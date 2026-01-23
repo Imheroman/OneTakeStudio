@@ -1,5 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* 이후 여기에 피그마 디자인 토큰(변수)을 추가할 예정입니다 */
+@theme {
+  /* 피그마에서 추출한 브랜드 컬러 이식 */
+  --color-brand-primary: #1A73E8;
+  --color-brand-secondary: #4285F4;
+  --color-brand-black: #202124;
+  
+  --color-brand-gray-100: #F1F3F4;
+  --color-brand-gray-200: #E8EAED;
+  --color-brand-gray-300: #DADCE0;
+  
+  /* 스튜디오 전용 컬러 */
+  --color-studio-bg: #0F0F0F;
+  --color-studio-panel: #1E1E1E;
+  --color-studio-point: #FF4B4B;
+
+  /* 둥글기 규격 */
+  --radius-brand: 8px;
+}
