@@ -5,7 +5,7 @@ import { getSession } from "next-auth/react";
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // 2. Axios 인스턴스 생성
-export const apiCLient = axios.create({
+export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
   headers: {
@@ -14,7 +14,7 @@ export const apiCLient = axios.create({
 });
 
 // 3. 요청 인터셉터: 모든 요청에 토큰 주입
-apiCLient.interceptors.request.use(
+apiClient.interceptors.request.use(
   async (config) => {
     const session = await getSession();
     if (session?.accessToken && config.headers) {
@@ -26,7 +26,7 @@ apiCLient.interceptors.request.use(
 );
 
 // 4. 응답 인터셉터: 공통 에러 핸들링 및 데이터 포맷팅
-apiCLient.interceptors.response.use(
+apiClient.interceptors.response.use(
   (response) => response.data,
   (error: AxiosError) => {
     const status = error.response?.status;
