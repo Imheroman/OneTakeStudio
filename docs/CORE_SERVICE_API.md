@@ -1,4 +1,4 @@
-# Auth API 명세서
+# Core Service API 명세서
 
 ## Base URL
 ```
@@ -195,6 +195,104 @@ GET /api/auth/check-username?username=testuser01
 
 ---
 
+# User API
+
+## 5. 내 프로필 조회
+
+### `GET /api/users/me`
+
+> 인증 필요 (Authorization: Bearer {accessToken})
+
+#### Response (성공)
+```json
+{
+  "success": true,
+  "message": "프로필 조회 성공",
+  "data": {
+    "userId": 1,
+    "username": "testuser01",
+    "nickname": "테스터",
+    "profileImageUrl": null,
+    "createdAt": "2024-01-01T12:00:00"
+  }
+}
+```
+
+---
+
+## 6. 프로필 수정
+
+### `PUT /api/users/me`
+
+> 인증 필요 (Authorization: Bearer {accessToken})
+
+#### Request
+```json
+{
+  "nickname": "새닉네임",
+  "profileImageUrl": "https://example.com/image.jpg"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| nickname | String | X | 2-20자 (변경할 경우만) |
+| profileImageUrl | String | X | 500자 이하 (변경할 경우만) |
+
+#### Response (성공)
+```json
+{
+  "success": true,
+  "message": "프로필 수정 성공",
+  "data": {
+    "userId": 1,
+    "username": "testuser01",
+    "nickname": "새닉네임",
+    "profileImageUrl": "https://example.com/image.jpg",
+    "createdAt": "2024-01-01T12:00:00"
+  }
+}
+```
+
+---
+
+## 7. 다른 사용자 프로필 조회
+
+### `GET /api/users/{userId}`
+
+> 인증 필요 (Authorization: Bearer {accessToken})
+
+#### Path Parameter
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|----------|------|------|------|
+| userId | Long | O | 조회할 사용자 ID |
+
+#### Response (성공)
+```json
+{
+  "success": true,
+  "message": "프로필 조회 성공",
+  "data": {
+    "userId": 2,
+    "username": "otheruser",
+    "nickname": "다른유저",
+    "profileImageUrl": null,
+    "createdAt": "2024-01-02T12:00:00"
+  }
+}
+```
+
+#### Response (실패 - 사용자 없음)
+```json
+{
+  "success": false,
+  "message": "사용자를 찾을 수 없습니다."
+}
+```
+
+---
+
 ## 인증이 필요한 API 호출 방법
 
 로그인 후 발급받은 `accessToken`을 Header에 포함해서 요청합니다.
@@ -307,4 +405,5 @@ api.interceptors.response.use(
 | 200 | 성공 |
 | 400 | 잘못된 요청 (유효성 검증 실패) |
 | 401 | 인증 실패 (토큰 없음/만료/잘못됨) |
+| 404 | 리소스 없음 (사용자 없음 등) |
 | 500 | 서버 에러 |

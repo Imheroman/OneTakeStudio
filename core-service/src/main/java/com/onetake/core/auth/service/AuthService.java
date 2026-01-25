@@ -91,7 +91,14 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public boolean checkUsernameAvailable(String username) {
-        return !userRepository.existsByUsername(username);
+    public CheckUsernameResponse checkUsernameAvailable(String username) {
+        // 유효성 검증: 4-20자, 영문/숫자/언더스코어만 허용
+        if (username == null || !username.matches("^[a-zA-Z0-9_]{4,20}$")) {
+            return CheckUsernameResponse.invalidFormat();
+        }
+        if (userRepository.existsByUsername(username)) {
+            return CheckUsernameResponse.duplicated();
+        }
+        return CheckUsernameResponse.available();
     }
 }

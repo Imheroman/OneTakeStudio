@@ -1,6 +1,7 @@
 package com.onetake.core.auth.exception;
 
 import com.onetake.common.dto.ApiResponse;
+import com.onetake.core.user.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,14 @@ public class GlobalExceptionHandler {
         log.warn("AuthException: {}", e.getMessage());
         return ResponseEntity
                 .status(e.getStatus())
+                .body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUserNotFoundException(UserNotFoundException e) {
+        log.warn("UserNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(e.getMessage()));
     }
 

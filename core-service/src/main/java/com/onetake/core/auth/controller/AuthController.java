@@ -35,9 +35,14 @@ public class AuthController {
     }
 
     @GetMapping("/check-username")
-    public ResponseEntity<ApiResponse<Boolean>> checkUsername(@RequestParam String username) {
-        boolean available = authService.checkUsernameAvailable(username);
-        String message = available ? "사용 가능한 아이디입니다." : "이미 사용 중인 아이디입니다.";
-        return ResponseEntity.ok(ApiResponse.success(message, available));
+    public ResponseEntity<ApiResponse<CheckUsernameResponse>> checkUsername(@RequestParam String username) {
+        CheckUsernameResponse response = authService.checkUsernameAvailable(username);
+        String message = switch (response.getReason()) {
+            case "AVAILABLE" -> "사용 가능한 아이디입니다.";
+            case "INVALID_FORMAT" -> "아이디는 4-20자의 영문, 숫자, 언더스코어만 가능합니다.";
+            case "DUPLICATED" -> "이미 사용 중인 아이디입니다.";
+            default -> "알 수 없는 오류입니다.";
+        };
+        return ResponseEntity.ok(ApiResponse.success(message, response));
     }
 }

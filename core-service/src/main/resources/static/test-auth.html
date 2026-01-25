@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auth API Test</title>
+    <title>Core Service API Test</title>
     <style>
         body { font-family: monospace; padding: 20px; max-width: 900px; margin: 0 auto; }
         .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <h1>OneTake Auth API Test</h1>
+    <h1>OneTake Core Service API Test</h1>
     <p>Base URL: <input type="text" id="baseUrl" value="http://localhost:8080" style="width: 200px;"></p>
 
     <!-- 아이디 중복 확인 -->
@@ -78,9 +78,33 @@
         <div id="refreshResult" class="response"></div>
     </div>
 
+    <!-- 내 프로필 조회 -->
+    <div class="section">
+        <h2>6. My Profile</h2>
+        <button onclick="getMyProfile()">Get My Profile</button>
+        <div id="myProfileResult" class="response"></div>
+    </div>
+
+    <!-- 프로필 수정 -->
+    <div class="section">
+        <h2>7. Update Profile</h2>
+        <div><label>Nickname:</label><input type="text" id="updateNickname" placeholder="2-20자"></div>
+        <div><label>Image URL:</label><input type="text" id="updateProfileImage" placeholder="https://..." style="width: 300px;"></div>
+        <button onclick="updateProfile()">Update Profile</button>
+        <div id="updateProfileResult" class="response"></div>
+    </div>
+
+    <!-- 다른 사용자 프로필 조회 -->
+    <div class="section">
+        <h2>8. Get User Profile</h2>
+        <div><label>User ID:</label><input type="number" id="targetUserId" placeholder="1"></div>
+        <button onclick="getUserProfile()">Get Profile</button>
+        <div id="userProfileResult" class="response"></div>
+    </div>
+
     <!-- 인증 테스트 -->
     <div class="section">
-        <h2>6. Test Protected API</h2>
+        <h2>9. Test Protected API</h2>
         <div><label>Method:</label>
             <select id="testMethod" style="padding: 8px;">
                 <option value="GET">GET</option>
@@ -216,6 +240,66 @@
                 }
             } catch (e) {
                 showResult('refreshResult', { error: e.message }, false);
+            }
+        }
+
+        async function getMyProfile() {
+            if (!accessToken) {
+                showResult('myProfileResult', { error: 'Login first' }, false);
+                return;
+            }
+            try {
+                const res = await fetch(`${getBaseUrl()}/api/users/me`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                const data = await res.json();
+                showResult('myProfileResult', data, data.success);
+            } catch (e) {
+                showResult('myProfileResult', { error: e.message }, false);
+            }
+        }
+
+        async function updateProfile() {
+            if (!accessToken) {
+                showResult('updateProfileResult', { error: 'Login first' }, false);
+                return;
+            }
+            const body = {};
+            const nickname = document.getElementById('updateNickname').value;
+            const profileImageUrl = document.getElementById('updateProfileImage').value;
+            if (nickname) body.nickname = nickname;
+            if (profileImageUrl) body.profileImageUrl = profileImageUrl;
+
+            try {
+                const res = await fetch(`${getBaseUrl()}/api/users/me`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + accessToken
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                showResult('updateProfileResult', data, data.success);
+            } catch (e) {
+                showResult('updateProfileResult', { error: e.message }, false);
+            }
+        }
+
+        async function getUserProfile() {
+            const userId = document.getElementById('targetUserId').value;
+            if (!userId) {
+                showResult('userProfileResult', { error: 'Enter user ID' }, false);
+                return;
+            }
+            try {
+                const headers = {};
+                if (accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
+                const res = await fetch(`${getBaseUrl()}/api/users/${userId}`, { headers });
+                const data = await res.json();
+                showResult('userProfileResult', data, data.success);
+            } catch (e) {
+                showResult('userProfileResult', { error: e.message }, false);
             }
         }
 
