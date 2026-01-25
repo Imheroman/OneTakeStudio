@@ -1,7 +1,7 @@
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import { MSWComponent } from "@/mock/MSWComponent"
-import "@/app/styles/globals.css"
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import { MSWComponent } from "@/mock/MSWComponent";
+import "@/styles/globals.css";
 
 // 폰트 설정
 const geistSans = Geist({
@@ -26,7 +26,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko"> {/* 한국어 서비스이므로 ko 유지 */}
+    <html lang="ko">
+      {" "}
+      {/* 한국어 서비스이므로 ko 유지 */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
