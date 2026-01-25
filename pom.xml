@@ -19,7 +19,8 @@
     <modules>
         <module>common</module>
         <module>core-service</module>
-    </modules>
+        <module>media-service</module>
+</modules>
 
     <properties>
         <java.version>21</java.version>
@@ -40,7 +41,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.projectlombok</groupId>
+<groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>

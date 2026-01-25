@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: media-service
+
+  # PostgreSQL Database (Docker)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/media_db
+    username: media_user
+    password: media_password
+    driver-class-name: org.postgresql.Driver
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # 테스트마다 초기화
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+
+  # RabbitMQ
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+
+  # Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# Server
+server:
+  port: 8081
+
+# LiveKit (Mock)
+livekit:
+  host: http://localhost:7880
+  api:
+    key: test-api-key
+    secret: test-api-secret
+
+# AWS S3 (Mock)
+aws:
+  s3:
+    bucket: test-bucket
+    region: ap-northeast-2
+  access-key-id: test-access-key
+  secret-access-key: test-secret-key
+
+# Logging
+logging:
+  level:
+    com.onetakestudio.mediaservice: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
