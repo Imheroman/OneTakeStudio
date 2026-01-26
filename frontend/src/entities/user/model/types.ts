@@ -6,7 +6,8 @@
  * 사용자 정보
  */
 export interface User {
-  id: string;
+  id: string; // 서버에서 생성된 고유 ID (UUID 등)
+  email: string;
   name: string;
 }
 
@@ -23,7 +24,7 @@ export interface AuthResponse {
  * 로그인 요청 데이터
  */
 export interface LoginRequest {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -31,7 +32,7 @@ export interface LoginRequest {
  * 회원가입 요청 데이터
  */
 export interface SignupRequest {
-  username: string;
+  email: string;
   password: string;
   name: string;
   nickname: string;

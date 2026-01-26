@@ -31,7 +31,7 @@ import {
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  username: z.string().min(4, { message: "아이디는 4자 이상 입력해주세요." }),
+  email: z.string().email({ message: "올바른 이메일 형식을 입력해주세요." }),
   password: z.string().min(8, { message: "비밀번호는 8자 이상이어야 합니다." }),
 });
 
@@ -44,7 +44,7 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -65,7 +65,7 @@ export function LoginForm() {
     } catch (error: any) {
       console.error("로그인 에러:", error);
       setErrorMsg(
-        error.response?.data?.message || "아이디 또는 비밀번호를 확인해주세요.",
+        error.response?.data?.message || "이메일 또는 비밀번호를 확인해주세요.",
       );
     } finally {
       setIsSubmitting(false);
@@ -80,7 +80,7 @@ export function LoginForm() {
         </h1>
         <CardTitle className="text-xl font-bold text-gray-900">로그인</CardTitle>
         <CardDescription className="text-gray-500">
-          서비스 이용을 위해 아이디와 비밀번호를 입력해주세요.
+          서비스 이용을 위해 이메일과 비밀번호를 입력해주세요.
         </CardDescription>
       </CardHeader>
 
@@ -89,13 +89,14 @@ export function LoginForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="username"
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">아이디</FormLabel>
+                  <FormLabel className="text-gray-700 font-medium">이메일</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="아이디를 입력하세요"
+                      type="email"
+                      placeholder="이메일을 입력하세요"
                       className="h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all"
                       {...field}
                     />

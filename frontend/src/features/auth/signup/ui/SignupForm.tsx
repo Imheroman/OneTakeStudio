@@ -37,9 +37,9 @@ const formSchema = z
     nickname: z
       .string()
       .min(2, { message: "닉네임은 2글자 이상이어야 합니다." }),
-    username: z
+    email: z
       .string()
-      .min(4, { message: "아이디는 4글자 이상이어야 합니다." }),
+      .email({ message: "올바른 이메일 형식을 입력해주세요." }),
     password: z
       .string()
       .min(8, { message: "비밀번호는 8글자 이상이어야 합니다." }),
@@ -67,7 +67,7 @@ export function SignupForm() {
     defaultValues: {
       name: "",
       nickname: "",
-      username: "",
+      email: "",
       password: "",
       confirmPassword: "",
       terms: false,
@@ -80,7 +80,7 @@ export function SignupForm() {
       setServerError("");
 
       const signupData: SignupRequest = {
-        username: values.username,
+        email: values.email,
         password: values.password,
         name: values.name,
         nickname: values.nickname,
@@ -161,12 +161,16 @@ export function SignupForm() {
 
               <FormField
                 control={form.control}
-                name="username"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ID</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your ID" {...field} />
+                      <Input 
+                        type="email"
+                        placeholder="Enter your email" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

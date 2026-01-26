@@ -191,18 +191,19 @@ export default function MyPage() {
                       onSubmit={profileForm.handleSubmit(onProfileSubmit)}
                       className="space-y-4"
                     >
-                      {/* 아이디 (읽기 전용) */}
+                      {/* 이메일 (읽기 전용) */}
                       <div className="space-y-2">
                         <FormLabel className="text-sm font-medium">
-                          아이디
+                          이메일
                         </FormLabel>
                         <Input
-                          value={user?.id || ""}
+                          type="email"
+                          value={user?.email || ""}
                           disabled
                           className="bg-gray-100"
                         />
                         <p className="text-xs text-gray-500">
-                          아이디는 변경할 수 없습니다.
+                          이메일은 변경할 수 없습니다.
                         </p>
                       </div>
 
