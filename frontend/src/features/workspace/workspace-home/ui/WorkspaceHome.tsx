@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/shared/ui/table";
 import { ActionCard, PageHeader } from "@/shared/common";
+import { StudioCreation } from "@/features/studio/studio-creation";
 import { apiClient } from "@/shared/api/client";
 
 interface Studio {
@@ -30,6 +31,8 @@ interface WorkspaceHomeProps {
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
   const [recentStudios, setRecentStudios] = useState<Studio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createDialogType, setCreateDialogType] = useState<"live" | "recording">("live");
 
   useEffect(() => {
     const fetchRecentStudios = async () => {
@@ -64,17 +67,34 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
           title="Start Live Streaming"
           description="Go live instantly with our professional streaming tools"
           icon={<Radio className="h-8 w-8 text-gray-600" />}
-          href="/studio"
+          href="#"
           actionLabel="Start Streaming"
+          onClick={(e) => {
+            e.preventDefault();
+            setCreateDialogType("live");
+            setIsCreateDialogOpen(true);
+          }}
         />
         <ActionCard
           title="Start Recording"
           description="Record high-quality content for later publishing"
           icon={<Video className="h-8 w-8 text-gray-600" />}
-          href="/studio"
+          href="#"
           actionLabel="Start Recording"
+          onClick={(e) => {
+            e.preventDefault();
+            setCreateDialogType("recording");
+            setIsCreateDialogOpen(true);
+          }}
         />
       </div>
+
+      {/* 스튜디오 생성 다이얼로그 */}
+      <StudioCreation
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        initialType={createDialogType}
+      />
 
       <Card className="border-gray-200">
         <CardContent className="p-6">

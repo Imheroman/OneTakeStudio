@@ -556,4 +556,35 @@ export const handlers = [
       { status: 200 },
     );
   }),
+
+  // 스튜디오 생성
+  http.post(`${BASE_URL}/api/v1/studios`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    const { title, description, transmissionType, storageLocation, platforms } = body;
+
+    console.log(`[MSW] 스튜디오 생성 요청:`, body);
+
+    // 스튜디오 ID 생성
+    const studioId = `studio_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+    const newStudio = {
+      id: studioId,
+      title,
+      description: description || "",
+      transmissionType,
+      storageLocation,
+      platforms: platforms || [],
+      createdAt: new Date().toISOString(),
+    };
+
+    console.log(`[MSW] 스튜디오 생성 완료:`, newStudio);
+
+    return HttpResponse.json(
+      {
+        studio: newStudio,
+        message: "스튜디오가 성공적으로 생성되었습니다.",
+      },
+      { status: 201 },
+    );
+  }),
 ];

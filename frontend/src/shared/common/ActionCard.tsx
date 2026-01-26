@@ -12,6 +12,7 @@ interface ActionCardProps {
   actionLabel?: string;
   className?: string;
   iconBg?: "indigo" | "gray" | "blue";
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 const iconBgClasses = {
@@ -28,6 +29,7 @@ export function ActionCard({
   actionLabel = "Start",
   className,
   iconBg = "gray",
+  onClick,
 }: ActionCardProps) {
   return (
     <Card
@@ -51,7 +53,7 @@ export function ActionCard({
             {description}
           </p>
         </div>
-        <Link href={href}>
+        <Link href={href} onClick={onClick}>
           <Button className="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 h-auto text-base">
             {actionLabel}
           </Button>
