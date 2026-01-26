@@ -3,6 +3,23 @@ import { http, HttpResponse } from "msw";
 // 환경 변수에서 베이스 URL을 가져옵니다.
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+// MSW 메모리 기반 상태 관리 (즐겨찾기)
+interface Favorite {
+  id: string;
+  nickname: string;
+  email?: string;
+}
+
+// 초기 즐겨찾기 데이터
+let favorites: Favorite[] = [
+  { id: "admin", nickname: "나는 동언" },
+  { id: "editor", nickname: "나는 범수" },
+  { id: "collaborator", nickname: "어드민 히로" },
+  { id: "designer", nickname: "골드 태현" },
+];
+
+const MAX_FAVORITES = 10;
+
 export const handlers = [
   // 주소 앞에 BASE_URL을 붙여서 MSW가 8080 포트 요청도 가로채게 만듭니다.
   http.post(`${BASE_URL}/api/v1/auth/login`, async ({ request }) => {
@@ -250,5 +267,136 @@ export const handlers = [
         },
       ],
     });
+  }),
+
+  // 즐겨찾기 목록 조회
+  http.get(`${BASE_URL}/api/v1/favorites`, async () => {
+    console.log("[MSW] 즐겨찾기 목록 요청", favorites);
+    return HttpResponse.json({
+      favorites,
+      total: favorites.length,
+      maxCount: MAX_FAVORITES,
+    });
+  }),
+
+  // 즐겨찾기 추가
+  http.post(`${BASE_URL}/api/v1/favorites`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    const { userId } = body;
+
+    console.log(`[MSW] 즐겨찾기 추가 요청: ${userId}`);
+
+    // 최대 개수 체크
+    if (favorites.length >= MAX_FAVORITES) {
+      return HttpResponse.json(
+        { message: `최대 ${MAX_FAVORITES}명까지 등록 가능합니다.` },
+        { status: 400 },
+      );
+    }
+
+    // 중복 체크
+    if (favorites.some((f) => f.id === userId)) {
+      return HttpResponse.json(
+        { message: "이미 등록된 사용자입니다." },
+        { status: 409 },
+      );
+    }
+
+    // 사용자 검색 결과에서 닉네임 찾기 (모의 데이터)
+    const mockUsers: Record<string, { nickname: string; email: string }> = {
+      user1: { nickname: "김철수", email: "kim@example.com" },
+      user2: { nickname: "이영희", email: "lee@example.com" },
+      user3: { nickname: "박민수", email: "park@example.com" },
+      user4: { nickname: "최지영", email: "choi@example.com" },
+      user5: { nickname: "정수진", email: "jung@example.com" },
+    };
+
+    const userInfo = mockUsers[userId] || {
+      nickname: `사용자 ${userId}`,
+      email: `${userId}@example.com`,
+    };
+
+    // 즐겨찾기에 추가
+    const newFavorite: Favorite = {
+      id: userId,
+      nickname: userInfo.nickname,
+      email: userInfo.email,
+    };
+    favorites.push(newFavorite);
+
+    console.log(`[MSW] 즐겨찾기 추가 완료:`, favorites);
+
+    return HttpResponse.json(
+      {
+        message: "즐겨찾기에 추가되었습니다.",
+        favorite: newFavorite,
+      },
+      { status: 201 },
+    );
+  }),
+
+  // 즐겨찾기 삭제
+  http.delete(`${BASE_URL}/api/v1/favorites/:id`, async ({ params }) => {
+    const { id } = params;
+    console.log(`[MSW] 즐겨찾기 삭제 요청: ${id}`, "삭제 전:", favorites);
+
+    // 즐겨찾기에서 제거
+    const index = favorites.findIndex((f) => f.id === id);
+    if (index === -1) {
+      return HttpResponse.json(
+        { message: "즐겨찾기에 존재하지 않는 사용자입니다." },
+        { status: 404 },
+      );
+    }
+
+    favorites = favorites.filter((f) => f.id !== id);
+    console.log(`[MSW] 즐겨찾기 삭제 완료:`, favorites);
+
+    return HttpResponse.json(
+      { message: "즐겨찾기에서 제거되었습니다." },
+      { status: 200 },
+    );
+  }),
+
+  // 사용자 검색 (이메일 또는 닉네임)
+  http.get(`${BASE_URL}/api/v1/favorites/search`, async ({ request }) => {
+    const url = new URL(request.url);
+    const query = url.searchParams.get("q") || "";
+
+    console.log(`[MSW] 사용자 검색 요청: ${query}`);
+
+    // 모의 사용자 데이터
+    const mockUsers = [
+      { id: "user1", nickname: "김철수", email: "kim@example.com" },
+      { id: "user2", nickname: "이영희", email: "lee@example.com" },
+      { id: "user3", nickname: "박민수", email: "park@example.com" },
+      { id: "user4", nickname: "최지영", email: "choi@example.com" },
+      { id: "user5", nickname: "정수진", email: "jung@example.com" },
+      { id: "admin", nickname: "나는 동언", email: "admin@example.com" },
+      { id: "editor", nickname: "나는 범수", email: "editor@example.com" },
+      {
+        id: "collaborator",
+        nickname: "어드민 히로",
+        email: "collaborator@example.com",
+      },
+      {
+        id: "designer",
+        nickname: "골드 태현",
+        email: "designer@example.com",
+      },
+    ];
+
+    if (!query) {
+      return HttpResponse.json({ users: [] });
+    }
+
+    // 이메일 또는 닉네임으로 검색
+    const filtered = mockUsers.filter(
+      (user) =>
+        user.email.toLowerCase().includes(query.toLowerCase()) ||
+        user.nickname.toLowerCase().includes(query.toLowerCase()),
+    );
+
+    return HttpResponse.json({ users: filtered });
   }),
 ];
