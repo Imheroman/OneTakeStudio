@@ -8,25 +8,26 @@ import { useAuthStore } from "@/stores/useAuthStore";
 // import FeatureSection from "@/components/organisms/landing/FeatureSection";
 
 export default function LandingPage() {
-  const { isLoggedIn, user } = useAuthStore();
+  const { isLoggedIn, user, hasHydrated } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
     // 로그인된 유저는 본인의 워크스페이스로 자동 리다이렉트
+    if (!hasHydrated) return;
     if (isLoggedIn && user) {
       router.replace(`/workspace/${user.id}`);
     }
-  }, [isLoggedIn, user, router]);
+  }, [hasHydrated, isLoggedIn, user, router]);
 
   return (
     <div className="flex flex-col min-h-screen">
-      <main className="flex-grow">
+      <main className="grow">
         {/* 유기체(Organisms) 단위로 섹션을 배치하여 가독성 확보 */}
         {/* <HeroSection /> */}
         {/* <FeatureSection /> */}
         
         {/* 임시 플레이스홀더 */}
-        <section className="py-20 text-center bg-gradient-to-b from-indigo-50 to-white">
+        <section className="py-20 text-center bg-linear-to-b from-indigo-50 to-white">
           <h1 className="text-5xl font-black italic text-indigo-600 tracking-tighter mb-4">
             OneTake
           </h1>

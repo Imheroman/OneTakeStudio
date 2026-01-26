@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
-import { getSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -15,10 +15,10 @@ export const apiClient = axios.create({
 
 // 3. 요청 인터셉터: 모든 요청에 토큰 주입
 apiClient.interceptors.request.use(
-  async (config) => {
-    const session = await getSession();
-    if (session?.accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${session.accessToken}`;
+  (config) => {
+    const accessToken = useAuthStore.getState().accessToken;
+    if (accessToken && config.headers) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },

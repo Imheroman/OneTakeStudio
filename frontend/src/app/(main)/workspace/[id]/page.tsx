@@ -1,23 +1,24 @@
 "use client";
 
-import { use } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LayoutDashboard, Video, Settings, LogOut } from "lucide-react";
 
-export default function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params); // URL 파라미터에서 id 추출
-  const { user, accessToken, isLoggedIn, logout } = useAuthStore();
+export default function WorkspacePage({ params }: { params: { id: string } }) {
+  const { id } = params; // URL 파라미터에서 id 추출
+  const { user, accessToken, isLoggedIn, logout, hasHydrated } = useAuthStore();
   const router = useRouter();
 
   // 1. 보안 가드: 토큰이나 로그인 정보가 없으면 튕겨냄
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!isLoggedIn || !accessToken) {
       router.replace("/login");
     }
-  }, [isLoggedIn, accessToken, router]);
+  }, [hasHydrated, isLoggedIn, accessToken, router]);
 
+  if (!hasHydrated) return null;
   if (!isLoggedIn) return null;
 
   return (
