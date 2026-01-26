@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ActionCard, PageHeader } from "@/components/shared/common";
 
 // [Mock Data] 최근 스튜디오 목록
 const recentStudios = [
@@ -57,28 +58,32 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* 상단 환영 섹션 (Top Nav는 공통 레이아웃에서 제공) */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          <span className="text-indigo-600">{user?.name ?? userId}</span>님, 반가워요!
-        </h1>
-        <p className="text-gray-500">오늘도 당신만의 멋진 방송을 만들어보세요.</p>
-      </div>
+      <PageHeader
+        title={
+          <>
+            <span className="text-indigo-600">{user?.name ?? userId}</span>님, 반가워요!
+          </>
+        }
+        description="오늘도 당신만의 멋진 방송을 만들어보세요."
+      />
 
-        {/* 액션 카드 그리드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ActionCard 
-            title="Start Live Streaming" 
-            desc="Go live instantly with our professional streaming tools" 
-            icon={<Radio className="h-8 w-8 text-gray-600" />}
-            href="/studio"
-          />
-          <ActionCard 
-            title="Start Recording" 
-            desc="Record high-quality content for later publishing" 
-            icon={<Video className="h-8 w-8 text-gray-600" />}
-            href="/studio"
-          />
-        </div>
+      {/* 액션 카드 그리드 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ActionCard
+          title="Start Live Streaming"
+          description="Go live instantly with our professional streaming tools"
+          icon={<Radio className="h-8 w-8 text-gray-600" />}
+          href="/studio"
+          actionLabel="Start Streaming"
+        />
+        <ActionCard
+          title="Start Recording"
+          description="Record high-quality content for later publishing"
+          icon={<Video className="h-8 w-8 text-gray-600" />}
+          href="/studio"
+          actionLabel="Start Recording"
+        />
+      </div>
 
         {/* 최근 스튜디오 목록 테이블 */}
         <Card className="border-gray-200">
@@ -113,27 +118,5 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
           </CardContent>
         </Card>
     </div>
-  );
-}
-
-// 가독성을 위한 컴포넌트 분리 (Senior's Practice)
-function ActionCard({ title, desc, icon, href }: { title: string, desc: string, icon: React.ReactNode, href: string }) {
-  return (
-    <Card className="hover:shadow-lg transition-all border-gray-200 group">
-      <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-6">
-        <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
-          {icon}
-        </div>
-        <div>
-          <h2 className="text-xl font-bold mb-2">{title}</h2>
-          <p className="text-gray-500 text-sm max-w-xs mx-auto">{desc}</p>
-        </div>
-        <Link href={href}>
-          <Button className="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 h-auto text-base">
-            Start
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
   );
 }

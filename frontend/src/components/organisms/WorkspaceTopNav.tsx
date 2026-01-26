@@ -7,6 +7,7 @@ import { Bell } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { IconButton } from "@/components/shared/common";
 
 export function WorkspaceTopNav({ notificationCount = 3 }: { notificationCount?: number }) {
   const router = useRouter();
@@ -30,30 +31,22 @@ export function WorkspaceTopNav({ notificationCount = 3 }: { notificationCount?:
           LOGOUT
         </Button>
 
-        <button
-          type="button"
-          className="relative inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Notifications"
-        >
-          <Bell className="h-5 w-5 text-gray-700" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[11px] leading-[18px] text-center font-bold">
-              {notificationCount}
-            </span>
-          )}
-        </button>
+        <IconButton
+          icon={<Bell className="h-5 w-5 text-gray-700" />}
+          label="Notifications"
+          badge={notificationCount > 0 ? notificationCount : undefined}
+        />
 
-        <button
-          type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Profile"
-        >
-          <Avatar>
-            <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
-              {user?.name?.[0] ?? "U"}
-            </AvatarFallback>
-          </Avatar>
-        </button>
+        <IconButton
+          icon={
+            <Avatar>
+              <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
+                {user?.name?.[0] ?? "U"}
+              </AvatarFallback>
+            </Avatar>
+          }
+          label="Profile"
+        />
       </div>
     </header>
   );

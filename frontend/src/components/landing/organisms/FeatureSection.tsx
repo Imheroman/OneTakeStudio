@@ -1,6 +1,7 @@
 import { Radio, Video, Users, BarChart3, ShieldCheck, Globe } from "lucide-react";
 
 import { FeatureCard } from "@/components/landing/molecules/FeatureCard";
+import { Section, SectionHeader } from "@/components/shared/common";
 
 const FEATURES = [
   {
@@ -37,19 +38,18 @@ const FEATURES = [
 
 export function FeatureSection() {
   return (
-    <section id="features" className="bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
-        <div className="space-y-2 text-center">
-          <div className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1">
-            핵심 기능
-          </div>
-          <h2 className="text-3xl font-extrabold text-gray-900">
-            원테이크가 특별한 이유
-          </h2>
-          <p className="text-gray-600">
-            전문 스트리머부터 입문자까지, 모두를 위한 완벽한 솔루션
-          </p>
-        </div>
+    <Section id="features" className="bg-white" padding="md" containerSize="md">
+      <div className="space-y-10">
+        <SectionHeader
+          title="원테이크가 특별한 이유"
+          description="전문 스트리머부터 입문자까지, 모두를 위한 완벽한 솔루션"
+          align="center"
+          badge={
+            <div className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1">
+              핵심 기능
+            </div>
+          }
+        />
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map((f) => (
@@ -62,7 +62,7 @@ export function FeatureSection() {
           ))}
         </div>
       </div>
-    </section>
+    </Section>
   );
 }
 
