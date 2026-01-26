@@ -587,4 +587,33 @@ export const handlers = [
       { status: 201 },
     );
   }),
+
+  // 스튜디오 조회
+  http.get(`${BASE_URL}/api/v1/studios/:id`, async ({ params }) => {
+    const { id } = params;
+    console.log(`[MSW] 스튜디오 조회 요청: ${id}`);
+
+    // 모의 스튜디오 데이터
+    const studioDetail = {
+      id: id as string,
+      title: "StudioTitle",
+      description: "스트리밍 스튜디오",
+      transmissionType: "live" as const,
+      storageLocation: "local" as const,
+      platforms: ["youtube", "twitch"] as const,
+      createdAt: new Date().toISOString(),
+      currentLayout: "full" as const,
+      isLive: false,
+      scenes: [
+        { id: "scene_1", name: "Scene 1 - Intro", isActive: true },
+        { id: "scene_2", name: "Scene 2 - Main Camera", isActive: false },
+      ],
+      sources: [
+        { id: "source_1", type: "video" as const, name: "Video Capture Device", isVisible: true },
+        { id: "source_2", type: "audio" as const, name: "Audio Input Capture", isVisible: true },
+      ],
+    };
+
+    return HttpResponse.json(studioDetail);
+  }),
 ];

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/widgets/workspace/sidebar";
 import { WorkspaceTopNav } from "@/widgets/workspace/top-nav";
 import { NotificationPanel, type Notification } from "@/widgets/workspace/notification-panel";
@@ -14,9 +15,13 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const { isLoggedIn } = useAuthStore();
   const { isOpen: showNotifications, close: closeNotifications } = useNotificationStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // 스튜디오 페이지인지 확인
+  const isStudioPage = pathname?.startsWith("/studio");
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -45,6 +50,12 @@ export default function MainLayout({
     fetchNotifications();
   }, [isLoggedIn]);
 
+  // 스튜디오 페이지는 전역 nav 없이 렌더링
+  if (isStudioPage) {
+    return <>{children}</>;
+  }
+
+  // 일반 워크스페이스 페이지는 nav 포함
   return (
     <div className="flex h-screen w-full">
       {/* 사이드바 고정 */}
