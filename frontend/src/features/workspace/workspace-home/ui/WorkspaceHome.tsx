@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Radio, Video } from "lucide-react";
 import { Button } from "@/shared/ui/button";
@@ -13,14 +14,13 @@ import {
   TableRow,
 } from "@/shared/ui/table";
 import { ActionCard, PageHeader } from "@/shared/common";
+import { apiClient } from "@/shared/api/client";
 
-const recentStudios = [
-  { id: 1, title: "Weekly Podcast Studio", date: "Jan 15, 2026" },
-  { id: 2, title: "Product Demo Setup", date: "Jan 14, 2026" },
-  { id: 3, title: "Team Meeting Room", date: "Jan 12, 2026" },
-  { id: 4, title: "Gaming Stream Studio", date: "Jan 10, 2026" },
-  { id: 5, title: "Tutorial Recording Space", date: "Jan 8, 2026" },
-];
+interface Studio {
+  id: number;
+  title: string;
+  date: string;
+}
 
 interface WorkspaceHomeProps {
   userId: string;
@@ -28,6 +28,26 @@ interface WorkspaceHomeProps {
 }
 
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
+  const [recentStudios, setRecentStudios] = useState<Studio[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentStudios = async () => {
+      try {
+        const response = await apiClient.get<{ studios: Studio[] }>(
+          `/api/v1/workspace/${userId}/studios/recent`,
+        );
+        setRecentStudios(response.studios);
+      } catch (error) {
+        console.error("최근 스튜디오 조회 실패:", error);
+        // 에러 발생 시 빈 배열 유지
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecentStudios();
+  }, [userId]);
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <PageHeader
@@ -73,7 +93,20 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentStudios.map((studio) => (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                      로딩 중...
+                    </TableCell>
+                  </TableRow>
+                ) : recentStudios.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                      최근 스튜디오가 없습니다.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentStudios.map((studio) => (
                   <TableRow
                     key={studio.id}
                     className="hover:bg-gray-50/80 transition-colors"
@@ -93,7 +126,8 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
                       </Link>
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

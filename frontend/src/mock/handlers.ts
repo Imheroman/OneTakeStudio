@@ -51,4 +51,70 @@ export const handlers = [
       },
     });
   }),
+
+  // 워크스페이스 최근 스튜디오 목록
+  http.get(`${BASE_URL}/api/v1/workspace/:userId/studios/recent`, async () => {
+    console.log("[MSW] 최근 스튜디오 목록 요청");
+    return HttpResponse.json({
+      studios: [
+        { id: 1, title: "Weekly Podcast Studio", date: "Jan 15, 2026" },
+        { id: 2, title: "Product Demo Setup", date: "Jan 14, 2026" },
+        { id: 3, title: "Team Meeting Room", date: "Jan 12, 2026" },
+        { id: 4, title: "Gaming Stream Studio", date: "Jan 10, 2026" },
+        { id: 5, title: "Tutorial Recording Space", date: "Jan 8, 2026" },
+      ],
+    });
+  }),
+
+  // 스토리지 정보 조회
+  http.get(`${BASE_URL}/api/v1/storage`, async () => {
+    console.log("[MSW] 스토리지 정보 요청");
+    return HttpResponse.json({
+      used: 45.09,
+      total: 50.0,
+      videoUsage: 40.2,
+      assetUsage: 4.89,
+    });
+  }),
+
+  // 스토리지 파일 목록 조회
+  http.get(`${BASE_URL}/api/v1/storage/files`, async () => {
+    console.log("[MSW] 스토리지 파일 목록 요청");
+    return HttpResponse.json({
+      files: [
+        {
+          id: 1,
+          title: "Weekly Podcast Episode #4",
+          date: "Jan 4, 2026",
+          size: "4.2 GB",
+          type: "Video",
+          status: "Uploaded",
+        },
+        {
+          id: 2,
+          title: "Product Demo - Q1 Launch",
+          date: "Jan 12, 2026",
+          size: "1.2 GB",
+          type: "Video",
+          status: "Processing",
+        },
+        {
+          id: 3,
+          title: "Team Meeting Recording",
+          date: "Jan 8, 2026",
+          size: "800 MB",
+          type: "Shorts",
+          status: "Saved",
+        },
+        {
+          id: 4,
+          title: "Gaming Stream Highlight",
+          date: "Jan 2, 2026",
+          size: "2.5 GB",
+          type: "Video",
+          status: "Uploaded",
+        },
+      ],
+    });
+  }),
 ];

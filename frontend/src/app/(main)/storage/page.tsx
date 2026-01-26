@@ -1,6 +1,7 @@
 // src/app/(main)/storage/page.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -21,52 +22,57 @@ import {
 import { Badge } from "@/shared/ui/badge";
 import { HardDrive, MoreHorizontal, PlayCircle } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { apiClient } from "@/shared/api/client";
 
-// [Mock Data]
-const storageData = {
-  used: 45.09,
-  total: 50.0,
-  videoUsage: 40.2,
-  assetUsage: 4.89,
-};
+interface StorageData {
+  used: number;
+  total: number;
+  videoUsage: number;
+  assetUsage: number;
+}
 
-const recentFiles = [
-  {
-    id: 1,
-    title: "Weekly Podcast Episode #4",
-    date: "Jan 4, 2026",
-    size: "4.2 GB",
-    type: "Video",
-    status: "Uploaded",
-  },
-  {
-    id: 2,
-    title: "Product Demo - Q1 Launch",
-    date: "Jan 12, 2026",
-    size: "1.2 GB",
-    type: "Video",
-    status: "Processing",
-  },
-  {
-    id: 3,
-    title: "Team Meeting Recording",
-    date: "Jan 8, 2026",
-    size: "800 MB",
-    type: "Shorts",
-    status: "Saved",
-  },
-  {
-    id: 4,
-    title: "Gaming Stream Highlight",
-    date: "Jan 2, 2026",
-    size: "2.5 GB",
-    type: "Video",
-    status: "Uploaded",
-  },
-];
+interface StorageFile {
+  id: number;
+  title: string;
+  date: string;
+  size: string;
+  type: string;
+  status: string;
+}
 
 export default function StoragePage() {
-  const usagePercent = Math.round((storageData.used / storageData.total) * 100);
+  const [storageData, setStorageData] = useState<StorageData>({
+    used: 0,
+    total: 0,
+    videoUsage: 0,
+    assetUsage: 0,
+  });
+  const [recentFiles, setRecentFiles] = useState<StorageFile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStorageData = async () => {
+      try {
+        const [storageResponse, filesResponse] = await Promise.all([
+          apiClient.get<StorageData>("/api/v1/storage"),
+          apiClient.get<{ files: StorageFile[] }>("/api/v1/storage/files"),
+        ]);
+
+        setStorageData(storageResponse);
+        setRecentFiles(filesResponse.files);
+      } catch (error) {
+        console.error("스토리지 데이터 조회 실패:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStorageData();
+  }, []);
+
+  const usagePercent = storageData.total > 0 
+    ? Math.round((storageData.used / storageData.total) * 100) 
+    : 0;
   const isDanger = usagePercent > 80;
 
   return (
@@ -128,7 +134,20 @@ export default function StoragePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentFiles.map((file) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                    로딩 중...
+                  </TableCell>
+                </TableRow>
+              ) : recentFiles.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                    파일이 없습니다.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                recentFiles.map((file) => (
                 <TableRow key={file.id}>
                   <TableCell className="font-medium flex items-center gap-3">
                     <div className="h-10 w-16 bg-gray-100 rounded-md flex items-center justify-center">
@@ -154,7 +173,8 @@ export default function StoragePage() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
