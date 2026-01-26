@@ -6,12 +6,15 @@ import com.onetakestudio.mediaservice.global.exception.ErrorCode;
 import com.onetakestudio.mediaservice.publish.dto.PublishResponse;
 import com.onetakestudio.mediaservice.publish.dto.PublishStartRequest;
 import com.onetakestudio.mediaservice.publish.dto.PublishStatusResponse;
+import com.onetakestudio.mediaservice.publish.entity.PublishDestination;
 import com.onetakestudio.mediaservice.publish.entity.PublishSession;
 import com.onetakestudio.mediaservice.publish.entity.PublishStatus;
+import com.onetakestudio.mediaservice.publish.repository.PublishDestinationRepository;
 import com.onetakestudio.mediaservice.publish.repository.PublishSessionRepository;
 import com.onetakestudio.mediaservice.stream.entity.SessionStatus;
 import com.onetakestudio.mediaservice.stream.entity.StreamSession;
 import com.onetakestudio.mediaservice.stream.repository.StreamSessionRepository;
+import com.onetakestudio.mediaservice.stream.service.LiveKitEgressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -28,7 +30,9 @@ import java.util.UUID;
 public class PublishService {
 
     private final PublishSessionRepository publishSessionRepository;
+    private final PublishDestinationRepository publishDestinationRepository;
     private final StreamSessionRepository streamSessionRepository;
+    private final LiveKitEgressService liveKitEgressService;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -60,14 +64,25 @@ public class PublishService {
                 .destinationIds(destinationIdsJson)
                 .build();
 
+        // 송출 세션 저장
+        publishSessionRepository.save(publishSession);
+
+        // RTMP URL 목록 생성 (streamKey 포함)
+        List<String> fullRtmpUrls = rtmpDestinations.stream()
+                .map(dest -> dest.getRtmpUrl() + dest.getStreamKey())
+                .toList();
+
         // LiveKit Egress를 통한 RTMP 송출 시작
-        String egressId = startLiveKitRtmpEgress(streamSession.getRoomName(), rtmpDestinations);
+        String egressId = liveKitEgressService.startRtmpStream(streamSession.getRoomName(), fullRtmpUrls);
         publishSession.startPublishing(egressId, rtmpUrlsJson);
 
         publishSessionRepository.save(publishSession);
 
-        log.info("Publishing started: studioId={}, publishId={}, destinations={}",
-                request.getStudioId(), publishSession.getId(), request.getDestinationIds());
+        // PublishDestination 저장
+        savePublishDestinations(publishSession, rtmpDestinations);
+
+        log.info("Publishing started: studioId={}, publishSessionId={}, destinations={}",
+                request.getStudioId(), publishSession.getPublishSessionId(), request.getDestinationIds());
 
         return PublishResponse.from(publishSession);
     }
@@ -79,12 +94,17 @@ public class PublishService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PUBLISH_NOT_IN_PROGRESS));
 
         // LiveKit Egress 중지
-        stopLiveKitEgress(publishSession.getLivekitEgressId());
+        liveKitEgressService.stopEgress(publishSession.getEgressId());
+
+        // PublishDestination 상태 업데이트
+        List<PublishDestination> destinations = publishDestinationRepository.findByPublishSessionId(publishSession.getId());
+        destinations.forEach(PublishDestination::markDisconnected);
+        publishDestinationRepository.saveAll(destinations);
 
         publishSession.stopPublishing();
         publishSessionRepository.save(publishSession);
 
-        log.info("Publishing stopped: studioId={}, publishId={}", studioId, publishSession.getId());
+        log.info("Publishing stopped: studioId={}, publishSessionId={}", studioId, publishSession.getPublishSessionId());
 
         return PublishResponse.from(publishSession);
     }
@@ -98,7 +118,7 @@ public class PublishService {
         List<PublishStatusResponse.DestinationStatus> destinations = buildDestinationStatuses(publishSession);
 
         return PublishStatusResponse.of(
-                publishSession.getId(),
+                publishSession.getPublishSessionId(),
                 publishSession.getStudioId(),
                 publishSession.getStatus(),
                 destinations,
@@ -122,40 +142,37 @@ public class PublishService {
     }
 
     private List<PublishStatusResponse.DestinationStatus> buildDestinationStatuses(PublishSession publishSession) {
-        // TODO: 실제 Destination 상태 조회
-        List<PublishStatusResponse.DestinationStatus> statuses = new ArrayList<>();
-        statuses.add(PublishStatusResponse.DestinationStatus.builder()
-                .destinationId(1L)
-                .platform("youtube")
-                .status("connected")
-                .rtmpUrl("rtmp://a.rtmp.youtube.com/live2/")
-                .build());
-        return statuses;
+        List<PublishDestination> destinations = publishDestinationRepository.findByPublishSessionId(publishSession.getId());
+
+        return destinations.stream()
+                .map(dest -> PublishStatusResponse.DestinationStatus.builder()
+                        .destinationId(dest.getConnectedDestinationId())
+                        .platform(dest.getPlatform())
+                        .status(dest.getConnectionStatus().name().toLowerCase())
+                        .rtmpUrl(dest.getRtmpUrl())
+                        .build())
+                .toList();
     }
 
-    private String startLiveKitRtmpEgress(String roomName, List<RtmpDestination> destinations) {
-        // TODO: LiveKit Egress RTMP API 연동
-        // RoomCompositeEgressRequest with StreamOutput (RTMP)
-        // 여러 destination을 동시에 송출 가능
-        log.info("Starting LiveKit RTMP Egress for room: {}, destinations: {}", roomName, destinations.size());
+    private void savePublishDestinations(PublishSession publishSession, List<RtmpDestination> rtmpDestinations) {
+        List<PublishDestination> destinations = rtmpDestinations.stream()
+                .map(dest -> {
+                    PublishDestination publishDestination = PublishDestination.builder()
+                            .publishSessionId(publishSession.getId())
+                            .connectedDestinationId(dest.getDestinationId())
+                            .platform(dest.getPlatform())
+                            .rtmpUrl(dest.getRtmpUrl() + dest.getStreamKey())
+                            .connectionStatus(PublishDestination.ConnectionStatus.CONNECTING)
+                            .build();
+                    return publishDestination;
+                })
+                .toList();
 
-        // LiveKit Egress RTMP 설정 예시:
-        // EncodedFileOutput output = new EncodedFileOutput.Builder()
-        //     .setFileType(EncodedFileType.MP4)
-        //     .addStreamOutputs(streamOutputs)
-        //     .build();
-        //
-        // RoomCompositeEgressRequest request = new RoomCompositeEgressRequest.Builder(roomName)
-        //     .setOutput(output)
-        //     .build();
+        publishDestinationRepository.saveAll(destinations);
 
-        return "egress-rtmp-" + UUID.randomUUID();
-    }
-
-    private void stopLiveKitEgress(String egressId) {
-        // TODO: LiveKit Egress API 연동
-        // StopEgress를 호출하여 송출 중지
-        log.info("Stopping LiveKit Egress: {}", egressId);
+        // 연결 성공으로 상태 변경 (실제로는 callback이나 polling으로 처리)
+        destinations.forEach(PublishDestination::markConnected);
+        publishDestinationRepository.saveAll(destinations);
     }
 
     private String toJson(Object obj) {

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screen_share_sessions")
@@ -17,6 +18,9 @@ public class ScreenShareSession extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "screen_share_session_id", unique = true, nullable = false, updatable = false, length = 36)
+    private String screenShareSessionId;
 
     @Column(name = "studio_id", nullable = false)
     private Long studioId;
@@ -55,5 +59,12 @@ public class ScreenShareSession extends BaseTimeEntity {
     public void stopSharing() {
         this.status = ScreenShareStatus.STOPPED;
         this.stoppedAt = LocalDateTime.now();
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (this.screenShareSessionId == null) {
+            this.screenShareSessionId = UUID.randomUUID().toString();
+        }
     }
 }

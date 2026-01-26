@@ -11,6 +11,8 @@ import java.util.Optional;
 @Repository
 public interface StreamSessionRepository extends JpaRepository<StreamSession, Long> {
 
+    Optional<StreamSession> findBySessionId(String sessionId);
+
     Optional<StreamSession> findByRoomName(String roomName);
 
     Optional<StreamSession> findByStudioIdAndStatus(Long studioId, SessionStatus status);

@@ -1,6 +1,7 @@
 package com.onetakestudio.mediaservice.global.config;
 
 import io.livekit.server.AccessToken;
+import io.livekit.server.EgressServiceClient;
 import io.livekit.server.RoomServiceClient;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,11 @@ public class LiveKitConfig {
     @Bean
     public RoomServiceClient roomServiceClient() {
         return RoomServiceClient.createClient(host, apiKey, apiSecret);
+    }
+
+    @Bean
+    public EgressServiceClient egressServiceClient() {
+        return EgressServiceClient.createClient(host, apiKey, apiSecret);
     }
 
     public AccessToken createAccessToken() {

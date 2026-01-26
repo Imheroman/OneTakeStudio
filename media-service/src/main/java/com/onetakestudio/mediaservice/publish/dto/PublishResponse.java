@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 public class PublishResponse {
 
-    private Long publishId;
+    private String publishSessionId;
     private Long studioId;
     private PublishStatus status;
     private String destinationIds;
@@ -21,7 +21,7 @@ public class PublishResponse {
 
     public static PublishResponse from(PublishSession session) {
         return PublishResponse.builder()
-                .publishId(session.getId())
+                .publishSessionId(session.getPublishSessionId())
                 .studioId(session.getStudioId())
                 .status(session.getStatus())
                 .destinationIds(session.getDestinationIds())

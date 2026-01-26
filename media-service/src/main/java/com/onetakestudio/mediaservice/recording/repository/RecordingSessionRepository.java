@@ -11,9 +11,11 @@ import java.util.Optional;
 @Repository
 public interface RecordingSessionRepository extends JpaRepository<RecordingSession, Long> {
 
+    Optional<RecordingSession> findByRecordingId(String recordingId);
+
     Optional<RecordingSession> findByStudioIdAndStatus(Long studioId, RecordingStatus status);
 
-    Optional<RecordingSession> findByLivekitEgressId(String livekitEgressId);
+    Optional<RecordingSession> findByEgressId(String egressId);
 
     List<RecordingSession> findByStudioIdOrderByCreatedAtDesc(Long studioId);
 
