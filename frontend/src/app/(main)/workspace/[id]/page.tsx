@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, use } from "react"; // use 훅 추가
 import { useRouter } from "next/navigation";
-import { Radio, Video, LogOut } from "lucide-react";
+import { Radio, Video } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 import { Button } from "@/components/ui/button";
@@ -55,33 +55,14 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   if (!isLoggedIn) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="space-y-8 max-w-7xl mx-auto px-6 py-8">
-        {/* 상단 헤더 섹션 */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              {/* 유저 정보 우선 노출, 없을 시 id 노출 */}
-              <span className="text-indigo-600">{user?.name ?? userId}</span>님,
-              반가워요!
-            </h1>
-            <p className="text-gray-500">
-              오늘도 당신만의 멋진 방송을 만들어보세요.
-            </p>
-          </div>
-
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => {
-              logout();
-              router.push("/login");
-            }}
-          >
-            <LogOut className="h-4 w-4" />
-            로그아웃
-          </Button>
-        </div>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* 상단 환영 섹션 (Top Nav는 공통 레이아웃에서 제공) */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+          <span className="text-indigo-600">{user?.name ?? userId}</span>님, 반가워요!
+        </h1>
+        <p className="text-gray-500">오늘도 당신만의 멋진 방송을 만들어보세요.</p>
+      </div>
 
         {/* 액션 카드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -131,7 +112,6 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
             </div>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
