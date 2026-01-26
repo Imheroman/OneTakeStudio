@@ -81,7 +81,7 @@ export const handlers = [
   http.get(`${BASE_URL}/api/v1/storage`, async () => {
     console.log("[MSW] 스토리지 정보 요청");
     return HttpResponse.json({
-      used: 45.09,
+      used: 40.09,
       total: 50.0,
       videoUsage: 40.2,
       assetUsage: 4.89,
