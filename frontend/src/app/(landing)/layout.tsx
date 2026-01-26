@@ -1,6 +1,6 @@
-import Navbar from "@/components/shared/Navigation/Navbar";
-import { LandingFooter } from "@/components/landing/organisms/LandingFooter";
-import { Button } from "@/components/ui/button";
+import { Navbar } from "@/widgets/landing/navbar";
+import { LandingFooter } from "@/widgets/landing/footer";
+import { Button } from "@/shared/ui/button";
 import Link from "next/link";
 
 export default function LandingLayout({ children }: { children: React.ReactNode }) {

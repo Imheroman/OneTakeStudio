@@ -1,6 +1,6 @@
 // src/app/(main)/layout.tsx
-import { Sidebar } from "@/components/organisms/Sidebar"; // 위치 변경됨!
-import { WorkspaceTopNav } from "@/components/organisms/WorkspaceTopNav";
+import { Sidebar } from "@/widgets/workspace/sidebar";
+import { WorkspaceTopNav } from "@/widgets/workspace/top-nav";
 
 export default function MainLayout({
   children,

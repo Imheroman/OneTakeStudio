@@ -3,10 +3,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { HeroSection } from "@/components/landing/organisms/HeroSection";
-import { FeatureSection } from "@/components/landing/organisms/FeatureSection";
-import { CTASection } from "@/components/landing/organisms/CTASection";
-import { Button } from "@/components/ui/button";
+import { HeroSection } from "@/widgets/landing/hero-section";
+import { FeatureSection } from "@/widgets/landing/feature-section";
+import { CTASection } from "@/widgets/landing/cta-section";
+import { Button } from "@/shared/ui/button";
 
 export default function LandingPage() {
   const { isLoggedIn, user, hasHydrated } = useAuthStore();

@@ -1,11 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-
-
-interface User {
-  id: string
-  name: string
-}
+import type { User } from "@/entities/user/model";
 
 interface AuthState {
   user: User | null;
