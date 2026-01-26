@@ -50,16 +50,18 @@
 CREATE TABLE users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '내부 PK (조인용)',
     user_id CHAR(36) UNIQUE NOT NULL COMMENT '외부 노출 UUID',
-    username VARCHAR(255) UNIQUE NOT NULL COMMENT '아이디 (로그인용)',
+    email VARCHAR(255) UNIQUE NOT NULL COMMENT '이메일 (로그인 ID)',
     password VARCHAR(255) NOT NULL COMMENT 'bcrypt 해시',
     nickname VARCHAR(50) NOT NULL COMMENT '닉네임',
     profile_image_url VARCHAR(500) COMMENT 'S3 프로필 이미지',
+    email_verified BOOLEAN DEFAULT FALSE COMMENT '이메일 인증 완료 여부',
     is_active BOOLEAN DEFAULT TRUE COMMENT '활성화 여부',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+
     INDEX idx_user_id (user_id),
-    INDEX idx_username (username),
+    INDEX idx_email (email),
+    INDEX idx_email_verified (email_verified),
     INDEX idx_is_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
@@ -73,30 +75,34 @@ CREATE TABLE users (
 @AllArgsConstructor
 @Builder
 public class User extends BaseTimeEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(name = "user_id", unique = true, nullable = false, length = 36)
     private String userId;  // UUID를 String으로 저장
-    
+
     @Column(unique = true, nullable = false)
-    private String username;
-    
+    private String email;
+
     @Column(nullable = false)
     private String password;
-    
+
     @Column(nullable = false, length = 50)
     private String nickname;
-    
+
     @Column(name = "profile_image_url", length = 500)
     private String profileImageUrl;
-    
+
+    @Column(name = "email_verified")
+    @Builder.Default
+    private Boolean emailVerified = false;
+
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
-    
+
     @PrePersist
     public void prePersist() {
         if (userId == null) {
@@ -104,6 +110,47 @@ public class User extends BaseTimeEntity {
         }
     }
 }
+```
+
+---
+
+### 1-1. email_verifications (이메일 인증 코드)
+
+```sql
+CREATE TABLE email_verifications (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL COMMENT '인증 대상 이메일',
+    verification_code VARCHAR(6) NOT NULL COMMENT '6자리 인증 코드',
+    type VARCHAR(20) NOT NULL COMMENT 'SIGNUP/PASSWORD_RESET',
+    expires_at DATETIME NOT NULL COMMENT '만료 시간 (5분)',
+    verified BOOLEAN DEFAULT FALSE COMMENT '인증 완료 여부',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_email (email),
+    INDEX idx_code (verification_code),
+    INDEX idx_type (type),
+    INDEX idx_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```
+
+---
+
+### 1-2. password_reset_tokens (비밀번호 재설정 토큰)
+
+```sql
+CREATE TABLE password_reset_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT 'users.id (FK)',
+    token CHAR(36) UNIQUE NOT NULL COMMENT 'UUID 토큰',
+    expires_at DATETIME NOT NULL COMMENT '만료 시간 (1시간)',
+    used BOOLEAN DEFAULT FALSE COMMENT '사용 완료 여부',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_user (user_id),
+    INDEX idx_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ---

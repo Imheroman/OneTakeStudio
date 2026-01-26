@@ -1,6 +1,6 @@
 ---
 name: onetake-streaming-project
-description: OneTakeStudio MSA 개발 프로젝트 통합 가이드. Spring Boot 3.5.9, Java 21, React, Next.js, LiveKit WebRTC 기반. 아이디/비밀번호/닉네임 간편 회원가입. MSA 2-서비스 구조 (Core-MySQL, Media-PostgreSQL). 라이브 스트리밍, WebRTC, 녹화, AI 쇼츠, 멀티 플랫폼 송출, 실시간 채팅. 내부 BIGINT + 외부 UUID 설계. LiveKit Egress 연동. Spring Cloud Gateway, Eureka, RabbitMQ, Redis, k3s 환경. 6인 팀 개발.
+description: OneTakeStudio MSA 개발 프로젝트 통합 가이드. Spring Boot 3.5.9, Java 21, React, Next.js, LiveKit WebRTC 기반. 이메일/비밀번호/닉네임 회원가입 + 이메일 인증. MSA 2-서비스 구조 (Core-MySQL, Media-PostgreSQL). 라이브 스트리밍, WebRTC, 녹화, AI 쇼츠, 멀티 플랫폼 송출, 실시간 채팅. 내부 BIGINT + 외부 UUID 설계. LiveKit Egress 연동. Spring Cloud Gateway, Eureka, RabbitMQ, Redis, k3s 환경. 6인 팀 개발.
 ---
 
 # OneTakeStudio MSA 개발 프로젝트 (최종 통합 가이드)
@@ -193,35 +193,77 @@ publish_sessions.egress_id VARCHAR(100)
 
 ---
 
-## 🔐 인증 시스템 (간편 회원가입)
+## 🔐 인증 시스템 (이메일 기반 회원가입)
 
 ### 필수 입력 정보
-- **아이디** (username): 영문, 숫자, 언더스코어 (4-20자)
+- **이메일** (email): 로그인 ID로 사용, 인증 필수
 - **비밀번호** (password): 8자 이상
 - **닉네임** (nickname): 2-20자
 
-### 제외된 기능
-- ❌ 이메일 입력 불필요
-- ❌ 이메일 인증 없음
-- ❌ 비밀번호 찾기/재설정 없음
-- ❌ OAuth 소셜 로그인 없음
+### 이메일 인증 흐름
+1. 회원가입 시 이메일 입력 → 인증 코드 발송
+2. 6자리 인증 코드 입력 → 이메일 인증 완료
+3. 인증 완료 후 로그인 가능
+
+### 포함된 기능
+- ✅ 이메일로 로그인 (username 제거)
+- ✅ 이메일 인증 (6자리 코드, 5분 유효)
+- ✅ 비밀번호 찾기/재설정 (이메일로 재설정 링크 발송)
+- ❌ OAuth 소셜 로그인 없음 (추후 추가 가능)
 
 ### User 테이블
 ```sql
 CREATE TABLE users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id CHAR(36) UNIQUE NOT NULL,        -- UUID
-    username VARCHAR(255) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,          -- bcrypt
+    user_id CHAR(36) UNIQUE NOT NULL,        -- UUID (외부 노출용)
+    email VARCHAR(255) UNIQUE NOT NULL,       -- 이메일 (로그인 ID)
+    password VARCHAR(255) NOT NULL,           -- bcrypt
     nickname VARCHAR(50) NOT NULL,
     profile_image_url VARCHAR(500),
+    email_verified BOOLEAN DEFAULT FALSE,     -- 이메일 인증 여부
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_email (email),
+    INDEX idx_email_verified (email_verified)
 );
 ```
 
-**상세 가이드**: `references/auth-simple-signup.md`
+### email_verifications 테이블 (이메일 인증 코드)
+```sql
+CREATE TABLE email_verifications (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL,
+    verification_code VARCHAR(6) NOT NULL,    -- 6자리 인증 코드
+    type VARCHAR(20) NOT NULL,                -- SIGNUP/PASSWORD_RESET
+    expires_at DATETIME NOT NULL,             -- 만료 시간 (5분)
+    verified BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_email (email),
+    INDEX idx_code (verification_code),
+    INDEX idx_expires (expires_at)
+);
+```
+
+### password_reset_tokens 테이블 (비밀번호 재설정)
+```sql
+CREATE TABLE password_reset_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    token CHAR(36) UNIQUE NOT NULL,           -- UUID 토큰
+    expires_at DATETIME NOT NULL,             -- 만료 시간 (1시간)
+    used BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_expires (expires_at)
+);
+```
+
+**상세 가이드**: `references/auth-email-signup.md`
 
 ---
 
@@ -480,7 +522,7 @@ public ResponseEntity<PublishSessionDto> startPublish(@RequestBody StartPublishR
 | 문서 | 내용 | 언제 보나 |
 |------|------|----------|
 | `database-erd.md` | **전체 ERD** (Core + Media) | 모든 개발 시작 전 |
-| `auth-simple-signup.md` | 회원가입/로그인 상세 | Auth 개발 시 |
+| `auth-email-signup.md` | **이메일 회원가입/인증** 상세 | Auth 개발 시 |
 | `livekit-guide.md` | **LiveKit 개념 + 연동** | WebRTC/녹화/송출 개발 시 |
 | `complete-code.md` | **복붙 가능한 완성 코드** | 빠른 구현 시 |
 
