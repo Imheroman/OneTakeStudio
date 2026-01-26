@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "stream_sessions")
@@ -17,6 +18,9 @@ public class StreamSession extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "session_id", unique = true, nullable = false, updatable = false, length = 36)
+    private String sessionId;
 
     @Column(name = "studio_id", nullable = false)
     private Long studioId;
@@ -61,5 +65,12 @@ public class StreamSession extends BaseTimeEntity {
     public void fail() {
         this.status = SessionStatus.FAILED;
         this.endedAt = LocalDateTime.now();
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (this.sessionId == null) {
+            this.sessionId = UUID.randomUUID().toString();
+        }
     }
 }

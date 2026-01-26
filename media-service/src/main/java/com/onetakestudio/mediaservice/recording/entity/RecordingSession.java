@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "recording_sessions")
@@ -18,6 +19,9 @@ public class RecordingSession extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "recording_id", unique = true, nullable = false, updatable = false, length = 36)
+    private String recordingId;
+
     @Column(name = "studio_id", nullable = false)
     private Long studioId;
 
@@ -27,8 +31,8 @@ public class RecordingSession extends BaseTimeEntity {
     @Column(name = "stream_session_id")
     private Long streamSessionId;
 
-    @Column(name = "livekit_egress_id")
-    private String livekitEgressId;
+    @Column(name = "egress_id")
+    private String egressId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
@@ -61,8 +65,8 @@ public class RecordingSession extends BaseTimeEntity {
     @Column(name = "error_message")
     private String errorMessage;
 
-    public void startRecording(String livekitEgressId) {
-        this.livekitEgressId = livekitEgressId;
+    public void startRecording(String egressId) {
+        this.egressId = egressId;
         this.status = RecordingStatus.RECORDING;
         this.startedAt = LocalDateTime.now();
     }
@@ -97,6 +101,13 @@ public class RecordingSession extends BaseTimeEntity {
         this.status = RecordingStatus.FAILED;
         if (this.endedAt == null) {
             this.endedAt = LocalDateTime.now();
+        }
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (this.recordingId == null) {
+            this.recordingId = UUID.randomUUID().toString();
         }
     }
 }

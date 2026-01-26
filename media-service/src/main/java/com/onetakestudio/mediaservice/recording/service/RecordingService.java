@@ -12,6 +12,7 @@ import com.onetakestudio.mediaservice.recording.repository.RecordingSessionRepos
 import com.onetakestudio.mediaservice.stream.entity.SessionStatus;
 import com.onetakestudio.mediaservice.stream.entity.StreamSession;
 import com.onetakestudio.mediaservice.stream.repository.StreamSessionRepository;
+import com.onetakestudio.mediaservice.stream.service.LiveKitEgressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -31,6 +32,7 @@ public class RecordingService {
     private final RecordingSessionRepository recordingSessionRepository;
     private final StreamSessionRepository streamSessionRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final LiveKitEgressService liveKitEgressService;
 
     @Transactional
     public RecordingResponse startRecording(Long userId, RecordingStartRequest request) {
@@ -55,13 +57,13 @@ public class RecordingService {
                 .fileName(fileName)
                 .build();
 
-        // LiveKit Egress를 통한 녹화 시작 (여기서는 시뮬레이션)
-        String egressId = startLiveKitEgress(streamSession.getRoomName(), fileName);
+        // LiveKit Egress를 통한 녹화 시작
+        String egressId = liveKitEgressService.startRoomCompositeRecording(streamSession.getRoomName(), fileName);
         recordingSession.startRecording(egressId);
 
         recordingSessionRepository.save(recordingSession);
 
-        log.info("Recording started: studioId={}, recordingId={}", request.getStudioId(), recordingSession.getId());
+        log.info("Recording started: studioId={}, recordingId={}", request.getStudioId(), recordingSession.getRecordingId());
 
         return RecordingResponse.from(recordingSession);
     }
@@ -73,12 +75,12 @@ public class RecordingService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_IN_PROGRESS));
 
         // LiveKit Egress 중지
-        stopLiveKitEgress(recordingSession.getLivekitEgressId());
+        liveKitEgressService.stopEgress(recordingSession.getEgressId());
 
         recordingSession.stopRecording();
         recordingSessionRepository.save(recordingSession);
 
-        log.info("Recording stopped: studioId={}, recordingId={}", studioId, recordingSession.getId());
+        log.info("Recording stopped: studioId={}, recordingId={}", studioId, recordingSession.getRecordingId());
 
         return RecordingResponse.from(recordingSession);
     }
@@ -89,13 +91,13 @@ public class RecordingService {
                 .findByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_IN_PROGRESS));
 
-        // LiveKit Egress 일시정지
-        pauseLiveKitEgress(recordingSession.getLivekitEgressId());
+        // LiveKit Egress 일시정지 (LiveKit SDK는 직접 pause를 지원하지 않으므로 상태만 관리)
+        log.info("Pausing recording: egressId={}", recordingSession.getEgressId());
 
         recordingSession.pauseRecording();
         recordingSessionRepository.save(recordingSession);
 
-        log.info("Recording paused: studioId={}, recordingId={}", studioId, recordingSession.getId());
+        log.info("Recording paused: studioId={}, recordingId={}", studioId, recordingSession.getRecordingId());
 
         return RecordingResponse.from(recordingSession);
     }
@@ -106,13 +108,13 @@ public class RecordingService {
                 .findByStudioIdAndStatus(studioId, RecordingStatus.PAUSED)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_PAUSED));
 
-        // LiveKit Egress 재개
-        resumeLiveKitEgress(recordingSession.getLivekitEgressId());
+        // LiveKit Egress 재개 (LiveKit SDK는 직접 resume을 지원하지 않으므로 상태만 관리)
+        log.info("Resuming recording: egressId={}", recordingSession.getEgressId());
 
         recordingSession.resumeRecording();
         recordingSessionRepository.save(recordingSession);
 
-        log.info("Recording resumed: studioId={}, recordingId={}", studioId, recordingSession.getId());
+        log.info("Recording resumed: studioId={}, recordingId={}", studioId, recordingSession.getRecordingId());
 
         return RecordingResponse.from(recordingSession);
     }
@@ -146,8 +148,8 @@ public class RecordingService {
         log.info("Recording completed and event published: recordingId={}", recordingId);
     }
 
-    public RecordingResponse getRecording(Long recordingId) {
-        RecordingSession recordingSession = recordingSessionRepository.findById(recordingId)
+    public RecordingResponse getRecordingByUuid(String recordingId) {
+        RecordingSession recordingSession = recordingSessionRepository.findByRecordingId(recordingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
         return RecordingResponse.from(recordingSession);
     }
@@ -169,30 +171,5 @@ public class RecordingService {
         String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String extension = format != null ? format : "mp4";
         return String.format("studio_%d_%s_%s.%s", studioId, timestamp, UUID.randomUUID().toString().substring(0, 8), extension);
-    }
-
-    private String startLiveKitEgress(String roomName, String fileName) {
-        // TODO: LiveKit Egress API 연동
-        // RoomCompositeEgressRequest를 사용하여 녹화 시작
-        log.info("Starting LiveKit Egress for room: {}, file: {}", roomName, fileName);
-        return "egress-" + UUID.randomUUID();
-    }
-
-    private void stopLiveKitEgress(String egressId) {
-        // TODO: LiveKit Egress API 연동
-        // StopEgress를 호출하여 녹화 중지
-        log.info("Stopping LiveKit Egress: {}", egressId);
-    }
-
-    private void pauseLiveKitEgress(String egressId) {
-        // TODO: LiveKit Egress API 연동
-        // PauseEgress를 호출하여 녹화 일시정지
-        log.info("Pausing LiveKit Egress: {}", egressId);
-    }
-
-    private void resumeLiveKitEgress(String egressId) {
-        // TODO: LiveKit Egress API 연동
-        // ResumeEgress를 호출하여 녹화 재개
-        log.info("Resuming LiveKit Egress: {}", egressId);
     }
 }

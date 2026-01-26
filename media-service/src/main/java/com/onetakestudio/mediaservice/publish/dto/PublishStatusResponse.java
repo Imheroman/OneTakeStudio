@@ -11,7 +11,7 @@ import java.util.List;
 @Builder
 public class PublishStatusResponse {
 
-    private Long publishId;
+    private String publishSessionId;
     private Long studioId;
     private PublishStatus status;
     private List<DestinationStatus> destinations;
@@ -27,7 +27,7 @@ public class PublishStatusResponse {
         private String rtmpUrl;
     }
 
-    public static PublishStatusResponse of(Long publishId, Long studioId, PublishStatus status,
+    public static PublishStatusResponse of(String publishSessionId, Long studioId, PublishStatus status,
                                             List<DestinationStatus> destinations,
                                             LocalDateTime startedAt) {
         Long durationSeconds = null;
@@ -36,7 +36,7 @@ public class PublishStatusResponse {
         }
 
         return PublishStatusResponse.builder()
-                .publishId(publishId)
+                .publishSessionId(publishSessionId)
                 .studioId(studioId)
                 .status(status)
                 .destinations(destinations)

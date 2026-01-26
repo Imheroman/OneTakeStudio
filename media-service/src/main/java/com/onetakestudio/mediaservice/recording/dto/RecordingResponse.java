@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 public class RecordingResponse {
 
-    private Long id;
+    private String recordingId;
     private Long studioId;
     private Long userId;
     private RecordingStatus status;
@@ -26,7 +26,7 @@ public class RecordingResponse {
 
     public static RecordingResponse from(RecordingSession session) {
         return RecordingResponse.builder()
-                .id(session.getId())
+                .recordingId(session.getRecordingId())
                 .studioId(session.getStudioId())
                 .userId(session.getUserId())
                 .status(session.getStatus())

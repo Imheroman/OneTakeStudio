@@ -49,8 +49,8 @@ public class RecordingController {
 
     @GetMapping("/{recordingId}")
     public ResponseEntity<ApiResponse<RecordingResponse>> getRecording(
-            @PathVariable Long recordingId) {
-        RecordingResponse response = recordingService.getRecording(recordingId);
+            @PathVariable String recordingId) {
+        RecordingResponse response = recordingService.getRecordingByUuid(recordingId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
