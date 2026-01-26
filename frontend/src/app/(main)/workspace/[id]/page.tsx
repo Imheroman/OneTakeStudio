@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, use } from "react"; // use 훅 추가
 import { useRouter } from "next/navigation";
 import { Radio, Video, LogOut } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -26,30 +26,42 @@ const recentStudios = [
   { id: 5, title: "Tutorial Recording Space", date: "Jan 8, 2026" },
 ];
 
-export default function WorkspacePage({ params }: { params: { id: string } }) {
-  const { id } = params; // URL 파라미터에서 id 추출
+// 1. Next.js 15 규격에 맞는 타입 정의
+interface WorkspacePageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function WorkspacePage({ params }: WorkspacePageProps) {
+  // 2. 'use' 훅을 사용하여 비동기 params를 언래핑합니다.
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
+  
   const { user, accessToken, isLoggedIn, logout, hasHydrated } = useAuthStore();
   const router = useRouter();
+  
+  // URL 인코딩 대응
   const userId = decodeURIComponent(id);
 
-  // 1. 보안 가드: 토큰이나 로그인 정보가 없으면 튕겨냄
+  // 3. 보안 가드: 리다이렉트 로직 최적화
   useEffect(() => {
-    if (!hasHydrated) return;
-    if (!isLoggedIn || !accessToken) {
+    if (hasHydrated && (!isLoggedIn || !accessToken)) {
       router.replace("/login");
     }
   }, [hasHydrated, isLoggedIn, accessToken, router]);
 
+  // 하이드레이션 전에는 아무것도 렌더링하지 않음 (Hydration Mismatch 방지)
   if (!hasHydrated) return null;
+  // 로그인 체크 중일 때 깜빡임 방지
   if (!isLoggedIn) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="space-y-8 max-w-7xl mx-auto px-6 py-8">
-        {/* 상단 환영 메시지 */}
+        {/* 상단 헤더 섹션 */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              {/* 유저 정보 우선 노출, 없을 시 id 노출 */}
               <span className="text-indigo-600">{user?.name ?? userId}</span>님,
               반가워요!
             </h1>
@@ -71,90 +83,77 @@ export default function WorkspacePage({ params }: { params: { id: string } }) {
           </Button>
         </div>
 
-        {/* 액션 카드 */}
+        {/* 액션 카드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 라이브 스트리밍 카드 */}
-          <Card className="hover:shadow-lg transition-shadow border-gray-200">
-            <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-6">
-              <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center">
-                <Radio className="h-8 w-8 text-gray-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold mb-2">Start Live Streaming</h2>
-                <p className="text-gray-500 text-sm max-w-xs mx-auto">
-                  Go live instantly with our professional streaming tools
-                </p>
-              </div>
-              <Link href="/studio">
-                <Button className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-auto text-base">
-                  Start Streaming
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* 녹화 카드 */}
-          <Card className="hover:shadow-lg transition-shadow border-gray-200">
-            <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-6">
-              <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center">
-                <Video className="h-8 w-8 text-gray-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold mb-2">Start Recording</h2>
-                <p className="text-gray-500 text-sm max-w-xs mx-auto">
-                  Record high-quality content for later publishing
-                </p>
-              </div>
-              <Link href="/studio">
-                <Button className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-auto text-base">
-                  Start Recording
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+          <ActionCard 
+            title="Start Live Streaming" 
+            desc="Go live instantly with our professional streaming tools" 
+            icon={<Radio className="h-8 w-8 text-gray-600" />}
+            href="/studio"
+          />
+          <ActionCard 
+            title="Start Recording" 
+            desc="Record high-quality content for later publishing" 
+            icon={<Video className="h-8 w-8 text-gray-600" />}
+            href="/studio"
+          />
         </div>
 
-        {/* 최근 스튜디오 목록 */}
+        {/* 최근 스튜디오 목록 테이블 */}
         <Card className="border-gray-200">
           <CardContent className="p-6">
             <h3 className="text-xl font-bold mb-6">Recent Studios</h3>
-
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-b border-gray-100">
-                  <TableHead className="w-[50%] text-gray-400 font-medium">
-                    Title
-                  </TableHead>
-                  <TableHead className="text-gray-400 font-medium">
-                    Last Modified
-                  </TableHead>
-                  <TableHead className="text-right text-gray-400 font-medium" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentStudios.map((studio) => (
-                  <TableRow
-                    key={studio.id}
-                    className="border-b border-gray-50 hover:bg-gray-50"
-                  >
-                    <TableCell className="font-medium text-gray-700 py-4">
-                      {studio.title}
-                    </TableCell>
-                    <TableCell className="text-gray-500">{studio.date}</TableCell>
-                    <TableCell className="text-right">
-                      <Link href="/studio">
-                        <Button className="bg-blue-600 hover:bg-blue-700 h-9 px-4 text-sm font-normal rounded-md">
-                          Enter Studio
-                        </Button>
-                      </Link>
-                    </TableCell>
+            <div className="rounded-md border border-gray-100">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent bg-gray-50/50">
+                    <TableHead className="w-[50%] text-gray-600 font-semibold">Title</TableHead>
+                    <TableHead className="text-gray-600 font-semibold">Last Modified</TableHead>
+                    <TableHead className="text-right" />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentStudios.map((studio) => (
+                    <TableRow key={studio.id} className="hover:bg-gray-50/80 transition-colors">
+                      <TableCell className="font-medium text-gray-700 py-4">{studio.title}</TableCell>
+                      <TableCell className="text-gray-500">{studio.date}</TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/studio/${studio.id}`}>
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                            Enter Studio
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
     </div>
+  );
+}
+
+// 가독성을 위한 컴포넌트 분리 (Senior's Practice)
+function ActionCard({ title, desc, icon, href }: { title: string, desc: string, icon: React.ReactNode, href: string }) {
+  return (
+    <Card className="hover:shadow-lg transition-all border-gray-200 group">
+      <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-6">
+        <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-indigo-50 transition-colors">
+          {icon}
+        </div>
+        <div>
+          <h2 className="text-xl font-bold mb-2">{title}</h2>
+          <p className="text-gray-500 text-sm max-w-xs mx-auto">{desc}</p>
+        </div>
+        <Link href={href}>
+          <Button className="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 h-auto text-base">
+            Start
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
   );
 }
