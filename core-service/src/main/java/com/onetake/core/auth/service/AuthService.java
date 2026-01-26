@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.regex.Pattern;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -17,34 +19,54 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final EmailVerificationService emailVerificationService;
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+            "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"
+    );
 
     @Transactional
     public void register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw AuthException.duplicateUsername();
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw AuthException.duplicateEmail();
+        }
+
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw AuthException.duplicateNickname();
+        }
+
+        if (!emailVerificationService.isEmailVerified(request.getEmail())) {
+            throw AuthException.verificationNotCompleted();
         }
 
         User user = User.builder()
-                .username(request.getUsername())
+                .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
+                .emailVerified(true)
                 .build();
 
         userRepository.save(user);
+
+        emailVerificationService.deleteVerification(request.getEmail());
     }
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(AuthException::invalidCredentials);
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw AuthException.invalidCredentials();
         }
 
+        if (!user.isEmailVerified()) {
+            throw AuthException.emailNotVerified();
+        }
+
         String accessToken = jwtUtil.generateAccessToken(
                 user.getUserId(),
-                user.getUsername(),
+                user.getEmail(),
                 user.getNickname()
         );
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
@@ -54,7 +76,7 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .user(LoginResponse.UserDto.builder()
                         .userId(user.getUserId())
-                        .username(user.getUsername())
+                        .email(user.getEmail())
                         .nickname(user.getNickname())
                         .profileImageUrl(user.getProfileImageUrl())
                         .build())
@@ -79,7 +101,7 @@ public class AuthService {
 
         String newAccessToken = jwtUtil.generateAccessToken(
                 user.getUserId(),
-                user.getUsername(),
+                user.getEmail(),
                 user.getNickname()
         );
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUserId());
@@ -91,14 +113,13 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public CheckUsernameResponse checkUsernameAvailable(String username) {
-        // 유효성 검증: 4-20자, 영문/숫자/언더스코어만 허용
-        if (username == null || !username.matches("^[a-zA-Z0-9_]{4,20}$")) {
-            return CheckUsernameResponse.invalidFormat();
+    public CheckEmailResponse checkEmailAvailable(String email) {
+        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
+            return CheckEmailResponse.invalidFormat();
         }
-        if (userRepository.existsByUsername(username)) {
-            return CheckUsernameResponse.duplicated();
+        if (userRepository.existsByEmail(email)) {
+            return CheckEmailResponse.duplicated();
         }
-        return CheckUsernameResponse.available();
+        return CheckEmailResponse.available();
     }
 }

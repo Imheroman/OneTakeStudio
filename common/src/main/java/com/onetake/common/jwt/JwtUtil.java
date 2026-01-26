@@ -19,10 +19,10 @@ public class JwtUtil {
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
-    public String generateAccessToken(Long userId, String username, String nickname) {
+    public String generateAccessToken(Long userId, String email, String nickname) {
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim("username", username)
+                .claim("email", email)
                 .claim("nickname", nickname)
                 .claim("type", "access")
                 .issuedAt(new Date())
@@ -62,8 +62,8 @@ public class JwtUtil {
         return Long.parseLong(parseToken(token).getSubject());
     }
 
-    public String getUsername(String token) {
-        return parseToken(token).get("username", String.class);
+    public String getEmail(String token) {
+        return parseToken(token).get("email", String.class);
     }
 
     public String getNickname(String token) {

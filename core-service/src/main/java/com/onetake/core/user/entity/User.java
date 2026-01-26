@@ -21,8 +21,11 @@ public class User {
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "username", unique = true, nullable = false, length = 20)
-    private String username;
+    @Column(name = "email", unique = true, nullable = false, length = 100)
+    private String email;
+
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
 
     @Column(name = "password", nullable = false)
     private String password;

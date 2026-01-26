@@ -3,6 +3,8 @@ package com.onetake.core.auth.controller;
 import com.onetake.common.dto.ApiResponse;
 import com.onetake.core.auth.dto.*;
 import com.onetake.core.auth.service.AuthService;
+import com.onetake.core.auth.service.EmailVerificationService;
+import com.onetake.core.auth.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,22 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final EmailVerificationService emailVerificationService;
+    private final PasswordResetService passwordResetService;
+
+    @PostMapping("/send-verification")
+    public ResponseEntity<ApiResponse<Void>> sendVerification(
+            @RequestBody @Valid SendVerificationRequest request) {
+        emailVerificationService.sendVerificationCode(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("인증 코드가 발송되었습니다."));
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(
+            @RequestBody @Valid VerifyEmailRequest request) {
+        emailVerificationService.verifyCode(request.getEmail(), request.getCode());
+        return ResponseEntity.ok(ApiResponse.success("이메일 인증이 완료되었습니다."));
+    }
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(@RequestBody @Valid RegisterRequest request) {
@@ -34,15 +52,29 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("토큰 갱신 성공", response));
     }
 
-    @GetMapping("/check-username")
-    public ResponseEntity<ApiResponse<CheckUsernameResponse>> checkUsername(@RequestParam String username) {
-        CheckUsernameResponse response = authService.checkUsernameAvailable(username);
+    @GetMapping("/check-email")
+    public ResponseEntity<ApiResponse<CheckEmailResponse>> checkEmail(@RequestParam String email) {
+        CheckEmailResponse response = authService.checkEmailAvailable(email);
         String message = switch (response.getReason()) {
-            case "AVAILABLE" -> "사용 가능한 아이디입니다.";
-            case "INVALID_FORMAT" -> "아이디는 4-20자의 영문, 숫자, 언더스코어만 가능합니다.";
-            case "DUPLICATED" -> "이미 사용 중인 아이디입니다.";
+            case "AVAILABLE" -> "사용 가능한 이메일입니다.";
+            case "INVALID_FORMAT" -> "올바른 이메일 형식이 아닙니다.";
+            case "DUPLICATED" -> "이미 사용 중인 이메일입니다.";
             default -> "알 수 없는 오류입니다.";
         };
         return ResponseEntity.ok(ApiResponse.success(message, response));
+    }
+
+    @PostMapping("/password-reset")
+    public ResponseEntity<ApiResponse<Void>> requestPasswordReset(
+            @RequestBody @Valid PasswordResetRequest request) {
+        passwordResetService.requestPasswordReset(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success("비밀번호 재설정 이메일이 발송되었습니다."));
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(
+            @RequestBody @Valid PasswordResetConfirmRequest request) {
+        passwordResetService.confirmPasswordReset(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success("비밀번호가 성공적으로 변경되었습니다."));
     }
 }

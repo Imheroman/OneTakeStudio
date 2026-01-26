@@ -21,11 +21,7 @@ services:
       timeout: 5s
       retries: 5
 
-<<<<<<< Updated upstream
   # MySQL (Core Service용)
-=======
-  # MySQL (Core Service용 - 향후 사용)
->>>>>>> Stashed changes
   mysql:
     image: mysql:8.0
     container_name: onetakestudio-mysql
@@ -105,8 +101,4 @@ volumes:
 
 networks:
   onetakestudio-network:
-<<<<<<< Updated upstream
     driver: bridge
-=======
-    driver: bridge
->>>>>>> Stashed changes

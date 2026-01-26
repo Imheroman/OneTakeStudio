@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 public class UserProfileResponse {
 
     private Long userId;
-    private String username;
+    private String email;
     private String nickname;
     private String profileImageUrl;
     private LocalDateTime createdAt;
@@ -19,7 +19,7 @@ public class UserProfileResponse {
     public static UserProfileResponse from(User user) {
         return UserProfileResponse.builder()
                 .userId(user.getUserId())
-                .username(user.getUsername())
+                .email(user.getEmail())
                 .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
                 .createdAt(user.getCreatedAt())

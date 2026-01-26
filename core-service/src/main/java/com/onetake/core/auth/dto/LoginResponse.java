@@ -15,7 +15,7 @@ public class LoginResponse {
     @Builder
     public static class UserDto {
         private Long userId;
-        private String username;
+        private String email;
         private String nickname;
         private String profileImageUrl;
     }
