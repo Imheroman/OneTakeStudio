@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
 import { useAuthStore } from "@/stores/useAuthStore";
-import type { AuthResponse, SignupRequest } from "@/entities/user/model";
+import { AuthResponseSchema, type SignupRequest } from "@/entities/user/model";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -86,8 +86,9 @@ export function SignupForm() {
         nickname: values.nickname,
       };
 
-      const response = await apiClient.post<AuthResponse>(
+      const response = await apiClient.post(
         "/api/v1/auth/signup",
+        AuthResponseSchema,
         signupData,
       );
 

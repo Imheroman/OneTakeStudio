@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import { z, ZodTypeAny } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
@@ -13,22 +14,170 @@ const axiosInstance = axios.create({
   },
 });
 
-// 타입 안전한 apiClient 래퍼
+/**
+ * 타입 안전한 apiClient 래퍼
+ * zod 스키마를 사용하여 런타임 검증을 수행합니다.
+ */
 export const apiClient = {
-  get: <T = any>(url: string, config?: any): Promise<T> => {
-    return axiosInstance.get<T>(url, config).then((res) => res.data);
+  /**
+   * GET 요청 (zod 스키마로 검증)
+   * @param url API 엔드포인트
+   * @param schema zod 스키마 (검증용)
+   * @param config Axios 설정
+   * @returns 검증된 데이터
+   */
+  get: <T extends ZodTypeAny>(
+    url: string,
+    schema: T,
+    config?: any,
+  ): Promise<z.infer<T>> => {
+    return axiosInstance
+      .get(url, config)
+      .then((res) => res.data)
+      .then((data) => {
+        try {
+          return schema.parse(data);
+        } catch (error) {
+          console.error(`[API Validation Error] GET ${url}:`, error);
+          if (error instanceof z.ZodError) {
+            const zodError = error as z.ZodError;
+            throw new Error(
+              `API 응답 검증 실패: ${zodError.issues.map((issue) => issue.message).join(", ")}`,
+            );
+          }
+          throw new Error("API 응답 검증 실패: 알 수 없는 오류");
+        }
+      });
   },
-  post: <T = any>(url: string, data?: any, config?: any): Promise<T> => {
-    return axiosInstance.post<T>(url, data, config).then((res) => res.data);
+
+  /**
+   * POST 요청 (zod 스키마로 검증)
+   * @param url API 엔드포인트
+   * @param schema zod 스키마 (검증용)
+   * @param data 요청 데이터
+   * @param config Axios 설정
+   * @returns 검증된 데이터
+   */
+  post: <T extends ZodTypeAny>(
+    url: string,
+    schema: T,
+    data?: any,
+    config?: any,
+  ): Promise<z.infer<T>> => {
+    return axiosInstance
+      .post(url, data, config)
+      .then((res) => res.data)
+      .then((responseData) => {
+        try {
+          return schema.parse(responseData);
+        } catch (error) {
+          console.error(`[API Validation Error] POST ${url}:`, error);
+          if (error instanceof z.ZodError) {
+            const zodError = error as z.ZodError;
+            throw new Error(
+              `API 응답 검증 실패: ${zodError.issues.map((issue) => issue.message).join(", ")}`,
+            );
+          }
+          throw new Error("API 응답 검증 실패: 알 수 없는 오류");
+        }
+      });
   },
-  put: <T = any>(url: string, data?: any, config?: any): Promise<T> => {
-    return axiosInstance.put<T>(url, data, config).then((res) => res.data);
+
+  /**
+   * PUT 요청 (zod 스키마로 검증)
+   * @param url API 엔드포인트
+   * @param schema zod 스키마 (검증용)
+   * @param data 요청 데이터
+   * @param config Axios 설정
+   * @returns 검증된 데이터
+   */
+  put: <T extends ZodTypeAny>(
+    url: string,
+    schema: T,
+    data?: any,
+    config?: any,
+  ): Promise<z.infer<T>> => {
+    return axiosInstance
+      .put(url, data, config)
+      .then((res) => res.data)
+      .then((responseData) => {
+        try {
+          return schema.parse(responseData);
+        } catch (error) {
+          console.error(`[API Validation Error] PUT ${url}:`, error);
+          if (error instanceof z.ZodError) {
+            const zodError = error as z.ZodError;
+            throw new Error(
+              `API 응답 검증 실패: ${zodError.issues.map((issue) => issue.message).join(", ")}`,
+            );
+          }
+          throw new Error("API 응답 검증 실패: 알 수 없는 오류");
+        }
+      });
   },
-  delete: <T = any>(url: string, config?: any): Promise<T> => {
-    return axiosInstance.delete<T>(url, config).then((res) => res.data);
+
+  /**
+   * DELETE 요청 (zod 스키마로 검증)
+   * @param url API 엔드포인트
+   * @param schema zod 스키마 (검증용)
+   * @param config Axios 설정
+   * @returns 검증된 데이터
+   */
+  delete: <T extends ZodTypeAny>(
+    url: string,
+    schema: T,
+    config?: any,
+  ): Promise<z.infer<T>> => {
+    return axiosInstance
+      .delete(url, config)
+      .then((res) => res.data)
+      .then((data) => {
+        try {
+          return schema.parse(data);
+        } catch (error) {
+          console.error(`[API Validation Error] DELETE ${url}:`, error);
+          if (error instanceof z.ZodError) {
+            const zodError = error as z.ZodError;
+            throw new Error(
+              `API 응답 검증 실패: ${zodError.issues.map((issue) => issue.message).join(", ")}`,
+            );
+          }
+          throw new Error("API 응답 검증 실패: 알 수 없는 오류");
+        }
+      });
   },
-  patch: <T = any>(url: string, data?: any, config?: any): Promise<T> => {
-    return axiosInstance.patch<T>(url, data, config).then((res) => res.data);
+
+  /**
+   * PATCH 요청 (zod 스키마로 검증)
+   * @param url API 엔드포인트
+   * @param schema zod 스키마 (검증용)
+   * @param data 요청 데이터
+   * @param config Axios 설정
+   * @returns 검증된 데이터
+   */
+  patch: <T extends ZodTypeAny>(
+    url: string,
+    schema: T,
+    data?: any,
+    config?: any,
+  ): Promise<z.infer<T>> => {
+    return axiosInstance
+      .patch(url, data, config)
+      .then((res) => res.data)
+      .then((responseData) => {
+        try {
+          return schema.parse(responseData);
+        } catch (error) {
+          console.error(`[API Validation Error] PATCH ${url}:`, error);
+          if (error instanceof z.ZodError) {
+            const zodError = error as z.ZodError;
+            throw new Error(
+              `API 응답 검증 실패: ${zodError.issues.map((issue) => issue.message).join(", ")}`,
+            );
+          }
+          throw new Error("API 응답 검증 실패: 알 수 없는 오류");
+        }
+      });
   },
 };
 

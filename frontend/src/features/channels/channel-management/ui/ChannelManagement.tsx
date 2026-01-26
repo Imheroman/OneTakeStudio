@@ -7,10 +7,12 @@ import { Button } from "@/shared/ui/button";
 import { ChannelCard } from "@/widgets/channels/channel-card";
 import { AddChannelDialog } from "@/widgets/channels/add-channel-dialog";
 import { apiClient } from "@/shared/api/client";
-import type {
-  Channel,
-  ChannelListResponse,
-  PlatformType,
+import {
+  ChannelListResponseSchema,
+  ConnectChannelResponseSchema,
+  DeleteResponseSchema,
+  type Channel,
+  type PlatformType,
 } from "@/entities/channel/model";
 
 export function ChannelManagement() {
@@ -31,8 +33,9 @@ export function ChannelManagement() {
   const fetchChannels = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get<ChannelListResponse>(
+      const response = await apiClient.get(
         "/api/v1/channels",
+        ChannelListResponseSchema,
       );
       setChannels(response.channels);
     } catch (error) {
@@ -46,8 +49,9 @@ export function ChannelManagement() {
     try {
       // 백엔드에서 OAuth URL 생성 요청
       // 백엔드는 Client Secret을 사용하여 안전하게 OAuth URL 생성
-      const response = await apiClient.post<{ authUrl: string }>(
+      const response = await apiClient.post(
         "/api/v1/channels/connect",
+        ConnectChannelResponseSchema,
         { platform },
       );
 
@@ -68,7 +72,10 @@ export function ChannelManagement() {
     }
 
     try {
-      await apiClient.delete(`/api/v1/channels/${id}`);
+      await apiClient.delete(
+        `/api/v1/channels/${id}`,
+        DeleteResponseSchema,
+      );
       // 목록 새로고침
       fetchChannels();
     } catch (error) {

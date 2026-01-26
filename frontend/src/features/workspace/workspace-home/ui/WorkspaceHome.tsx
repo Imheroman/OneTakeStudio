@@ -16,12 +16,8 @@ import {
 import { ActionCard, PageHeader } from "@/shared/common";
 import { StudioCreation } from "@/features/studio/studio-creation";
 import { apiClient } from "@/shared/api/client";
-
-interface Studio {
-  id: number;
-  title: string;
-  date: string;
-}
+import type { RecentStudio } from "@/entities/studio/model";
+import { RecentStudioListResponseSchema } from "@/entities/studio/model";
 
 interface WorkspaceHomeProps {
   userId: string;
@@ -29,7 +25,7 @@ interface WorkspaceHomeProps {
 }
 
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
-  const [recentStudios, setRecentStudios] = useState<Studio[]>([]);
+  const [recentStudios, setRecentStudios] = useState<RecentStudio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [createDialogType, setCreateDialogType] = useState<"live" | "recording">("live");
@@ -37,8 +33,9 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
   useEffect(() => {
     const fetchRecentStudios = async () => {
       try {
-        const response = await apiClient.get<{ studios: Studio[] }>(
+        const response = await apiClient.get(
           `/api/v1/workspace/${userId}/studios/recent`,
+          RecentStudioListResponseSchema,
         );
         setRecentStudios(response.studios);
       } catch (error) {

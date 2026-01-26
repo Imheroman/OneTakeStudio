@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreateStudioDialog } from "@/widgets/studio/create-studio-dialog";
 import { apiClient } from "@/shared/api/client";
-import type {
-  CreateStudioRequest,
-  CreateStudioResponse,
+import {
+  CreateStudioRequestSchema,
+  CreateStudioResponseSchema,
+  type CreateStudioRequest,
 } from "@/entities/studio/model";
 
 interface StudioCreationProps {
@@ -41,8 +42,9 @@ export function StudioCreation({
         platforms: data.platforms,
       };
 
-      const response = await apiClient.post<CreateStudioResponse>(
+      const response = await apiClient.post(
         "/api/v1/studios",
+        CreateStudioResponseSchema,
         request,
       );
 

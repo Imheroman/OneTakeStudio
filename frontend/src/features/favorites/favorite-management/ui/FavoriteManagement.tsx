@@ -6,10 +6,12 @@ import { Button } from "@/shared/ui/button";
 import { FavoriteTable } from "@/widgets/favorites/favorite-table";
 import { InviteMemberDialog } from "@/widgets/favorites/invite-member-dialog";
 import { apiClient } from "@/shared/api/client";
-import type {
-  Favorite,
-  FavoriteListResponse,
-  UserSearchResult,
+import {
+  FavoriteListResponseSchema,
+  AddFavoriteResponseSchema,
+  DeleteResponseSchema,
+  type Favorite,
+  type UserSearchResult,
 } from "@/entities/favorite/model";
 
 export function FavoriteManagement() {
@@ -25,8 +27,9 @@ export function FavoriteManagement() {
   const fetchFavorites = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get<FavoriteListResponse>(
+      const response = await apiClient.get(
         "/api/v1/favorites",
+        FavoriteListResponseSchema,
       );
       setFavorites(response.favorites);
       setMaxCount(response.maxCount);
@@ -39,9 +42,13 @@ export function FavoriteManagement() {
 
   const handleInvite = async (user: UserSearchResult) => {
     try {
-      await apiClient.post("/api/v1/favorites", {
-        userId: user.id,
-      });
+      await apiClient.post(
+        "/api/v1/favorites",
+        AddFavoriteResponseSchema,
+        {
+          userId: user.id,
+        },
+      );
       // 목록 새로고침
       fetchFavorites();
     } catch (error: any) {
@@ -58,7 +65,10 @@ export function FavoriteManagement() {
     }
 
     try {
-      await apiClient.delete(`/api/v1/favorites/${id}`);
+      await apiClient.delete(
+        `/api/v1/favorites/${id}`,
+        DeleteResponseSchema,
+      );
       // 목록 새로고침
       fetchFavorites();
     } catch (error) {

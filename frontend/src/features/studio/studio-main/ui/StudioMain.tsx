@@ -11,11 +11,12 @@ import { SourcesPanel } from "@/widgets/studio/sources-panel";
 import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
 import { apiClient } from "@/shared/api/client";
-import type {
-  StudioDetail,
-  LayoutType,
-  Scene,
-  Source,
+import {
+  StudioDetailSchema,
+  type StudioDetail,
+  type LayoutType,
+  type Scene,
+  type Source,
 } from "@/entities/studio/model";
 
 interface StudioMainProps {
@@ -40,8 +41,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const fetchStudio = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get<StudioDetail>(
+      const response = await apiClient.get(
         `/api/v1/studios/${studioId}`,
+        StudioDetailSchema,
       );
       setStudio(response);
       setCurrentLayout(response.currentLayout);

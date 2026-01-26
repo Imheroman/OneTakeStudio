@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import { VideoCard } from "@/widgets/library/video-card";
 import { VideoFilter, type FilterType } from "@/widgets/library/video-filter";
 import { apiClient } from "@/shared/api/client";
-import type { Video, VideoListResponse } from "@/entities/video/model";
+import {
+  VideoListResponseSchema,
+  type Video,
+} from "@/entities/video/model";
 
 export function VideoLibrary() {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -19,7 +22,7 @@ export function VideoLibrary() {
           filter !== "all"
             ? `/api/v1/library/videos?type=${filter}`
             : "/api/v1/library/videos";
-        const response = await apiClient.get<VideoListResponse>(url);
+        const response = await apiClient.get(url, VideoListResponseSchema);
         setVideos(response.videos);
       } catch (error) {
         console.error("비디오 목록 조회 실패:", error);

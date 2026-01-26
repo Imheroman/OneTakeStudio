@@ -8,7 +8,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
 import { useState } from "react";
-import type { AuthResponse } from "@/entities/user/model";
+import { AuthResponseSchema } from "@/entities/user/model";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -54,8 +54,9 @@ export function LoginForm() {
       setErrorMsg("");
       setIsSubmitting(true);
 
-      const response = await apiClient.post<AuthResponse>(
+      const response = await apiClient.post(
         "/api/v1/auth/login",
+        AuthResponseSchema,
         values,
       );
 

@@ -10,6 +10,7 @@ import { Button } from "@/shared/ui/button";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { IconButton } from "@/shared/common";
 import { apiClient } from "@/shared/api/client";
+import { NotificationListResponseSchema } from "@/entities/notification/model";
 
 export function WorkspaceTopNav() {
   const router = useRouter();
@@ -21,8 +22,9 @@ export function WorkspaceTopNav() {
     const fetchNotificationCount = async () => {
       if (!isLoggedIn) return;
       try {
-        const response = await apiClient.get<{ notifications: unknown[] }>(
+        const response = await apiClient.get(
           "/api/v1/notifications",
+          NotificationListResponseSchema,
         );
         setNotificationCount(response.notifications.length);
       } catch (error) {

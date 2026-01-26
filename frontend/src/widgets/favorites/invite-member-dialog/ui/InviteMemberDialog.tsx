@@ -64,8 +64,9 @@ export function InviteMemberDialog({
     const performSearch = async () => {
       try {
         setIsSearching(true);
-        const response = await apiClient.get<UserSearchResponse>(
+        const response = await apiClient.get(
           `/api/v1/favorites/search?q=${encodeURIComponent(debouncedSearchQuery)}`,
+          UserSearchResponseSchema,
         );
         // 이미 등록된 사용자 제외
         const filtered = response.users.filter(
@@ -91,8 +92,9 @@ export function InviteMemberDialog({
 
     try {
       setIsSearching(true);
-      const response = await apiClient.get<UserSearchResponse>(
+      const response = await apiClient.get(
         `/api/v1/favorites/search?q=${encodeURIComponent(searchQuery)}`,
+        UserSearchResponseSchema,
       );
       // 이미 등록된 사용자 제외
       const filtered = response.users.filter(

@@ -3,13 +3,9 @@
 import { X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import type { Notification } from "@/entities/notification/model";
 
-export interface Notification {
-  id: string;
-  type: "friend_request" | "studio_invite" | "ai_shorts" | "file_deletion";
-  title: string;
-  message: string;
-  time: string;
+export interface NotificationWithActions extends Notification {
   actions?: {
     accept?: () => void;
     decline?: () => void;
@@ -17,7 +13,7 @@ export interface Notification {
 }
 
 interface NotificationPanelProps {
-  notifications: Notification[];
+  notifications: NotificationWithActions[];
   onClose: () => void;
   onAccept?: (id: string) => void;
   onDecline?: (id: string) => void;

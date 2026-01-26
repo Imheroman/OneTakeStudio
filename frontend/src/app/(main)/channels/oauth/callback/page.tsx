@@ -42,11 +42,10 @@ export default function OAuthCallbackPage() {
 
         // 백엔드에서 OAuth 콜백 처리
         // 백엔드는 인증 코드를 토큰으로 교환하고 채널 정보를 저장
-        const response = await apiClient.get<{
-          channel: any;
-          message: string;
-          redirectUrl?: string;
-        }>(`/api/v1/channels/oauth/callback?code=${code}&state=${state}`);
+        const response = await apiClient.get(
+          `/api/v1/channels/oauth/callback?code=${code}&state=${state}`,
+          OAuthCallbackResponseSchema,
+        );
 
         setStatus("success");
         setMessage(response.message || "채널이 성공적으로 연결되었습니다.");

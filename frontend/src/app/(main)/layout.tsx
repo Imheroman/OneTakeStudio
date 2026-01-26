@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/widgets/workspace/sidebar";
 import { WorkspaceTopNav } from "@/widgets/workspace/top-nav";
-import { NotificationPanel, type Notification } from "@/widgets/workspace/notification-panel";
+import { NotificationPanel } from "@/widgets/workspace/notification-panel";
+import type { NotificationWithActions } from "@/widgets/workspace/notification-panel";
+import { NotificationListResponseSchema } from "@/entities/notification/model";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { apiClient } from "@/shared/api/client";
@@ -18,7 +20,7 @@ export default function MainLayout({
   const pathname = usePathname();
   const { isLoggedIn } = useAuthStore();
   const { isOpen: showNotifications, close: closeNotifications } = useNotificationStore();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationWithActions[]>([]);
 
   // 스튜디오 페이지인지 확인
   const isStudioPage = pathname?.startsWith("/studio");
@@ -27,8 +29,9 @@ export default function MainLayout({
     const fetchNotifications = async () => {
       if (!isLoggedIn) return;
       try {
-        const response = await apiClient.get<{ notifications: Notification[] }>(
+        const response = await apiClient.get(
           "/api/v1/notifications",
+          NotificationListResponseSchema,
         );
         setNotifications(
           response.notifications.map((notif) => ({

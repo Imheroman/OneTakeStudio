@@ -23,22 +23,12 @@ import { Badge } from "@/shared/ui/badge";
 import { HardDrive, MoreHorizontal, PlayCircle } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { apiClient } from "@/shared/api/client";
-
-interface StorageData {
-  used: number;
-  total: number;
-  videoUsage: number;
-  assetUsage: number;
-}
-
-interface StorageFile {
-  id: number;
-  title: string;
-  date: string;
-  size: string;
-  type: string;
-  status: string;
-}
+import {
+  StorageDataSchema,
+  StorageFilesResponseSchema,
+  type StorageData,
+  type StorageFile,
+} from "@/entities/storage/model";
 
 export default function StoragePage() {
   const [storageData, setStorageData] = useState<StorageData>({
@@ -54,8 +44,8 @@ export default function StoragePage() {
     const fetchStorageData = async () => {
       try {
         const [storageResponse, filesResponse] = await Promise.all([
-          apiClient.get<StorageData>("/api/v1/storage"),
-          apiClient.get<{ files: StorageFile[] }>("/api/v1/storage/files"),
+          apiClient.get("/api/v1/storage", StorageDataSchema),
+          apiClient.get("/api/v1/storage/files", StorageFilesResponseSchema),
         ]);
 
         setStorageData(storageResponse);
