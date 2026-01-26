@@ -1,16 +1,37 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useNotificationStore } from "@/stores/useNotificationStore";
 import { Button } from "@/shared/ui/button";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { IconButton } from "@/shared/common";
+import { apiClient } from "@/shared/api/client";
 
-export function WorkspaceTopNav({ notificationCount = 3 }: { notificationCount?: number }) {
+export function WorkspaceTopNav() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, isLoggedIn } = useAuthStore();
+  const openNotifications = useNotificationStore((state) => state.open);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      if (!isLoggedIn) return;
+      try {
+        const response = await apiClient.get<{ notifications: unknown[] }>(
+          "/api/v1/notifications",
+        );
+        setNotificationCount(response.notifications.length);
+      } catch (error) {
+        console.error("알림 개수 조회 실패:", error);
+      }
+    };
+
+    fetchNotificationCount();
+  }, [isLoggedIn]);
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40">
@@ -34,6 +55,7 @@ export function WorkspaceTopNav({ notificationCount = 3 }: { notificationCount?:
           icon={<Bell className="h-5 w-5 text-gray-700" />}
           label="Notifications"
           badge={notificationCount > 0 ? notificationCount : undefined}
+          onClick={openNotifications}
         />
 
         <IconButton

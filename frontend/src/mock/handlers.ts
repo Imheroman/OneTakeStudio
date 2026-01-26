@@ -128,4 +128,127 @@ export const handlers = [
       ],
     });
   }),
+
+  // 비디오 라이브러리 목록 조회
+  http.get(`${BASE_URL}/api/v1/library/videos`, async ({ request }) => {
+    const url = new URL(request.url);
+    const type = url.searchParams.get("type");
+
+    console.log("[MSW] 비디오 라이브러리 목록 요청", type ? `(type: ${type})` : "");
+
+    const allVideos = [
+      {
+        id: 1,
+        title: "Weekly Podcast Episode #45",
+        date: "Jan 15, 2026",
+        duration: "42:18",
+        type: "original" as const,
+        status: "Uploaded" as const,
+      },
+      {
+        id: 2,
+        title: "Product Demo - Q1 Launch",
+        date: "Jan 14, 2026",
+        duration: "15:32",
+        type: "original" as const,
+        status: "Uploaded" as const,
+      },
+      {
+        id: 3,
+        title: "Tutorial: Getting Started",
+        date: "Jan 12, 2026",
+        duration: "28:14",
+        type: "original" as const,
+        status: "Saved" as const,
+      },
+      {
+        id: 4,
+        title: "Live Stream Highlight Reel",
+        date: "Jan 10, 2026",
+        duration: "8:52",
+        type: "shorts" as const,
+        status: "Uploaded" as const,
+      },
+      {
+        id: 5,
+        title: "Summer Vlog Highlights",
+        date: "Jan 8, 2026",
+        duration: "5:23",
+        type: "shorts" as const,
+        status: "Saved" as const,
+      },
+      {
+        id: 6,
+        title: "Team Meeting Recording",
+        date: "Jan 6, 2026",
+        duration: "1:12:45",
+        type: "original" as const,
+        status: "Uploaded" as const,
+      },
+      {
+        id: 7,
+        title: "Quick Tips - Editing Basics",
+        date: "Jan 4, 2026",
+        duration: "3:45",
+        type: "shorts" as const,
+        status: "Uploaded" as const,
+      },
+      {
+        id: 8,
+        title: "Gaming Stream Highlights",
+        date: "Jan 2, 2026",
+        duration: "12:30",
+        type: "shorts" as const,
+        status: "Saved" as const,
+      },
+    ];
+
+    const filteredVideos =
+      type && type !== "all"
+        ? allVideos.filter((video) => video.type === type)
+        : allVideos;
+
+    return HttpResponse.json({
+      videos: filteredVideos,
+      total: filteredVideos.length,
+    });
+  }),
+
+  // 알림 목록 조회
+  http.get(`${BASE_URL}/api/v1/notifications`, async () => {
+    console.log("[MSW] 알림 목록 요청");
+    return HttpResponse.json({
+      notifications: [
+        {
+          id: "1",
+          type: "friend_request",
+          title: "새로운 친구 요청",
+          message: "김민수님이 친구 요청을 보냈습니다.",
+          time: "방금 전",
+        },
+        {
+          id: "2",
+          type: "studio_invite",
+          title: "스튜디오 멤버 초대",
+          message: "Weekly Podcast Studio에 멤버로 초대되었습니다.",
+          time: "5분 전",
+        },
+        {
+          id: "3",
+          type: "ai_shorts",
+          title: "AI쇼츠 생성 완료",
+          message: "'여름 브이로그' AI쇼츠가 생성되었습니다.",
+          time: "30분 전",
+        },
+        {
+          id: "4",
+          type: "file_deletion",
+          title: "파일 삭제 예고",
+          message:
+            "저장공간의 '프로젝트_최종본.mp4' 파일이 내일 자동으로 삭제됩니다.",
+          time: "1시간 전",
+        },
+      ],
+    });
+  }),
 ];
