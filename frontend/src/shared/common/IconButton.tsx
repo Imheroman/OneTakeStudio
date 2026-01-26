@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "@/shared/lib/utils";
 
 interface IconButtonProps {
@@ -45,9 +46,9 @@ export function IconButton({
 
   if (href) {
     return (
-      <a href={href} className={baseClasses} aria-label={label}>
+      <Link href={href} className={baseClasses} aria-label={label}>
         {content}
-      </a>
+      </Link>
     );
   }
 

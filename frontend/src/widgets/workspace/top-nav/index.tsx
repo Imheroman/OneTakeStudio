@@ -67,6 +67,7 @@ export function WorkspaceTopNav() {
             </Avatar>
           }
           label="Profile"
+          href="/mypage"
         />
       </div>
     </header>
