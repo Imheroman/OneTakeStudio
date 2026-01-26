@@ -1,42 +1,112 @@
-services:
-  mysql-db:
-    image: mysql:8.0
-    container_name: onetake-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: onetake_core
-      TZ: Asia/Seoul
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-    networks:
-      - onetake-network
+version: '3.8'
 
-  postgres-db:
-    image: postgres:15
-    container_name: onetake-postgres
-    restart: unless-stopped
+services:
+  # PostgreSQL (Media Service용)
+  postgres:
+    image: postgres:16-alpine
+    container_name: onetakestudio-postgres
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: onetake_media
-      TZ: Asia/Seoul
+      POSTGRES_DB: media_db
+      POSTGRES_USER: media_user
+      POSTGRES_PASSWORD: media_password
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     networks:
-      - onetake-network
+      - onetakestudio-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U media_user -d media_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+<<<<<<< Updated upstream
+  # MySQL (Core Service용)
+=======
+  # MySQL (Core Service용 - 향후 사용)
+>>>>>>> Stashed changes
+  mysql:
+    image: mysql:8.0
+    container_name: onetakestudio-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: core_db
+      MYSQL_USER: core_user
+      MYSQL_PASSWORD: core_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - onetakestudio-network
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "core_user", "-pcore_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ (메시지 브로커)
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: onetakestudio-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - onetakestudio-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (캐시)
+  redis:
+    image: redis:7-alpine
+    container_name: onetakestudio-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - onetakestudio-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LiveKit (WebRTC 서버)
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: onetakestudio-livekit
+    command: --config /livekit.yaml
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
+    networks:
+      - onetakestudio-network
 
 volumes:
-  mysql-data:
-  postgres-data:
+  postgres_data:
+  mysql_data:
+  rabbitmq_data:
+  redis_data:
 
 networks:
-  onetake-network:
+  onetakestudio-network:
+<<<<<<< Updated upstream
     driver: bridge
+=======
+    driver: bridge
+>>>>>>> Stashed changes
