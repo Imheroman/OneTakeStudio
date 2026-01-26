@@ -1,95 +1,134 @@
 "use client";
 
-import { use } from "react";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { LayoutDashboard, Video, Settings, LogOut } from "lucide-react";
+import { use } from "react"; // ★ params를 꺼내기 위해 필요
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Radio, Video } from "lucide-react";
+import Link from "next/link";
 
-export default function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params); // URL 파라미터에서 id 추출
-  const { user, accessToken, isLoggedIn, logout } = useAuthStore();
-  const router = useRouter();
+// [Mock Data] 최근 스튜디오 목록
+const recentStudios = [
+  { id: 1, title: "Weekly Podcast Studio", date: "Jan 15, 2026" },
+  { id: 2, title: "Product Demo Setup", date: "Jan 14, 2026" },
+  { id: 3, title: "Team Meeting Room", date: "Jan 12, 2026" },
+  { id: 4, title: "Gaming Stream Studio", date: "Jan 10, 2026" },
+  { id: 5, title: "Tutorial Recording Space", date: "Jan 8, 2026" },
+];
 
-  // 1. 보안 가드: 토큰이나 로그인 정보가 없으면 튕겨냄
-  useEffect(() => {
-    if (!isLoggedIn || !accessToken) {
-      router.replace("/login");
-    }
-  }, [isLoggedIn, accessToken, router]);
+export default function WorkspaceHomePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  // ★ 1. URL에서 id 꺼내기 (Next.js 15+ 방식)
+  const { id } = use(params);
 
-  if (!isLoggedIn) return null;
+  // 한글 아이디가 깨질 경우를 대비해 디코딩 (선택사항)
+  const userId = decodeURIComponent(id);
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* 사이드바 영역 */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-6">
-          <h1 className="text-2xl font-black text-indigo-600 italic">OneTake</h1>
-        </div>
-        
-        <nav className="flex-1 px-4 space-y-2">
-          <div className="flex items-center gap-3 p-3 bg-indigo-50 text-indigo-600 rounded-lg font-bold">
-            <LayoutDashboard size={20} />
-            <span>대시보드</span>
-          </div>
-          <div className="flex items-center gap-3 p-3 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
-            <Video size={20} />
-            <span>스튜디오</span>
-          </div>
-          <div className="flex items-center gap-3 p-3 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">
-            <Settings size={20} />
-            <span>설정</span>
-          </div>
-        </nav>
+    <div className="space-y-8 max-w-7xl mx-auto">
+      {/* ★ 2. 상단 환영 메시지 영역 추가 */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+          <span className="text-indigo-600">{userId}</span>님, 반가워요! 👋
+        </h1>
+        <p className="text-gray-500">
+          오늘도 당신만의 멋진 방송을 만들어보세요.
+        </p>
+      </div>
 
-        <button 
-          onClick={() => { logout(); router.push("/login"); }}
-          className="m-4 flex items-center gap-3 p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-        >
-          <LogOut size={20} />
-          <span className="font-medium">로그아웃</span>
-        </button>
-      </aside>
-
-      {/* 메인 컨텐츠 영역 */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
-          <h2 className="text-lg font-semibold text-gray-800">
-            {user?.name}님의 워크스페이스
-          </h2>
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-500">
-              Token: {accessToken?.slice(0, 10)}...
-            </span>
-            <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
-              {user?.name?.[0]}
+      {/* 3. 액션 카드 영역 (기존 코드 유지) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* 라이브 스트리밍 카드 */}
+        <Card className="hover:shadow-lg transition-shadow border-gray-200">
+          <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-6">
+            <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center">
+              <Radio className="h-8 w-8 text-gray-600" />
             </div>
-          </div>
-        </header>
-
-        <section className="flex-1 p-8 overflow-y-auto">
-          <div className="max-w-4xl space-y-6">
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900">환영합니다, {user?.name}님! 👋</h3>
-              <p className="text-gray-500 mt-2">
-                현재 <span className="font-bold text-indigo-600">{id}</span> 워크스페이스가 활성화되어 있습니다. 
-                여기서 실전 최적화 방송 관리를 시작하세요.
+            <div>
+              <h2 className="text-xl font-bold mb-2">Start Live Streaming</h2>
+              <p className="text-gray-500 text-sm max-w-xs mx-auto">
+                Go live instantly with our professional streaming tools
               </p>
             </div>
+            <Link href="/studio">
+              <Button className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-auto text-base">
+                Start Streaming
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="aspect-video bg-gray-900 rounded-2xl flex items-center justify-center text-gray-500 border border-gray-800">
-                방송 미리보기 (준비 중)
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                <h4 className="font-bold mb-4">최근 활동</h4>
-                <p className="text-sm text-gray-400">표시할 데이터가 없습니다.</p>
-              </div>
+        {/* 녹화 카드 */}
+        <Card className="hover:shadow-lg transition-shadow border-gray-200">
+          <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-6">
+            <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center">
+              <Video className="h-8 w-8 text-gray-600" />
             </div>
-          </div>
-        </section>
-      </main>
+            <div>
+              <h2 className="text-xl font-bold mb-2">Start Recording</h2>
+              <p className="text-gray-500 text-sm max-w-xs mx-auto">
+                Record high-quality content for later publishing
+              </p>
+            </div>
+            <Link href="/studio">
+              <Button className="bg-blue-600 hover:bg-blue-700 px-8 py-2 h-auto text-base">
+                Start Recording
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 4. 하단 스튜디오 목록 영역 (기존 코드 유지) */}
+      <Card className="border-gray-200">
+        <CardContent className="p-6">
+          <h3 className="text-xl font-bold mb-6">Recent Studios</h3>
+
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent border-b border-gray-100">
+                <TableHead className="w-[50%] text-gray-400 font-medium">
+                  Title
+                </TableHead>
+                <TableHead className="text-gray-400 font-medium">
+                  Last Modified
+                </TableHead>
+                <TableHead className="text-right text-gray-400 font-medium"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentStudios.map((studio) => (
+                <TableRow
+                  key={studio.id}
+                  className="border-b border-gray-50 hover:bg-gray-50"
+                >
+                  <TableCell className="font-medium text-gray-700 py-4">
+                    {studio.title}
+                  </TableCell>
+                  <TableCell className="text-gray-500">{studio.date}</TableCell>
+                  <TableCell className="text-right">
+                    <Link href={`/studio`}>
+                      <Button className="bg-blue-600 hover:bg-blue-700 h-9 px-4 text-sm font-normal rounded-md">
+                        Enter Studio
+                      </Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
