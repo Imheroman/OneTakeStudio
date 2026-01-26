@@ -35,7 +35,7 @@ public class UserController {
 
     @GetMapping("/{userId}")
     public ResponseEntity<ApiResponse<UserProfileResponse>> getUserProfile(
-            @PathVariable Long userId) {
+            @PathVariable String userId) {
         UserProfileResponse response = userService.getUserProfile(userId);
         return ResponseEntity.ok(ApiResponse.success("프로필 조회 성공", response));
     }

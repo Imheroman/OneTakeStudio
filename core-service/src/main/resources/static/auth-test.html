@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OneTakeStudio - 이메일 인증 테스트</title>
+    <title>OneTakeStudio - 인증 테스트 (이메일 + OAuth)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -181,7 +181,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>OneTakeStudio 이메일 인증 테스트</h1>
+        <h1>OneTakeStudio 인증 테스트</h1>
 
         <div class="flow-info">
             <h3>회원가입 흐름</h3>
@@ -311,6 +311,39 @@
                 </div>
                 <button class="secondary" onclick="refreshToken()">토큰 갱신</button>
                 <div id="refreshResult" class="result"></div>
+            </div>
+
+            <!-- Google OAuth 로그인 -->
+            <div class="card">
+                <h2><span class="step" style="background: #4285F4;">G</span> Google 로그인</h2>
+                <div class="form-group">
+                    <label>Google Access Token</label>
+                    <input type="text" id="googleAccessToken" placeholder="프론트엔드에서 받은 Access Token">
+                </div>
+                <button class="primary" style="background: #4285F4;" onclick="oauthGoogle()">Google 로그인</button>
+                <div id="googleResult" class="result"></div>
+            </div>
+
+            <!-- Kakao OAuth 로그인 -->
+            <div class="card">
+                <h2><span class="step" style="background: #FEE500; color: #000;">K</span> Kakao 로그인</h2>
+                <div class="form-group">
+                    <label>Kakao Access Token</label>
+                    <input type="text" id="kakaoAccessToken" placeholder="프론트엔드에서 받은 Access Token">
+                </div>
+                <button class="primary" style="background: #FEE500; color: #000;" onclick="oauthKakao()">Kakao 로그인</button>
+                <div id="kakaoResult" class="result"></div>
+            </div>
+
+            <!-- Naver OAuth 로그인 -->
+            <div class="card">
+                <h2><span class="step" style="background: #03C75A;">N</span> Naver 로그인</h2>
+                <div class="form-group">
+                    <label>Naver Access Token</label>
+                    <input type="text" id="naverAccessToken" placeholder="프론트엔드에서 받은 Access Token">
+                </div>
+                <button class="primary" style="background: #03C75A;" onclick="oauthNaver()">Naver 로그인</button>
+                <div id="naverResult" class="result"></div>
             </div>
         </div>
     </div>
@@ -491,6 +524,62 @@
                 }
             } catch (e) {
                 showResult('refreshResult', false, e.message);
+            }
+        }
+
+        // OAuth 결과 처리 공통 함수
+        function handleOAuthResult(resultId, ok, data) {
+            showResult(resultId, ok, data.message || JSON.stringify(data));
+            if (ok && data.data) {
+                document.getElementById('tokenDisplay').style.display = 'block';
+                document.getElementById('accessToken').textContent = data.data.accessToken;
+                document.getElementById('userInfo').textContent = JSON.stringify(data.data.user, null, 2);
+                document.getElementById('refreshToken').value = data.data.refreshToken;
+            }
+        }
+
+        // Google OAuth 로그인
+        async function oauthGoogle() {
+            const accessToken = document.getElementById('googleAccessToken').value;
+            if (!accessToken) {
+                showResult('googleResult', false, 'Access Token을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/oauth/google', 'POST', { accessToken });
+                handleOAuthResult('googleResult', ok, data);
+            } catch (e) {
+                showResult('googleResult', false, e.message);
+            }
+        }
+
+        // Kakao OAuth 로그인
+        async function oauthKakao() {
+            const accessToken = document.getElementById('kakaoAccessToken').value;
+            if (!accessToken) {
+                showResult('kakaoResult', false, 'Access Token을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/oauth/kakao', 'POST', { accessToken });
+                handleOAuthResult('kakaoResult', ok, data);
+            } catch (e) {
+                showResult('kakaoResult', false, e.message);
+            }
+        }
+
+        // Naver OAuth 로그인
+        async function oauthNaver() {
+            const accessToken = document.getElementById('naverAccessToken').value;
+            if (!accessToken) {
+                showResult('naverResult', false, 'Access Token을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/oauth/naver', 'POST', { accessToken });
+                handleOAuthResult('naverResult', ok, data);
+            } catch (e) {
+                showResult('naverResult', false, e.message);
             }
         }
     </script>

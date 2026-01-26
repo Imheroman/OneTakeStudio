@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class UserProfileResponse {
 
-    private Long userId;
+    private String userId;
     private String email;
     private String nickname;
     private String profileImageUrl;

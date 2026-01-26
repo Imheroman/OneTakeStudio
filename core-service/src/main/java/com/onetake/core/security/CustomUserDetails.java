@@ -12,7 +12,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class CustomUserDetails implements UserDetails {
 
-    private final Long userId;
+    private final String userId;
     private final String email;
 
     @Override

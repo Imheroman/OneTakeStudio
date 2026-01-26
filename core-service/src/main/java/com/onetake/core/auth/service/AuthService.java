@@ -2,6 +2,7 @@ package com.onetake.core.auth.service;
 
 import com.onetake.common.jwt.JwtUtil;
 import com.onetake.core.auth.dto.*;
+import com.onetake.core.auth.entity.AuthProvider;
 import com.onetake.core.auth.exception.AuthException;
 import com.onetake.core.user.entity.User;
 import com.onetake.core.user.repository.UserRepository;
@@ -10,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Service
@@ -20,6 +22,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailVerificationService emailVerificationService;
+    private final OAuthService oAuthService;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"
@@ -95,8 +98,8 @@ public class AuthService {
             throw AuthException.invalidToken();
         }
 
-        Long userId = jwtUtil.getUserId(refreshToken);
-        User user = userRepository.findById(userId)
+        String userId = jwtUtil.getUserId(refreshToken);
+        User user = userRepository.findByUserId(userId)
                 .orElseThrow(AuthException::userNotFound);
 
         String newAccessToken = jwtUtil.generateAccessToken(
@@ -121,5 +124,105 @@ public class AuthService {
             return CheckEmailResponse.duplicated();
         }
         return CheckEmailResponse.available();
+    }
+
+    @Transactional
+    public LoginResponse oauthLoginGoogle(OAuthLoginRequest request) {
+        OAuthUserInfo userInfo = oAuthService.getGoogleUserInfo(request.getAccessToken());
+        return processOAuthLogin(userInfo);
+    }
+
+    @Transactional
+    public LoginResponse oauthLoginKakao(OAuthLoginRequest request) {
+        OAuthUserInfo userInfo = oAuthService.getKakaoUserInfo(request.getAccessToken());
+        return processOAuthLogin(userInfo);
+    }
+
+    @Transactional
+    public LoginResponse oauthLoginNaver(OAuthLoginRequest request) {
+        OAuthUserInfo userInfo = oAuthService.getNaverUserInfo(request.getAccessToken());
+        return processOAuthLogin(userInfo);
+    }
+
+    private LoginResponse processOAuthLogin(OAuthUserInfo userInfo) {
+        if (userInfo.getEmail() == null || userInfo.getEmail().isEmpty()) {
+            throw AuthException.oauthEmailRequired();
+        }
+
+        Optional<User> existingUser = userRepository.findByProviderAndProviderId(
+                userInfo.getProvider(), userInfo.getProviderId());
+
+        User user;
+        if (existingUser.isPresent()) {
+            user = existingUser.get();
+        } else {
+            Optional<User> userByEmail = userRepository.findByEmail(userInfo.getEmail());
+            if (userByEmail.isPresent()) {
+                User existing = userByEmail.get();
+                if (existing.getProvider() != null &&
+                    !existing.getProvider().equals(userInfo.getProvider())) {
+                    throw new AuthException(
+                        "이미 " + existing.getProvider() + " 계정으로 가입된 이메일입니다.",
+                        org.springframework.http.HttpStatus.CONFLICT);
+                }
+            }
+
+            String nickname = generateUniqueNickname(userInfo.getNickname());
+
+            user = User.builder()
+                    .email(userInfo.getEmail())
+                    .nickname(nickname)
+                    .provider(userInfo.getProvider())
+                    .providerId(userInfo.getProviderId())
+                    .profileImageUrl(userInfo.getProfileImageUrl())
+                    .emailVerified(true)
+                    .build();
+
+            userRepository.save(user);
+        }
+
+        String accessToken = jwtUtil.generateAccessToken(
+                user.getUserId(),
+                user.getEmail(),
+                user.getNickname()
+        );
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(LoginResponse.UserDto.builder()
+                        .userId(user.getUserId())
+                        .email(user.getEmail())
+                        .nickname(user.getNickname())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .build())
+                .build();
+    }
+
+    private String generateUniqueNickname(String baseName) {
+        String nickname = baseName;
+        if (nickname == null || nickname.isEmpty()) {
+            nickname = "User";
+        }
+
+        if (nickname.length() > 15) {
+            nickname = nickname.substring(0, 15);
+        }
+
+        if (!userRepository.existsByNickname(nickname)) {
+            return nickname;
+        }
+
+        int suffix = 1;
+        String candidate;
+        do {
+            candidate = nickname.length() > 12
+                ? nickname.substring(0, 12) + suffix
+                : nickname + suffix;
+            suffix++;
+        } while (userRepository.existsByNickname(candidate) && suffix < 10000);
+
+        return candidate;
     }
 }

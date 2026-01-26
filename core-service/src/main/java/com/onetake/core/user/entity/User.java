@@ -29,8 +29,14 @@ public class User {
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     private String password;
+
+    @Column(name = "provider", length = 20)
+    private String provider;  // LOCAL, GOOGLE, KAKAO, NAVER
+
+    @Column(name = "provider_id", length = 100)
+    private String providerId;
 
     @Column(name = "nickname", nullable = false, length = 20)
     private String nickname;

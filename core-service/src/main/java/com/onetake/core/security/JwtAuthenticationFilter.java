@@ -30,7 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = extractToken(request);
 
         if (StringUtils.hasText(token) && jwtUtil.validateToken(token) && jwtUtil.isAccessToken(token)) {
-            Long userId = jwtUtil.getUserId(token);
+            String userId = jwtUtil.getUserId(token);
             String email = jwtUtil.getEmail(token);
 
             CustomUserDetails userDetails = new CustomUserDetails(userId, email);

@@ -64,4 +64,12 @@ public class AuthException extends RuntimeException {
     public static AuthException emailSendFailed() {
         return new AuthException("이메일 발송에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    public static AuthException oauthFailed(String provider) {
+        return new AuthException(provider + " 로그인에 실패했습니다.", HttpStatus.UNAUTHORIZED);
+    }
+
+    public static AuthException oauthEmailRequired() {
+        return new AuthException("이메일 정보 제공에 동의해주세요.", HttpStatus.BAD_REQUEST);
+    }
 }

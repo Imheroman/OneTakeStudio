@@ -77,4 +77,25 @@ public class AuthController {
         passwordResetService.confirmPasswordReset(request.getToken(), request.getNewPassword());
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 성공적으로 변경되었습니다."));
     }
+
+    @PostMapping("/oauth/google")
+    public ResponseEntity<ApiResponse<LoginResponse>> oauthGoogle(
+            @RequestBody @Valid OAuthLoginRequest request) {
+        LoginResponse response = authService.oauthLoginGoogle(request);
+        return ResponseEntity.ok(ApiResponse.success("Google 로그인 성공", response));
+    }
+
+    @PostMapping("/oauth/kakao")
+    public ResponseEntity<ApiResponse<LoginResponse>> oauthKakao(
+            @RequestBody @Valid OAuthLoginRequest request) {
+        LoginResponse response = authService.oauthLoginKakao(request);
+        return ResponseEntity.ok(ApiResponse.success("Kakao 로그인 성공", response));
+    }
+
+    @PostMapping("/oauth/naver")
+    public ResponseEntity<ApiResponse<LoginResponse>> oauthNaver(
+            @RequestBody @Valid OAuthLoginRequest request) {
+        LoginResponse response = authService.oauthLoginNaver(request);
+        return ResponseEntity.ok(ApiResponse.success("Naver 로그인 성공", response));
+    }
 }
