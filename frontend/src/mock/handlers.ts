@@ -611,6 +611,9 @@ export const handlers = [
       sources: [
         { id: "source_1", type: "video" as const, name: "Video Capture Device", isVisible: true },
         { id: "source_2", type: "audio" as const, name: "Audio Input Capture", isVisible: true },
+        { id: "source_3", type: "image" as const, name: "Test Image", isVisible: true },
+        { id: "source_4", type: "text" as const, name: "Text Overlay", isVisible: true },
+        { id: "source_5", type: "browser" as const, name: "Browser Source", isVisible: false },
       ],
     };
 

@@ -130,7 +130,13 @@ export function StudioMain({ studioId }: StudioMainProps) {
         <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
           {/* 프리뷰 영역 */}
           <div className="flex-1 min-h-0">
-            <PreviewArea className="h-full" />
+            <PreviewArea
+              className="h-full"
+              layout={currentLayout}
+              sources={studio.sources}
+              isVideoEnabled={isVideoEnabled}
+              isAudioEnabled={isAudioEnabled}
+            />
           </div>
 
           {/* 레이아웃 컨트롤 */}
