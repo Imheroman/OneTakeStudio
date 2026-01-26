@@ -3,6 +3,9 @@ import { http, HttpResponse } from "msw";
 // 환경 변수에서 베이스 URL을 가져옵니다.
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+// 타입 정의 (entities에서 import하지 않고 여기서 정의 - MSW는 독립적)
+type PlatformType = "youtube" | "twitch" | "facebook" | "custom_rtmp";
+
 // MSW 메모리 기반 상태 관리 (즐겨찾기)
 interface Favorite {
   id: string;
@@ -19,6 +22,48 @@ let favorites: Favorite[] = [
 ];
 
 const MAX_FAVORITES = 10;
+
+// MSW 메모리 기반 상태 관리 (채널)
+interface Channel {
+  id: string;
+  platform: PlatformType;
+  accountName: string;
+  status: "connected" | "disconnected";
+  connectedAt?: string;
+  disconnectedAt?: string;
+}
+
+// 초기 채널 데이터
+let channels: Channel[] = [
+  {
+    id: "channel_1",
+    platform: "youtube",
+    accountName: "mystream@gmail.com",
+    status: "connected",
+    connectedAt: "2026-01-15T10:00:00Z",
+  },
+  {
+    id: "channel_2",
+    platform: "youtube",
+    accountName: "substream@gmail.com",
+    status: "connected",
+    connectedAt: "2026-01-14T15:30:00Z",
+  },
+  {
+    id: "channel_3",
+    platform: "twitch",
+    accountName: "streamuser123",
+    status: "connected",
+    connectedAt: "2026-01-13T09:20:00Z",
+  },
+  {
+    id: "channel_4",
+    platform: "custom_rtmp",
+    accountName: "rtmp://custom-server.com",
+    status: "disconnected",
+    disconnectedAt: "2026-01-12T14:00:00Z",
+  },
+];
 
 export const handlers = [
   // 주소 앞에 BASE_URL을 붙여서 MSW가 8080 포트 요청도 가로채게 만듭니다.
@@ -398,5 +443,117 @@ export const handlers = [
     );
 
     return HttpResponse.json({ users: filtered });
+  }),
+
+  // 채널 목록 조회
+  http.get(`${BASE_URL}/api/v1/channels`, async () => {
+    console.log("[MSW] 채널 목록 요청", channels);
+    return HttpResponse.json({
+      channels,
+      total: channels.length,
+    });
+  }),
+
+  // 채널 연결 시작 (백엔드에서 OAuth URL 생성)
+  // MSW는 실제 OAuth URL만 반환 (실제 OAuth Provider로 리다이렉트)
+  http.post(`${BASE_URL}/api/v1/channels/connect`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    const { platform } = body;
+
+    console.log(`[MSW] 채널 연결 시작: ${platform}`);
+
+    // Custom RTMP는 OAuth 불필요, 직접 추가 가능
+    if (platform === "custom_rtmp") {
+      // RTMP 채널 추가 (실제로는 사용자 입력 필요)
+      const newChannel: Channel = {
+        id: `channel_${Date.now()}`,
+        platform: "custom_rtmp",
+        accountName: "rtmp://new-server.com",
+        status: "connected",
+        connectedAt: new Date().toISOString(),
+      };
+      channels.push(newChannel);
+      console.log(`[MSW] RTMP 채널 추가 완료:`, channels);
+
+      return HttpResponse.json(
+        {
+          message: "RTMP 채널이 추가되었습니다.",
+          channel: newChannel,
+        },
+        { status: 201 },
+      );
+    }
+
+    // 백엔드에서 OAuth URL 생성 (Client Secret 사용)
+    // MSW에서는 실제 OAuth Provider URL만 반환
+    // 실제 백엔드에서는 Client Secret을 사용하여 안전하게 OAuth URL 생성
+    const requestUrl = new URL(request.url);
+    const origin = requestUrl.origin;
+    const redirectUri = `${origin}/channels/oauth/callback`;
+    
+    const oauthBaseUrls: Record<string, string> = {
+      youtube: "https://accounts.google.com/o/oauth2/v2/auth",
+      twitch: "https://id.twitch.tv/oauth2/authorize",
+      facebook: "https://www.facebook.com/v18.0/dialog/oauth",
+    };
+
+    const scopes: Record<string, string> = {
+      youtube: "https://www.googleapis.com/auth/youtube.force-ssl",
+      twitch: "channel:read:stream_key",
+      facebook: "pages_manage_posts",
+    };
+
+    // 실제 백엔드에서는 Client Secret을 사용하여 OAuth URL 생성
+    // MSW에서는 예시 URL만 반환 (실제 프로덕션에서는 백엔드가 처리)
+    const authUrl =
+      `${oauthBaseUrls[platform]}?` +
+      `client_id=YOUR_CLIENT_ID&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=code&` +
+      `scope=${encodeURIComponent(scopes[platform] || "")}&` +
+      `state=STATE_PARAMETER&` +
+      `access_type=offline`; // refresh token 받기 위해
+
+    console.log(`[MSW] OAuth URL 반환: ${platform}`);
+    console.log(`[MSW] 참고: 실제 프로덕션에서는 백엔드가 Client Secret을 사용하여 OAuth URL을 생성합니다.`);
+
+    return HttpResponse.json(
+      {
+        authUrl,
+        message: `${platform} 채널 연결을 시작합니다.`,
+      },
+      { status: 200 },
+    );
+  }),
+
+  // OAuth 콜백은 실제 백엔드에서 처리
+  // MSW에서는 모킹하지 않음 (실제 OAuth Provider와 통신 필요)
+
+  // 채널 연결 해제
+  http.delete(`${BASE_URL}/api/v1/channels/:id`, async ({ params }) => {
+    const { id } = params;
+    console.log(`[MSW] 채널 연결 해제 요청: ${id}`, "해제 전:", channels);
+
+    const index = channels.findIndex((c) => c.id === id);
+    if (index === -1) {
+      return HttpResponse.json(
+        { message: "채널을 찾을 수 없습니다." },
+        { status: 404 },
+      );
+    }
+
+    // 채널 상태를 disconnected로 변경
+    channels[index] = {
+      ...channels[index],
+      status: "disconnected",
+      disconnectedAt: new Date().toISOString(),
+    };
+
+    console.log(`[MSW] 채널 연결 해제 완료:`, channels);
+
+    return HttpResponse.json(
+      { message: "채널 연결이 해제되었습니다." },
+      { status: 200 },
+    );
   }),
 ];
