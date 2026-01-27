@@ -1,7 +1,8 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, passthrough } from "msw";
 
 // 환경 변수에서 베이스 URL을 가져옵니다.
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE_URL = "";
+// const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 // 타입 정의 (entities에서 import하지 않고 여기서 정의 - MSW는 독립적)
 type PlatformType = "youtube" | "twitch" | "facebook" | "custom_rtmp";
@@ -22,6 +23,14 @@ let favorites: Favorite[] = [
 ];
 
 const MAX_FAVORITES = 10;
+
+// [추가] 쇼츠 생성 상태 변수 (핸들러 밖에서 선언해야 상태가 유지됨)
+let shortsServerState = {
+  isGenerating: false,
+  startTime: 0,
+  completedCount: 0,
+  videoId: "",
+};
 
 // MSW 메모리 기반 상태 관리 (채널)
 interface Channel {
@@ -66,6 +75,8 @@ let channels: Channel[] = [
 ];
 
 export const handlers = [
+  http.all("/_next/*", () => passthrough()),
+  http.post("/__nextjs_original-stack-frames", () => passthrough()),
   // 주소 앞에 BASE_URL을 붙여서 MSW가 8080 포트 요청도 가로채게 만듭니다.
   http.post(`${BASE_URL}/api/v1/auth/login`, async ({ request }) => {
     const body = (await request.json()) as any;
@@ -79,10 +90,10 @@ export const handlers = [
       const userId = "user_" + Math.random().toString(36).substring(2, 11);
       return HttpResponse.json(
         {
-          user: { 
-            id: userId, 
+          user: {
+            id: userId,
             email: email,
-            name: "홍길동" 
+            name: "홍길동",
           },
           accessToken: "fake-jwt-token-one-take",
           message: "로그인 성공!",
@@ -196,7 +207,10 @@ export const handlers = [
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
 
-    console.log("[MSW] 비디오 라이브러리 목록 요청", type ? `(type: ${type})` : "");
+    console.log(
+      "[MSW] 비디오 라이브러리 목록 요청",
+      type ? `(type: ${type})` : "",
+    );
 
     const allVideos = [
       {
@@ -490,7 +504,7 @@ export const handlers = [
     const requestUrl = new URL(request.url);
     const origin = requestUrl.origin;
     const redirectUri = `${origin}/channels/oauth/callback`;
-    
+
     const oauthBaseUrls: Record<string, string> = {
       youtube: "https://accounts.google.com/o/oauth2/v2/auth",
       twitch: "https://id.twitch.tv/oauth2/authorize",
@@ -515,7 +529,9 @@ export const handlers = [
       `access_type=offline`; // refresh token 받기 위해
 
     console.log(`[MSW] OAuth URL 반환: ${platform}`);
-    console.log(`[MSW] 참고: 실제 프로덕션에서는 백엔드가 Client Secret을 사용하여 OAuth URL을 생성합니다.`);
+    console.log(
+      `[MSW] 참고: 실제 프로덕션에서는 백엔드가 Client Secret을 사용하여 OAuth URL을 생성합니다.`,
+    );
 
     return HttpResponse.json(
       {
@@ -560,7 +576,8 @@ export const handlers = [
   // 스튜디오 생성
   http.post(`${BASE_URL}/api/v1/studios`, async ({ request }) => {
     const body = (await request.json()) as any;
-    const { title, description, transmissionType, storageLocation, platforms } = body;
+    const { title, description, transmissionType, storageLocation, platforms } =
+      body;
 
     console.log(`[MSW] 스튜디오 생성 요청:`, body);
 
@@ -609,14 +626,104 @@ export const handlers = [
         { id: "scene_2", name: "Scene 2 - Main Camera", isActive: false },
       ],
       sources: [
-        { id: "source_1", type: "video" as const, name: "Video Capture Device", isVisible: true },
-        { id: "source_2", type: "audio" as const, name: "Audio Input Capture", isVisible: true },
-        { id: "source_3", type: "image" as const, name: "Test Image", isVisible: true },
-        { id: "source_4", type: "text" as const, name: "Text Overlay", isVisible: true },
-        { id: "source_5", type: "browser" as const, name: "Browser Source", isVisible: false },
+        {
+          id: "source_1",
+          type: "video" as const,
+          name: "Video Capture Device",
+          isVisible: true,
+        },
+        {
+          id: "source_2",
+          type: "audio" as const,
+          name: "Audio Input Capture",
+          isVisible: true,
+        },
+        {
+          id: "source_3",
+          type: "image" as const,
+          name: "Test Image",
+          isVisible: true,
+        },
+        {
+          id: "source_4",
+          type: "text" as const,
+          name: "Text Overlay",
+          isVisible: true,
+        },
+        {
+          id: "source_5",
+          type: "browser" as const,
+          name: "Browser Source",
+          isVisible: false,
+        },
       ],
     };
 
     return HttpResponse.json(studioDetail);
+  }),
+  // --- 쇼츠 생성 및 상태 폴링 핸들러 ---
+  // 1. 쇼츠 생성 요청 (POST)
+  http.post(`${BASE_URL}/api/v1/shorts/generate`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    const { videoId, bgColor, useSubtitles, language } = body;
+
+    console.log(`[MSW] 쇼츠 생성 요청 시작: Video(${videoId})`, {
+      bgColor,
+      useSubtitles,
+      language,
+    });
+
+    // 상태 변수 업데이트 (시작 시간 기록)
+    shortsServerState = {
+      isGenerating: true,
+      startTime: Date.now(),
+      completedCount: 0,
+      videoId: videoId,
+    };
+
+    return HttpResponse.json(
+      { message: "쇼츠 생성이 시작되었습니다." },
+      { status: 200 },
+    );
+  }),
+
+  // 2. 쇼츠 생성 상태 조회 (Polling용 GET)
+  http.get(`${BASE_URL}/api/v1/shorts/status`, async () => {
+    // 생성 중이 아니면 idle 반환
+    if (!shortsServerState.isGenerating) {
+      return HttpResponse.json({ status: "idle", completedCount: 0 });
+    }
+
+    const elapsed = Date.now() - shortsServerState.startTime;
+
+    // 시간 경과에 따른 상태 변화 시뮬레이션
+    // 3초, 6초, 9초마다 하나씩 완료됨
+    let currentCount = 0;
+    let currentStatus = "processing";
+
+    if (elapsed > 9000) {
+      currentCount = 3;
+      currentStatus = "completed";
+      // 3개가 다 만들어지면 생성 상태 종료 (선택사항)
+      // shortsServerState.isGenerating = false;
+    } else if (elapsed > 6000) {
+      currentCount = 2;
+    } else if (elapsed > 3000) {
+      currentCount = 1;
+    }
+
+    // 상태가 변경되었을 때만 로그 출력 (도배 방지)
+    if (currentCount > shortsServerState.completedCount) {
+      console.log(
+        `[MSW] 쇼츠 생성 진행중: ${currentCount}개 완료 (Video: ${shortsServerState.videoId})`,
+      );
+      shortsServerState.completedCount = currentCount;
+    }
+
+    return HttpResponse.json({
+      status: currentStatus,
+      completedCount: currentCount,
+      videoId: shortsServerState.videoId,
+    });
   }),
 ];
