@@ -181,27 +181,27 @@ public class AuthService {
         } else {
             Optional<User> userByEmail = userRepository.findByEmail(userInfo.getEmail());
             if (userByEmail.isPresent()) {
-                User existing = userByEmail.get();
-                if (existing.getProvider() != null &&
-                    !existing.getProvider().equals(userInfo.getProvider())) {
-                    throw new AuthException(
-                        "이미 " + existing.getProvider() + " 계정으로 가입된 이메일입니다.",
-                        org.springframework.http.HttpStatus.CONFLICT);
+                // 같은 이메일의 기존 계정에 새 OAuth 제공자 연동
+                user = userByEmail.get();
+                user.linkOAuthProvider(userInfo.getProvider(), userInfo.getProviderId());
+                if (userInfo.getProfileImageUrl() != null) {
+                    user.updateProfileImageUrl(userInfo.getProfileImageUrl());
                 }
+                userRepository.save(user);
+            } else {
+                String nickname = generateUniqueNickname(userInfo.getNickname());
+
+                user = User.builder()
+                        .email(userInfo.getEmail())
+                        .nickname(nickname)
+                        .provider(userInfo.getProvider())
+                        .providerId(userInfo.getProviderId())
+                        .profileImageUrl(userInfo.getProfileImageUrl())
+                        .emailVerified(true)
+                        .build();
+
+                userRepository.save(user);
             }
-
-            String nickname = generateUniqueNickname(userInfo.getNickname());
-
-            user = User.builder()
-                    .email(userInfo.getEmail())
-                    .nickname(nickname)
-                    .provider(userInfo.getProvider())
-                    .providerId(userInfo.getProviderId())
-                    .profileImageUrl(userInfo.getProfileImageUrl())
-                    .emailVerified(true)
-                    .build();
-
-            userRepository.save(user);
         }
 
         String accessToken = jwtUtil.generateAccessToken(

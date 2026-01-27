@@ -65,13 +65,13 @@ oauth:
     client-secret: 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
     redirect-uri: http://localhost:3001/oauth/callback
   kakao:
-    client-id: ${KAKAO_CLIENT_ID:your-kakao-client-id}
-    client-secret: ${KAKAO_CLIENT_SECRET:your-kakao-client-secret}
-    redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:3000/oauth/callback}
+    client-id: 42b37ce2a41ca38644fa194c0b3d86bd
+    client-secret: C21YcsY9g9y1dlVnVTMCEm0IqosxHzGh
+    redirect-uri: http://localhost:3001/oauth/callback
   naver:
-    client-id: ${NAVER_CLIENT_ID:your-naver-client-id}
-    client-secret: ${NAVER_CLIENT_SECRET:your-naver-client-secret}
-    redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:3000/oauth/callback}
+    client-id: ID4xqmLVEISnoNshnvoH
+    client-secret: QUGmPMFJqK
+    redirect-uri: http://localhost:3001/oauth/callback
 
 logging:
   level:
