@@ -50,7 +50,9 @@ export function FavoriteManagement() {
         },
       );
       // 목록 새로고침
-      fetchFavorites();
+      await fetchFavorites();
+      // 다이얼로그 닫기
+      setIsDialogOpen(false);
     } catch (error: any) {
       console.error("즐겨찾기 추가 실패:", error);
       alert(
