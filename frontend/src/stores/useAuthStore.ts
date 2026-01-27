@@ -4,12 +4,14 @@ import type { User } from "@/entities/user/model";
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null
+  accessToken: string | null;
+  refreshToken: string | null;
   isLoggedIn: boolean;
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
-  login: (userData: User, token: string) => void; 
-  logout: () => void
+  login: (userData: User, accessToken: string, refreshToken?: string) => void;
+  logout: () => void;
+  setTokens: (accessToken: string, refreshToken: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -17,22 +19,33 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       accessToken: null,
+      refreshToken: null,
       isLoggedIn: false,
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
-      login: (userData, token) =>
+      login: (userData, accessToken, refreshToken) =>
         set({
           user: userData,
-          accessToken: token,
+          accessToken,
+          refreshToken: refreshToken || null,
           isLoggedIn: true,
         }),
 
-      logout: () =>
+      logout: () => {
+        localStorage.removeItem("refreshToken");
         set({
           user: null,
           accessToken: null,
+          refreshToken: null,
           isLoggedIn: false,
+        });
+      },
+
+      setTokens: (accessToken, refreshToken) =>
+        set({
+          accessToken,
+          refreshToken,
         }),
     }),
     {
@@ -41,6 +54,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
         isLoggedIn: state.isLoggedIn,
       }),
       onRehydrateStorage: () => (state) => {

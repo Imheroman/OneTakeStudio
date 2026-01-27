@@ -110,9 +110,10 @@ export function LoginForm() {
   const handleOAuthLogin = (provider: "google" | "kakao" | "naver") => {
     const config = OAUTH_PROVIDERS[provider];
     const redirectUri = `${window.location.origin}/oauth/callback`;
-    const state = encodeURIComponent(JSON.stringify({ provider }));
+    // state는 plain text로 전달 (Naver가 JSON state를 HTML entity로 변환하는 문제 방지)
+    const state = provider;
 
-    let authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${redirectUri}&response_type=code&state=${state}`;
+    let authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${state}`;
 
     if (config.scope) {
       authUrl += `&scope=${encodeURIComponent(config.scope)}`;

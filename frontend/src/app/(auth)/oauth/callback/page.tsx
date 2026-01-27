@@ -36,8 +36,33 @@ export default function OAuthLoginCallbackPage() {
         }
 
         // state에서 provider 정보 추출
-        const state = JSON.parse(decodeURIComponent(stateParam));
-        const provider = state.provider as "google" | "kakao" | "naver";
+        // state는 plain text provider 이름 (예: "google", "kakao", "naver")
+        let provider: "google" | "kakao" | "naver";
+        const validProviders = ["google", "kakao", "naver"];
+
+        if (validProviders.includes(stateParam)) {
+          // plain text state (권장 형식)
+          provider = stateParam as "google" | "kakao" | "naver";
+        } else {
+          // 레거시: JSON 형식 state 지원
+          try {
+            const state = JSON.parse(decodeURIComponent(stateParam));
+            provider = state.provider;
+          } catch {
+            try {
+              const state = JSON.parse(stateParam);
+              provider = state.provider;
+            } catch {
+              provider = stateParam as "google" | "kakao" | "naver";
+            }
+          }
+        }
+
+        if (!["google", "kakao", "naver"].includes(provider)) {
+          setStatus("error");
+          setMessage("알 수 없는 OAuth 제공자입니다.");
+          return;
+        }
 
         // 백엔드에 authorization code 전송
         const redirectUri = `${window.location.origin}/oauth/callback`;
