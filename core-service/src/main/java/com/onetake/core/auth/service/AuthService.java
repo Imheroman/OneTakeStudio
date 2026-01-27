@@ -144,6 +144,29 @@ public class AuthService {
         return processOAuthLogin(userInfo);
     }
 
+    // ==================== Code 기반 OAuth 로그인 (Authorization Code Flow) ====================
+
+    @Transactional
+    public LoginResponse oauthLoginGoogleWithCode(String code, String redirectUri) {
+        String accessToken = oAuthService.exchangeGoogleCodeForToken(code, redirectUri);
+        OAuthUserInfo userInfo = oAuthService.getGoogleUserInfo(accessToken);
+        return processOAuthLogin(userInfo);
+    }
+
+    @Transactional
+    public LoginResponse oauthLoginKakaoWithCode(String code, String redirectUri) {
+        String accessToken = oAuthService.exchangeKakaoCodeForToken(code, redirectUri);
+        OAuthUserInfo userInfo = oAuthService.getKakaoUserInfo(accessToken);
+        return processOAuthLogin(userInfo);
+    }
+
+    @Transactional
+    public LoginResponse oauthLoginNaverWithCode(String code, String redirectUri) {
+        String accessToken = oAuthService.exchangeNaverCodeForToken(code, redirectUri);
+        OAuthUserInfo userInfo = oAuthService.getNaverUserInfo(accessToken);
+        return processOAuthLogin(userInfo);
+    }
+
     private LoginResponse processOAuthLogin(OAuthUserInfo userInfo) {
         if (userInfo.getEmail() == null || userInfo.getEmail().isEmpty()) {
             throw AuthException.oauthEmailRequired();

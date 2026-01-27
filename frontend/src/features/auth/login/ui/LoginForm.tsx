@@ -35,6 +35,25 @@ const formSchema = z.object({
   password: z.string().min(8, { message: "비밀번호는 8자 이상이어야 합니다." }),
 });
 
+// OAuth 제공자 설정
+const OAUTH_PROVIDERS = {
+  google: {
+    clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    scope: "openid email profile",
+  },
+  kakao: {
+    clientId: process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID,
+    authUrl: "https://kauth.kakao.com/oauth/authorize",
+    scope: "profile_nickname profile_image account_email",
+  },
+  naver: {
+    clientId: process.env.NEXT_PUBLIC_NAVER_CLIENT_ID,
+    authUrl: "https://nid.naver.com/oauth2.0/authorize",
+    scope: "",
+  },
+};
+
 export function LoginForm() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
@@ -55,14 +74,28 @@ export function LoginForm() {
       setIsSubmitting(true);
 
       const response = await apiClient.post(
-        "/api/v1/auth/login",
+        "/api/auth/login",
         AuthResponseSchema,
         values,
       );
 
-      login(response.user, response.accessToken);
+      if (response.success && response.data) {
+        const { user, accessToken, refreshToken } = response.data;
 
-      router.push(`/workspace/${response.user.id}`);
+        // refreshToken은 localStorage에 별도 저장
+        localStorage.setItem("refreshToken", refreshToken);
+
+        // user 객체를 프론트엔드 형식에 맞게 변환
+        const userData = {
+          userId: user.userId,
+          email: user.email,
+          nickname: user.nickname,
+          profileImageUrl: user.profileImageUrl,
+        };
+
+        login(userData, accessToken);
+        router.push(`/workspace/${user.userId}`);
+      }
     } catch (error: any) {
       console.error("로그인 에러:", error);
       setErrorMsg(
@@ -72,6 +105,21 @@ export function LoginForm() {
       setIsSubmitting(false);
     }
   }
+
+  // OAuth 로그인 핸들러
+  const handleOAuthLogin = (provider: "google" | "kakao" | "naver") => {
+    const config = OAUTH_PROVIDERS[provider];
+    const redirectUri = `${window.location.origin}/oauth/callback`;
+    const state = encodeURIComponent(JSON.stringify({ provider }));
+
+    let authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${redirectUri}&response_type=code&state=${state}`;
+
+    if (config.scope) {
+      authUrl += `&scope=${encodeURIComponent(config.scope)}`;
+    }
+
+    window.location.href = authUrl;
+  };
 
   return (
     <Card className="w-full max-w-md border-0 shadow-xl bg-white rounded-2xl">
@@ -158,19 +206,25 @@ export function LoginForm() {
 
         <div className="grid grid-cols-3 gap-3">
           <Button
+            type="button"
             variant="outline"
+            onClick={() => handleOAuthLogin("google")}
             className="h-11 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
           >
             Google
           </Button>
           <Button
+            type="button"
             variant="outline"
+            onClick={() => handleOAuthLogin("kakao")}
             className="h-11 font-medium text-gray-600 hover:bg-[#FEE500] hover:text-black hover:border-[#FEE500] border-gray-200"
           >
             Kakao
           </Button>
           <Button
+            type="button"
             variant="outline"
+            onClick={() => handleOAuthLogin("naver")}
             className="h-11 font-medium text-gray-600 hover:bg-[#03C75A] hover:text-white hover:border-[#03C75A] border-gray-200"
           >
             Naver

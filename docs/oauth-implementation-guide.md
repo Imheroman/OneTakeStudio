@@ -320,3 +320,170 @@ caabc96 merge: resolve conflict in UserRepository (email-based auth)
 ---
 
 *작성일: 2026-01-26*
+
+---
+
+## 9. Authorization Code Flow 구현 (2026-01-27 업데이트)
+
+### 9.1 개요
+
+기존 Frontend Token 방식에서 **Authorization Code Flow**를 추가 구현했습니다.
+
+```
+[Frontend] → [Google OAuth] → [Frontend Callback] → [Backend API] → [JWT 발급]
+     |                              |
+     |---(1) OAuth 인증 요청------->|
+     |<--(2) Authorization Code-----|
+     |
+     |---(3) Code를 Backend 전송--->|
+     |                              |---(4) Code → Token 교환--->[Google]
+     |                              |<--(5) Access Token---------|
+     |                              |---(6) 사용자 정보 조회---->|
+     |<--(7) JWT 토큰 발급----------|
+```
+
+### 9.2 새로운 API 엔드포인트
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/auth/oauth/google/callback` | Google Authorization Code 처리 |
+| POST | `/api/auth/oauth/kakao/callback` | Kakao Authorization Code 처리 |
+| POST | `/api/auth/oauth/naver/callback` | Naver Authorization Code 처리 |
+
+**Request Body:**
+```json
+{
+  "code": "authorization_code_from_oauth_provider",
+  "redirectUri": "http://localhost:3001/oauth/callback"
+}
+```
+
+### 9.3 추가된 파일
+
+| 파일 | 설명 |
+|------|------|
+| `OAuthProperties.java` | OAuth 설정값 관리 (client-id, client-secret, redirect-uri) |
+| `OAuthCodeRequest.java` | Authorization Code 요청 DTO |
+
+### 9.4 설정 추가 (application.yml)
+
+```yaml
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    redirect-uri: http://localhost:3001/oauth/callback
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID}
+    client-secret: ${KAKAO_CLIENT_SECRET}
+    redirect-uri: http://localhost:3001/oauth/callback
+  naver:
+    client-id: ${NAVER_CLIENT_ID}
+    client-secret: ${NAVER_CLIENT_SECRET}
+    redirect-uri: http://localhost:3001/oauth/callback
+```
+
+---
+
+## 10. CORS 문제 해결 (2026-01-27)
+
+MSA 환경에서 API Gateway와 Core Service 간 CORS 설정 충돌 문제를 해결했습니다.
+
+### 10.1 문제 상황
+
+| 오류 | 원인 |
+|------|------|
+| `redirect_uri_mismatch` (400) | Google Cloud Console에 redirect URI 미등록 |
+| CORS 에러 | allowedOriginPatterns: "*" + allowCredentials: true 조합 |
+| 403 Forbidden | Spring Security에서 OAuth 경로 차단 |
+| CORS 헤더 중복 | Gateway와 Core Service 모두 CORS 헤더 추가 |
+
+### 10.2 해결 방법
+
+#### 1) Google Cloud Console 설정
+- 승인된 리디렉션 URI: `http://localhost:3001/oauth/callback`
+- 승인된 JavaScript 원본: `http://localhost:3001`
+
+#### 2) API Gateway CORS 설정 (application.yml)
+```yaml
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:3001"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - "Authorization"
+            allowCredentials: true
+            maxAge: 3600
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+```
+
+#### 3) Core Service CORS 비활성화 (SecurityConfig.java)
+```java
+http
+    .cors(AbstractHttpConfigurer::disable)  // Gateway에서 CORS 처리
+    // ...
+```
+
+### 10.3 핵심 원칙
+
+1. **CORS는 Gateway에서만 처리** - 각 서비스에서 중복 처리하지 않음
+2. **명시적 Origin 지정** - `allowedOriginPatterns: "*"`와 `allowCredentials: true` 동시 사용 불가
+3. **중복 헤더 제거** - `DedupeResponseHeader` 필터 사용
+
+---
+
+## 11. 프론트엔드 닉네임 표시 문제 해결 (2026-01-27)
+
+### 11.1 증상
+
+OAuth 로그인 후 워크스페이스에서 닉네임 대신 UUID 표시:
+```
+"2f7e50af-774c-49bf-82ca-07eb702e85d9님, 반가워요!"
+```
+
+### 11.2 원인
+
+프론트엔드 workspace 페이지에서 존재하지 않는 필드 참조:
+```typescript
+// Before (잘못된 코드)
+<WorkspaceHome userId={userId} userName={user?.name} />
+```
+
+User 객체에는 `name` 필드가 없고 `nickname` 필드가 있음.
+
+### 11.3 해결
+
+```typescript
+// After (수정된 코드)
+<WorkspaceHome userId={userId} userName={user?.nickname} />
+```
+
+### 11.4 User 타입 정의
+
+```typescript
+// frontend/src/entities/user/model/schemas.ts
+export const UserSchema = z.object({
+  userId: z.string(),
+  email: z.string().email(),
+  nickname: z.string(),  // ← 이 필드 사용
+  profileImageUrl: z.string().nullable().optional(),
+});
+```
+
+---
+
+*최종 수정일: 2026-01-27*

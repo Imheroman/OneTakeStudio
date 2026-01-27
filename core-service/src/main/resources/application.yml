@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
@@ -36,6 +36,16 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
+# Eureka Client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
 jwt:
   secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
   access-token-expiration: 3600000    # 1시간 (밀리초)
@@ -47,6 +57,21 @@ email:
     code-length: 6
   password-reset:
     expiration-minutes: 30
+
+# OAuth 설정
+oauth:
+  google:
+    client-id: 51683382309-340jprf00qpfjggfv5jphuifk5jk1np0.apps.googleusercontent.com
+    client-secret: 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
+    redirect-uri: http://localhost:3001/oauth/callback
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:your-kakao-client-id}
+    client-secret: ${KAKAO_CLIENT_SECRET:your-kakao-client-secret}
+    redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:3000/oauth/callback}
+  naver:
+    client-id: ${NAVER_CLIENT_ID:your-naver-client-id}
+    client-secret: ${NAVER_CLIENT_SECRET:your-naver-client-secret}
+    redirect-uri: ${OAUTH_REDIRECT_URI:http://localhost:3000/oauth/callback}
 
 logging:
   level:

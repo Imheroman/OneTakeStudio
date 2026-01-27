@@ -25,5 +25,5 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   if (!hasHydrated) return null;
   if (!isLoggedIn) return null;
 
-  return <WorkspaceHome userId={userId} userName={user?.name} />;
+  return <WorkspaceHome userId={userId} userName={user?.nickname} />;
 }
