@@ -20,6 +20,8 @@
         <module>common</module>
         <module>core-service</module>
         <module>media-service</module>
+        <module>eureka-server</module>
+        <module>api-gateway</module>
     </modules>
 
     <properties>
