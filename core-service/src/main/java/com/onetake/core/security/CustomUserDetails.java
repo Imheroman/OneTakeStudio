@@ -12,7 +12,7 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class CustomUserDetails implements UserDetails {
 
-    private final String userId;
+    private final String userId;  // UUID 문자열 (외부 노출용)
     private final String email;
 
     @Override

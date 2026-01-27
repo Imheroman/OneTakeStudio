@@ -1,6 +1,7 @@
 package com.onetake.core.auth.exception;
 
 import com.onetake.common.dto.ApiResponse;
+import com.onetake.core.studio.exception.*;
 import com.onetake.core.user.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -42,6 +43,54 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(errorMessage));
+    }
+
+    @ExceptionHandler(StudioNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStudioNotFoundException(StudioNotFoundException e) {
+        log.warn("StudioNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(StudioAccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStudioAccessDeniedException(StudioAccessDeniedException e) {
+        log.warn("StudioAccessDeniedException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(StudioInUseException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStudioInUseException(StudioInUseException e) {
+        log.warn("StudioInUseException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(MemberNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMemberNotFoundException(MemberNotFoundException e) {
+        log.warn("MemberNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(InvalidRoleException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidRoleException(InvalidRoleException e) {
+        log.warn("InvalidRoleException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(SceneNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSceneNotFoundException(SceneNotFoundException e) {
+        log.warn("SceneNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
     }
 
     @ExceptionHandler(Exception.class)
