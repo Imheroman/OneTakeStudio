@@ -75,6 +75,11 @@ public class User {
         this.password = password;
     }
 
+    public void linkOAuthProvider(String provider, String providerId) {
+        this.provider = provider;
+        this.providerId = providerId;
+    }
+
     public void deactivate() {
         this.isActive = false;
     }
