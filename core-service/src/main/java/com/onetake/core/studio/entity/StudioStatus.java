@@ -1,7 +1,7 @@
 package com.onetake.core.studio.entity;
 
 public enum StudioStatus {
-    PREPARING,
+    READY,
     LIVE,
     ENDED
 }
