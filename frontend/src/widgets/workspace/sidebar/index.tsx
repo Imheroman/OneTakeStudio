@@ -19,7 +19,7 @@ export function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const [isHovered, setIsHovered] = useState(false);
-  const workspaceLink = user?.id ? `/workspace/${user.id}` : "/login";
+  const workspaceLink = user?.userId ? `/workspace/${user.userId}` : "/login";
 
   const menus = [
     { name: "Home", href: workspaceLink, icon: Home },
