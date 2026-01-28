@@ -30,6 +30,9 @@ public class Studio {
     private String name;
 
     @Column(length = 500)
+    private String description;
+
+    @Column(length = 500)
     private String thumbnail;
 
     @Column(length = 50)

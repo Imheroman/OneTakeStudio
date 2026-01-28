@@ -45,16 +45,19 @@ export const SourceSchema = z.object({
   isVisible: z.boolean(),
 });
 
-// 스튜디오 스키마
+// 스튜디오 스키마 (백엔드 API 응답 형식)
 export const StudioSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
-  transmissionType: TransmissionTypeSchema,
-  storageLocation: StorageLocationSchema,
-  platforms: z.array(PlatformSchema),
+  studioId: z.number(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  thumbnail: z.string().nullable().optional(),
+  template: z.string().nullable().optional(),
+  status: z.string(),
+  joinUrl: z.string().optional(),
+  members: z.array(z.any()).nullable().optional(),
+  scenes: z.array(z.any()).nullable().optional(),
   createdAt: z.string(),
-  updatedAt: z.string().optional(),
+  updatedAt: z.string().nullable().optional(),
 });
 
 // 최근 스튜디오 스키마 (워크스페이스용 - id가 number, date 필드 포함)
@@ -78,20 +81,16 @@ export const CreateStudioRequestSchema = z.object({
   platforms: z.array(PlatformSchema).min(1, "최소 1개 이상의 플랫폼을 선택해주세요."),
 });
 
-// 스튜디오 생성 응답 스키마
+// 스튜디오 생성 응답 스키마 (ApiResponse<StudioDetailResponse>)
 export const CreateStudioResponseSchema = z.object({
-  studio: StudioSchema,
+  resultCode: z.string(),
+  success: z.boolean(),
   message: z.string().optional(),
+  data: StudioSchema,
 });
 
 // 스튜디오 상세 정보 스키마
-export const StudioDetailSchema = StudioSchema.extend({
-  currentLayout: LayoutTypeSchema,
-  scenes: z.array(SceneSchema),
-  sources: z.array(SourceSchema),
-  isLive: z.boolean(),
-  elapsedTime: z.string().optional(),
-});
+export const StudioDetailSchema = StudioSchema;
 
 // 타입 추론
 export type TransmissionType = z.infer<typeof TransmissionTypeSchema>;

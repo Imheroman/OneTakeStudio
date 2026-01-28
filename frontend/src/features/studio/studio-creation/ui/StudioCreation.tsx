@@ -49,7 +49,7 @@ export function StudioCreation({
       );
 
       // 스튜디오 생성 성공 시 스튜디오 페이지로 이동
-      router.push(`/studio/${response.studio.id}`);
+      router.push(`/studio/${response.data.studioId}`);
     } catch (error: any) {
       console.error("스튜디오 생성 실패:", error);
       alert(

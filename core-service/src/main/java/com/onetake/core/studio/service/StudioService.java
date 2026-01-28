@@ -39,12 +39,18 @@ public class StudioService {
 
     @Transactional
     public StudioDetailResponse createStudio(String userId, CreateStudioRequest request) {
-        log.debug("스튜디오 생성 요청: userId={}, name={}", userId, request.getName());
+        String studioName = request.getEffectiveName();
+        if (studioName == null || studioName.isBlank()) {
+            throw new IllegalArgumentException("스튜디오 이름(name 또는 title)은 필수입니다.");
+        }
+
+        log.debug("스튜디오 생성 요청: userId={}, name={}", userId, studioName);
         Long internalUserId = getInternalUserId(userId);
 
         Studio studio = Studio.builder()
                 .ownerId(internalUserId)
-                .name(request.getName())
+                .name(studioName)
+                .description(request.getDescription())
                 .template(request.getTemplate())
                 .build();
 
