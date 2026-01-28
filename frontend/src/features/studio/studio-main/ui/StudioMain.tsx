@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { StudioHeader } from "@/widgets/studio/studio-header";
@@ -34,6 +34,24 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isLive, setIsLive] = useState(false);
+  
+  // 디폴트 웹캠 소스 (sources가 비어있을 때 사용)
+  const defaultVideoSource: Source = useMemo(
+    () => ({
+      id: "default-webcam",
+      type: "video" as const,
+      name: "웹캠",
+      isVisible: true,
+    }),
+    [],
+  );
+  
+  // 실제 사용할 sources (백엔드 sources가 있으면 사용, 없으면 디폴트 웹캠)
+  const displaySources = useMemo(() => {
+    return studio?.sources && studio.sources.length > 0
+      ? studio.sources
+      : [defaultVideoSource];
+  }, [studio?.sources, defaultVideoSource]);
 
   useEffect(() => {
     fetchStudio();
@@ -135,7 +153,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             <PreviewArea
               className="h-full"
               layout={currentLayout}
-              sources={studio.sources ?? []}
+              sources={displaySources}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
             />
@@ -166,7 +184,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             {/* Sources 패널 */}
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <SourcesPanel
-                sources={studio.sources ?? []}
+                sources={displaySources}
                 onAddSource={handleAddSource}
                 onSourceToggle={handleSourceToggle}
               />
