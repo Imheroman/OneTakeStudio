@@ -1,6 +1,8 @@
 package com.onetake.core.auth.exception;
 
 import com.onetake.common.dto.ApiResponse;
+import com.onetake.core.destination.exception.DestinationAlreadyExistsException;
+import com.onetake.core.destination.exception.DestinationNotFoundException;
 import com.onetake.core.user.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -42,6 +44,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(errorMessage));
+    }
+
+    @ExceptionHandler(DestinationNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDestinationNotFoundException(DestinationNotFoundException e) {
+        log.warn("DestinationNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(DestinationAlreadyExistsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDestinationAlreadyExistsException(DestinationAlreadyExistsException e) {
+        log.warn("DestinationAlreadyExistsException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(e.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
