@@ -30,12 +30,12 @@ public class WorkspaceService {
     public List<RecentStudioResponse> getRecentStudios(String userId) {
         User user = findUserByUserId(userId);
 
-        List<Studio> studios = studioRepository.findByHostUserIdOrderByCreatedAtDesc(user.getId());
+        List<Studio> studios = studioRepository.findByOwnerId(user.getId());
 
         return studios.stream()
                 .limit(RECENT_STUDIO_LIMIT)
                 .map(studio -> {
-                    long memberCount = studioMemberRepository.countByStudioId(studio.getId());
+                    long memberCount = studioMemberRepository.findByStudioId(studio.getId()).size();
                     return RecentStudioResponse.from(studio, memberCount);
                 })
                 .toList();
@@ -47,7 +47,7 @@ public class WorkspaceService {
 
         List<RecentStudioResponse> recentStudios = getRecentStudios(userId);
         long connectedDestinationCount = connectedDestinationRepository.findByUserIdAndIsActiveTrue(user.getId()).size();
-        long totalStudioCount = studioRepository.countByHostUserId(user.getId());
+        long totalStudioCount = studioRepository.findByOwnerId(user.getId()).size();
 
         return DashboardResponse.builder()
                 .recentStudios(recentStudios)

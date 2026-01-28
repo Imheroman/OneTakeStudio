@@ -12,20 +12,18 @@ import java.time.LocalDateTime;
 public class RecentStudioResponse {
 
     private String studioId;
-    private String title;
+    private String name;
     private StudioStatus status;
-    private String thumbnailUrl;
-    private LocalDateTime scheduledAt;
+    private String thumbnail;
     private LocalDateTime createdAt;
     private long memberCount;
 
     public static RecentStudioResponse from(Studio studio, long memberCount) {
         return RecentStudioResponse.builder()
                 .studioId(studio.getStudioId())
-                .title(studio.getTitle())
+                .name(studio.getName())
                 .status(studio.getStatus())
-                .thumbnailUrl(studio.getThumbnailUrl())
-                .scheduledAt(studio.getScheduledAt())
+                .thumbnail(studio.getThumbnail())
                 .createdAt(studio.getCreatedAt())
                 .memberCount(memberCount)
                 .build();
