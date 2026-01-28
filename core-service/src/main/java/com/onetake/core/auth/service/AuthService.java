@@ -4,6 +4,7 @@ import com.onetake.common.jwt.JwtUtil;
 import com.onetake.core.auth.dto.*;
 import com.onetake.core.auth.entity.AuthProvider;
 import com.onetake.core.auth.exception.AuthException;
+import com.onetake.core.security.TokenBlacklistService;
 import com.onetake.core.user.entity.User;
 import com.onetake.core.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.util.Date;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -23,6 +26,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final EmailVerificationService emailVerificationService;
     private final OAuthService oAuthService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"
@@ -115,6 +119,23 @@ public class AuthService {
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
                 .build();
+    }
+
+    public void logout(String accessToken) {
+        if (!jwtUtil.validateToken(accessToken) || !jwtUtil.isAccessToken(accessToken)) {
+            throw AuthException.invalidToken();
+        }
+
+        String jti = jwtUtil.getJti(accessToken);
+        if (jti == null) {
+            return;
+        }
+
+        Date expiration = jwtUtil.getExpiration(accessToken);
+        long remainingMs = expiration.getTime() - System.currentTimeMillis();
+        if (remainingMs > 0) {
+            tokenBlacklistService.blacklist(jti, Duration.ofMillis(remainingMs));
+        }
     }
 
     @Transactional(readOnly = true)
