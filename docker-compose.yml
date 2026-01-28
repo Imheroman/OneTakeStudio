@@ -43,27 +43,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # RabbitMQ (메시지 브로커)
-  rabbitmq:
-    image: rabbitmq:3.12-management-alpine
-    container_name: onetakestudio-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
-    ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Management UI
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - onetakestudio-network
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Redis (캐시)
+  # Redis (캐시 + Streams 메시지 브로커)
   redis:
     image: redis:7-alpine
     container_name: onetakestudio-redis
@@ -96,7 +76,6 @@ services:
 volumes:
   postgres_data:
   mysql_data:
-  rabbitmq_data:
   redis_data:
 
 networks:

@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 0
 
 spring:
   application:
@@ -36,16 +36,6 @@ spring:
           timeout: 5000
           writetimeout: 5000
 
-# Eureka Client
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    prefer-ip-address: true
-
 jwt:
   secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
   access-token-expiration: 3600000    # 1시간 (밀리초)
@@ -72,6 +62,17 @@ oauth:
     client-id: ID4xqmLVEISnoNshnvoH
     client-secret: QUGmPMFJqK
     redirect-uri: http://localhost:3001/oauth/callback
+
+# Eureka Client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
 
 logging:
   level:

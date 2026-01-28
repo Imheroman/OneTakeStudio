@@ -302,8 +302,9 @@ if (data.success) {
 
 2. **이메일 필수**: 소셜 로그인 시 이메일 정보 제공에 동의하지 않으면 로그인 실패.
 
-3. **중복 가입 방지**: 같은 이메일로 다른 Provider로 가입 시도하면 에러 발생.
-   - 예: Google로 가입 후 같은 이메일로 Kakao 가입 시도 → "이미 GOOGLE 계정으로 가입된 이메일입니다."
+3. **동일 이메일 계정 연동**: 같은 이메일로 다른 Provider 로그인 시 기존 계정에 자동 연동됨.
+   - 예: Google로 가입 후 같은 이메일로 Naver 로그인 → 기존 계정의 provider가 NAVER로 업데이트
+   - 마지막 로그인한 Provider가 기록됨
 
 4. **닉네임 자동 생성**: 닉네임 중복 시 자동으로 숫자 suffix 추가 (예: 홍길동 → 홍길동1)
 
@@ -323,165 +324,292 @@ caabc96 merge: resolve conflict in UserRepository (email-based auth)
 
 ---
 
-## 9. Authorization Code Flow 구현 (2026-01-27 업데이트)
+## 9. Authorization Code Flow 전환 (2026-01-27)
 
-### 9.1 개요
+### 9.1 방식 변경 이유
 
-기존 Frontend Token 방식에서 **Authorization Code Flow**를 추가 구현했습니다.
+기존 Frontend Token 방식에서 **Authorization Code Flow**로 전환했습니다.
+
+- Frontend Token 방식: 프론트엔드가 OAuth Provider에서 Access Token을 받아 백엔드로 전달
+- Authorization Code Flow: 프론트엔드가 Authorization Code만 받고, 백엔드가 Code를 Token으로 교환
 
 ```
-[Frontend] → [Google OAuth] → [Frontend Callback] → [Backend API] → [JWT 발급]
-     |                              |
-     |---(1) OAuth 인증 요청------->|
-     |<--(2) Authorization Code-----|
-     |
-     |---(3) Code를 Backend 전송--->|
-     |                              |---(4) Code → Token 교환--->[Google]
-     |                              |<--(5) Access Token---------|
-     |                              |---(6) 사용자 정보 조회---->|
-     |<--(7) JWT 토큰 발급----------|
+[프론트엔드]                    [백엔드]                     [OAuth Provider]
+     |                            |                              |
+     |---(1) OAuth 인증 URL로 리다이렉트----------------------->|
+     |<--(2) Authorization Code + state 파라미터 반환-----------|
+     |                            |                              |
+     |---(3) Code + redirectUri -->|                              |
+     |                            |---(4) Code → Token 교환----->|
+     |                            |<--(5) Access Token 발급------|
+     |                            |---(6) 사용자 정보 조회------>|
+     |                            |<--(7) 사용자 정보 응답-------|
+     |<--(8) JWT 토큰 발급--------|                              |
 ```
 
-### 9.2 새로운 API 엔드포인트
+### 9.2 추가된 API 엔드포인트
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| POST | `/api/auth/oauth/google/callback` | Google Authorization Code 처리 |
-| POST | `/api/auth/oauth/kakao/callback` | Kakao Authorization Code 처리 |
-| POST | `/api/auth/oauth/naver/callback` | Naver Authorization Code 처리 |
+| POST | `/api/auth/oauth/google/callback` | Google Code 교환 |
+| POST | `/api/auth/oauth/kakao/callback` | Kakao Code 교환 |
+| POST | `/api/auth/oauth/naver/callback` | Naver Code 교환 |
 
-**Request Body:**
+**Request Body (OAuthCodeRequest):**
 ```json
 {
-  "code": "authorization_code_from_oauth_provider",
+  "code": "Authorization Code",
   "redirectUri": "http://localhost:3001/oauth/callback"
 }
 ```
 
-### 9.3 추가된 파일
+### 9.3 수정된 파일
 
-| 파일 | 설명 |
-|------|------|
-| `OAuthProperties.java` | OAuth 설정값 관리 (client-id, client-secret, redirect-uri) |
-| `OAuthCodeRequest.java` | Authorization Code 요청 DTO |
-
-### 9.4 설정 추가 (application.yml)
-
-```yaml
-oauth:
-  google:
-    client-id: ${GOOGLE_CLIENT_ID}
-    client-secret: ${GOOGLE_CLIENT_SECRET}
-    redirect-uri: http://localhost:3001/oauth/callback
-  kakao:
-    client-id: ${KAKAO_CLIENT_ID}
-    client-secret: ${KAKAO_CLIENT_SECRET}
-    redirect-uri: http://localhost:3001/oauth/callback
-  naver:
-    client-id: ${NAVER_CLIENT_ID}
-    client-secret: ${NAVER_CLIENT_SECRET}
-    redirect-uri: http://localhost:3001/oauth/callback
-```
+| 파일 | 변경 내용 |
+|------|-----------|
+| `OAuthService.java` | `exchangeGoogleCodeForToken()`, `exchangeKakaoCodeForToken()`, `exchangeNaverCodeForToken()` 추가 |
+| `AuthService.java` | `oauthLoginGoogleWithCode()`, `oauthLoginKakaoWithCode()`, `oauthLoginNaverWithCode()` 추가 |
+| `AuthController.java` | `/callback` 엔드포인트 3개 추가 |
+| `OAuthCodeRequest.java` | 신규 DTO (code, redirectUri) |
 
 ---
 
-## 10. CORS 문제 해결 (2026-01-27)
+## 10. CORS 문제 해결
 
-MSA 환경에서 API Gateway와 Core Service 간 CORS 설정 충돌 문제를 해결했습니다.
+### 10.1 redirect_uri_mismatch (Google)
 
-### 10.1 문제 상황
-
-| 오류 | 원인 |
-|------|------|
-| `redirect_uri_mismatch` (400) | Google Cloud Console에 redirect URI 미등록 |
-| CORS 에러 | allowedOriginPatterns: "*" + allowCredentials: true 조합 |
-| 403 Forbidden | Spring Security에서 OAuth 경로 차단 |
-| CORS 헤더 중복 | Gateway와 Core Service 모두 CORS 헤더 추가 |
-
-### 10.2 해결 방법
-
-#### 1) Google Cloud Console 설정
-- 승인된 리디렉션 URI: `http://localhost:3001/oauth/callback`
-- 승인된 JavaScript 원본: `http://localhost:3001`
-
-#### 2) API Gateway CORS 설정 (application.yml)
-```yaml
-spring:
-  cloud:
-    gateway:
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins:
-              - "http://localhost:3000"
-              - "http://localhost:3001"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowedHeaders: "*"
-            exposedHeaders:
-              - "Authorization"
-            allowCredentials: true
-            maxAge: 3600
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+**오류:**
+```
+redirect_uri_mismatch: The redirect URI in the request did not match a registered redirect URI.
 ```
 
-#### 3) Core Service CORS 비활성화 (SecurityConfig.java)
+**원인:** Google Cloud Console에 등록된 Redirect URI와 프론트엔드에서 보내는 URI 불일치
+
+**해결:** Google Cloud Console → 사용자 인증 정보 → OAuth 2.0 클라이언트에 `http://localhost:3001/oauth/callback` 추가
+
+### 10.2 CORS 헤더 중복
+
+**오류:**
+```
+Access-Control-Allow-Origin header contains multiple values 'http://localhost:3001, http://localhost:3001'
+```
+
+**원인:** API Gateway와 Core Service 양쪽에서 CORS 헤더를 설정하여 중복 발생
+
+**해결:** Core Service의 SecurityConfig에서 CORS 설정 제거, API Gateway에서만 CORS 처리
 ```java
-http
-    .cors(AbstractHttpConfigurer::disable)  // Gateway에서 CORS 처리
-    // ...
+// SecurityConfig.java - CORS 비활성화
+http.cors(cors -> cors.disable())
 ```
 
-### 10.3 핵심 원칙
+### 10.3 403 Forbidden
 
-1. **CORS는 Gateway에서만 처리** - 각 서비스에서 중복 처리하지 않음
-2. **명시적 Origin 지정** - `allowedOriginPatterns: "*"`와 `allowCredentials: true` 동시 사용 불가
-3. **중복 헤더 제거** - `DedupeResponseHeader` 필터 사용
+**오류:** OAuth callback POST 요청 시 403 Forbidden
+
+**원인:** Spring Security가 OAuth callback 엔드포인트를 차단
+
+**해결:** SecurityConfig에서 `/api/auth/**` 경로 permitAll 확인
+```java
+.requestMatchers("/api/auth/**").permitAll()
+```
 
 ---
 
-## 11. 프론트엔드 닉네임 표시 문제 해결 (2026-01-27)
+## 11. 닉네임 UUID 표시 버그
 
-### 11.1 증상
+**증상:** 로그인 후 워크스페이스에서 닉네임 대신 UUID가 표시됨
 
-OAuth 로그인 후 워크스페이스에서 닉네임 대신 UUID 표시:
-```
-"2f7e50af-774c-49bf-82ca-07eb702e85d9님, 반가워요!"
-```
+**원인:** `workspace/[id]/page.tsx`에서 `user?.name` 사용 → User 타입에 `name` 필드가 없어서 `undefined`, fallback으로 `userId`(UUID) 표시
 
-### 11.2 원인
+**해결:**
+```tsx
+// Before
+return <WorkspaceHome userId={userId} userName={user?.name} />;
 
-프론트엔드 workspace 페이지에서 존재하지 않는 필드 참조:
-```typescript
-// Before (잘못된 코드)
-<WorkspaceHome userId={userId} userName={user?.name} />
+// After
+return <WorkspaceHome userId={userId} userName={user?.nickname} />;
 ```
 
-User 객체에는 `name` 필드가 없고 `nickname` 필드가 있음.
+---
 
-### 11.3 해결
+## 12. Kakao OAuth 설정 및 오류
 
-```typescript
-// After (수정된 코드)
-<WorkspaceHome userId={userId} userName={user?.nickname} />
+### 12.1 크리덴셜 설정
+
+```yaml
+# application.yml
+oauth:
+  kakao:
+    client-id: 42b37ce2a41ca38644fa194c0b3d86bd     # REST API 키
+    client-secret: C21YcsY9g9y1dlVnVTMCEm0IqosxHzGh  # 보안 → Client Secret
+    redirect-uri: http://localhost:3001/oauth/callback
 ```
 
-### 11.4 User 타입 정의
+**주의:** Kakao Developers Console → 보안 탭에서 Client Secret을 별도로 발급받아야 합니다.
 
-```typescript
-// frontend/src/entities/user/model/schemas.ts
-export const UserSchema = z.object({
-  userId: z.string(),
-  email: z.string().email(),
-  nickname: z.string(),  // ← 이 필드 사용
-  profileImageUrl: z.string().nullable().optional(),
-});
+### 12.2 401 Unauthorized (Token Exchange 실패)
+
+**오류:**
+```
+Kakao token exchange failed: 401 on POST request for "https://kauth.kakao.com/oauth/token": [no body]
+```
+
+**원인:** Kakao OAuth는 Client Secret이 필수. 초기에 Client Secret 없이 요청하여 401 발생.
+
+**해결:** Kakao Developers Console → 보안 → Client Secret 발급 후 `application.yml`에 추가
+
+### 12.3 Port 8081 충돌 (서비스 재시작 실패)
+
+**오류:**
+```
+Port 8081 was already in use.
+```
+
+**원인:** 이전 Core Service 프로세스가 종료되지 않은 채 새 프로세스 시작 시도
+
+**해결:**
+```powershell
+# 포트 사용 프로세스 PID 확인
+(Get-NetTCPConnection -LocalPort 8081).OwningProcess
+
+# 프로세스 강제 종료
+Stop-Process -Id <PID> -Force
+```
+
+---
+
+## 13. Naver OAuth 설정 및 오류
+
+### 13.1 크리덴셜 설정
+
+```yaml
+# application.yml
+oauth:
+  naver:
+    client-id: ID4xqmLVEISnoNshnvoH
+    client-secret: QUGmPMFJqK
+    redirect-uri: http://localhost:3001/oauth/callback
+```
+
+```env
+# frontend/.env.local
+NEXT_PUBLIC_NAVER_CLIENT_ID=ID4xqmLVEISnoNshnvoH
+```
+
+### 13.2 State 파라미터 JSON 파싱 오류
+
+**오류:**
+```
+SyntaxError: Expected property name or '}' in JSON at position 1
+```
+
+**원인:** 프론트엔드에서 `state={"provider":"naver"}`를 URL-encoded로 전송하지만, Naver가 redirect 시 state를 HTML entity로 변환하여 반환:
+```
+# 전송한 state
+state=%7B%22provider%22%3A%22naver%22%7D
+
+# Naver가 반환한 state (HTML entity 포함)
+state={&quot;provider&quot;:&quot;naver&quot;}
+```
+
+`&quot;`의 `&`가 URL 파라미터 구분자로 인식되어 `searchParams.get("state")`가 `{`만 반환. JSON 파싱 실패.
+
+**해결:** state 파라미터를 JSON 대신 plain text provider 이름으로 변경:
+```tsx
+// Before (JSON - Naver에서 깨짐)
+const state = encodeURIComponent(JSON.stringify({ provider }));
+
+// After (plain text - 모든 Provider에서 안전)
+const state = provider; // "google", "kakao", "naver"
+```
+
+콜백 페이지에서도 plain text 우선 파싱으로 변경:
+```tsx
+const validProviders = ["google", "kakao", "naver"];
+
+if (validProviders.includes(stateParam)) {
+  // plain text state (권장)
+  provider = stateParam as "google" | "kakao" | "naver";
+} else {
+  // 레거시 JSON 형식 지원
+  try {
+    const state = JSON.parse(decodeURIComponent(stateParam));
+    provider = state.provider;
+  } catch { ... }
+}
+```
+
+### 13.3 409 Conflict (동일 이메일 충돌)
+
+**오류:**
+```
+POST http://localhost:8080/api/auth/oauth/naver/callback 409 (Conflict)
+```
+
+**원인:** Naver 계정의 이메일이 이미 Google/Kakao로 가입되어 있을 때, 기존 로직이 에러를 던짐:
+```java
+throw new AuthException(
+    "이미 " + existing.getProvider() + " 계정으로 가입된 이메일입니다.",
+    HttpStatus.CONFLICT);
+```
+
+**해결:** 동일 이메일이면 기존 계정에 새 OAuth 제공자를 연동하도록 변경:
+```java
+// Before: 409 에러
+if (!existing.getProvider().equals(userInfo.getProvider())) {
+    throw new AuthException("이미 " + existing.getProvider() + " 계정으로 가입...", CONFLICT);
+}
+
+// After: 기존 계정에 연동
+user = userByEmail.get();
+user.linkOAuthProvider(userInfo.getProvider(), userInfo.getProviderId());
+if (userInfo.getProfileImageUrl() != null) {
+    user.updateProfileImageUrl(userInfo.getProfileImageUrl());
+}
+userRepository.save(user);
+```
+
+`User.java`에 도메인 메서드 추가:
+```java
+public void linkOAuthProvider(String provider, String providerId) {
+    this.provider = provider;
+    this.providerId = providerId;
+}
+```
+
+**참고:** 이 방식은 마지막으로 로그인한 OAuth 제공자로 provider가 덮어씌워집니다. 다중 제공자를 동시에 유지하려면 별도 테이블(user_oauth_providers)이 필요합니다.
+
+---
+
+## 14. Media Service 패키지 리팩토링
+
+### 14.1 변경 내용
+
+| 항목 | Before | After |
+|------|--------|-------|
+| 패키지 | `com.onetakestudio.mediaservice` | `com.onetake.media` |
+| RabbitConfig | 존재 | 제거 |
+| RedisStreamConfig | 없음 | 신규 추가 |
+
+### 14.2 변경된 파일 수
+
+- 58개 파일 변경 (rename + 코드 수정)
+- 모든 import 경로가 `com.onetake.media`로 통일
+
+---
+
+## 15. 커밋 이력 (2026-01-27 추가분)
+
+```
+e8c14cf feat(fe/auth): OAuth state 파라미터 plain text 변환 및 콜백 파싱 개선
+b2295b0 feat(auth): OAuth 동일 이메일 계정 연동 및 Kakao/Naver 크리덴셜 추가
+dca9da6 feat(auth): OAuth Authorization Code Flow 구현 및 CORS 문제 해결
+```
+
+### be-dev 브랜치 (cherry-pick)
+```
+0251f43 refactor(media): 패키지 구조 변경 (com.onetakestudio.mediaservice -> com.onetake.media)
+9859ca8 feat(auth): OAuth 동일 이메일 계정 연동 및 Kakao/Naver 크리덴셜 추가
 ```
 
 ---
