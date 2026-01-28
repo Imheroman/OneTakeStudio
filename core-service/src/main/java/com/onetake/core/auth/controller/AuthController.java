@@ -98,4 +98,27 @@ public class AuthController {
         LoginResponse response = authService.oauthLoginNaver(request);
         return ResponseEntity.ok(ApiResponse.success("Naver 로그인 성공", response));
     }
+
+    // ==================== Code 기반 OAuth 로그인 (Authorization Code Flow) ====================
+
+    @PostMapping("/oauth/google/callback")
+    public ResponseEntity<ApiResponse<LoginResponse>> oauthGoogleCallback(
+            @RequestBody @Valid OAuthCodeRequest request) {
+        LoginResponse response = authService.oauthLoginGoogleWithCode(request.getCode(), request.getRedirectUri());
+        return ResponseEntity.ok(ApiResponse.success("Google 로그인 성공", response));
+    }
+
+    @PostMapping("/oauth/kakao/callback")
+    public ResponseEntity<ApiResponse<LoginResponse>> oauthKakaoCallback(
+            @RequestBody @Valid OAuthCodeRequest request) {
+        LoginResponse response = authService.oauthLoginKakaoWithCode(request.getCode(), request.getRedirectUri());
+        return ResponseEntity.ok(ApiResponse.success("Kakao 로그인 성공", response));
+    }
+
+    @PostMapping("/oauth/naver/callback")
+    public ResponseEntity<ApiResponse<LoginResponse>> oauthNaverCallback(
+            @RequestBody @Valid OAuthCodeRequest request) {
+        LoginResponse response = authService.oauthLoginNaverWithCode(request.getCode(), request.getRedirectUri());
+        return ResponseEntity.ok(ApiResponse.success("Naver 로그인 성공", response));
+    }
 }
