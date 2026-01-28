@@ -87,7 +87,7 @@ export function SignupForm() {
       };
 
       const response = await apiClient.post(
-        "/api/v1/auth/signup",
+        "/api/auth/signup",
         AuthResponseSchema,
         signupData,
       );

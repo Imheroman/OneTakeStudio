@@ -34,7 +34,7 @@ export function ChannelManagement() {
     try {
       setIsLoading(true);
       const response = await apiClient.get(
-        "/api/v1/channels",
+        "/api/channels",
         ChannelListResponseSchema,
       );
       setChannels(response.channels);
@@ -50,7 +50,7 @@ export function ChannelManagement() {
       // 백엔드에서 OAuth URL 생성 요청
       // 백엔드는 Client Secret을 사용하여 안전하게 OAuth URL 생성
       const response = await apiClient.post(
-        "/api/v1/channels/connect",
+        "/api/channels/connect",
         ConnectChannelResponseSchema,
         { platform },
       );
@@ -73,7 +73,7 @@ export function ChannelManagement() {
 
     try {
       await apiClient.delete(
-        `/api/v1/channels/${id}`,
+        `/api/channels/${id}`,
         DeleteResponseSchema,
       );
       // 목록 새로고침

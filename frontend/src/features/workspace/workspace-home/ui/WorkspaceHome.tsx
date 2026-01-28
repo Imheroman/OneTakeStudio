@@ -34,7 +34,7 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
     const fetchRecentStudios = async () => {
       try {
         const response = await apiClient.get(
-          `/api/v1/workspace/${userId}/studios/recent`,
+          `/api/workspace/${userId}/studios/recent`,
           RecentStudioListResponseSchema,
         );
         setRecentStudios(response.studios);

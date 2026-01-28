@@ -13,9 +13,9 @@ public interface StudioRepository extends JpaRepository<Studio, Long> {
 
     Optional<Studio> findByStudioId(String studioId);
 
-    List<Studio> findByHostUserIdOrderByCreatedAtDesc(Long hostUserId);
+    List<Studio> findByOwnerId(Long ownerId);
 
-    List<Studio> findByHostUserIdAndStatusOrderByCreatedAtDesc(Long hostUserId, StudioStatus status);
+    List<Studio> findByOwnerIdAndStatus(Long ownerId, StudioStatus status);
 
-    long countByHostUserId(Long hostUserId);
+    boolean existsByStudioId(String studioId);
 }

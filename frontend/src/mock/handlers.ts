@@ -67,7 +67,7 @@ let channels: Channel[] = [
 
 export const handlers = [
   // 주소 앞에 BASE_URL을 붙여서 MSW가 8080 포트 요청도 가로채게 만듭니다.
-  http.post(`${BASE_URL}/api/v1/auth/login`, async ({ request }) => {
+  http.post(`${BASE_URL}/api/auth/login`, async ({ request }) => {
     const body = (await request.json()) as any;
     const { email, password } = body;
 
@@ -99,7 +99,7 @@ export const handlers = [
   // src/mock/handlers.ts 안에 추가
 
   // 회원가입 모의 API
-  http.post("/api/v1/auth/signup", async ({ request }) => {
+  http.post("/api/auth/signup", async ({ request }) => {
     const body = (await request.json()) as any;
     const { email, name } = body;
 
@@ -126,7 +126,7 @@ export const handlers = [
   }),
 
   // 워크스페이스 최근 스튜디오 목록
-  http.get(`${BASE_URL}/api/v1/workspace/:userId/studios/recent`, async () => {
+  http.get(`${BASE_URL}/api/workspace/:userId/studios/recent`, async () => {
     console.log("[MSW] 최근 스튜디오 목록 요청");
     return HttpResponse.json({
       studios: [
@@ -140,7 +140,7 @@ export const handlers = [
   }),
 
   // 스토리지 정보 조회
-  http.get(`${BASE_URL}/api/v1/storage`, async () => {
+  http.get(`${BASE_URL}/api/storage`, async () => {
     console.log("[MSW] 스토리지 정보 요청");
     return HttpResponse.json({
       used: 40.09,
@@ -151,7 +151,7 @@ export const handlers = [
   }),
 
   // 스토리지 파일 목록 조회
-  http.get(`${BASE_URL}/api/v1/storage/files`, async () => {
+  http.get(`${BASE_URL}/api/storage/files`, async () => {
     console.log("[MSW] 스토리지 파일 목록 요청");
     return HttpResponse.json({
       files: [
@@ -192,7 +192,7 @@ export const handlers = [
   }),
 
   // 비디오 라이브러리 목록 조회
-  http.get(`${BASE_URL}/api/v1/library/videos`, async ({ request }) => {
+  http.get(`${BASE_URL}/api/library/videos`, async ({ request }) => {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
 
@@ -277,7 +277,7 @@ export const handlers = [
   }),
 
   // 알림 목록 조회
-  http.get(`${BASE_URL}/api/v1/notifications`, async () => {
+  http.get(`${BASE_URL}/api/notifications`, async () => {
     console.log("[MSW] 알림 목록 요청");
     return HttpResponse.json({
       notifications: [
@@ -315,7 +315,7 @@ export const handlers = [
   }),
 
   // 즐겨찾기 목록 조회
-  http.get(`${BASE_URL}/api/v1/favorites`, async () => {
+  http.get(`${BASE_URL}/api/favorites`, async () => {
     console.log("[MSW] 즐겨찾기 목록 요청", favorites);
     return HttpResponse.json({
       favorites,
@@ -325,7 +325,7 @@ export const handlers = [
   }),
 
   // 즐겨찾기 추가
-  http.post(`${BASE_URL}/api/v1/favorites`, async ({ request }) => {
+  http.post(`${BASE_URL}/api/favorites`, async ({ request }) => {
     const body = (await request.json()) as any;
     const { userId } = body;
 
@@ -381,7 +381,7 @@ export const handlers = [
   }),
 
   // 즐겨찾기 삭제
-  http.delete(`${BASE_URL}/api/v1/favorites/:id`, async ({ params }) => {
+  http.delete(`${BASE_URL}/api/favorites/:id`, async ({ params }) => {
     const { id } = params;
     console.log(`[MSW] 즐겨찾기 삭제 요청: ${id}`, "삭제 전:", favorites);
 
@@ -404,7 +404,7 @@ export const handlers = [
   }),
 
   // 사용자 검색 (이메일 또는 닉네임)
-  http.get(`${BASE_URL}/api/v1/favorites/search`, async ({ request }) => {
+  http.get(`${BASE_URL}/api/favorites/search`, async ({ request }) => {
     const url = new URL(request.url);
     const query = url.searchParams.get("q") || "";
 
@@ -446,7 +446,7 @@ export const handlers = [
   }),
 
   // 채널 목록 조회
-  http.get(`${BASE_URL}/api/v1/channels`, async () => {
+  http.get(`${BASE_URL}/api/channels`, async () => {
     console.log("[MSW] 채널 목록 요청", channels);
     return HttpResponse.json({
       channels,
@@ -456,7 +456,7 @@ export const handlers = [
 
   // 채널 연결 시작 (백엔드에서 OAuth URL 생성)
   // MSW는 실제 OAuth URL만 반환 (실제 OAuth Provider로 리다이렉트)
-  http.post(`${BASE_URL}/api/v1/channels/connect`, async ({ request }) => {
+  http.post(`${BASE_URL}/api/channels/connect`, async ({ request }) => {
     const body = (await request.json()) as any;
     const { platform } = body;
 
@@ -530,7 +530,7 @@ export const handlers = [
   // MSW에서는 모킹하지 않음 (실제 OAuth Provider와 통신 필요)
 
   // 채널 연결 해제
-  http.delete(`${BASE_URL}/api/v1/channels/:id`, async ({ params }) => {
+  http.delete(`${BASE_URL}/api/channels/:id`, async ({ params }) => {
     const { id } = params;
     console.log(`[MSW] 채널 연결 해제 요청: ${id}`, "해제 전:", channels);
 
@@ -558,7 +558,7 @@ export const handlers = [
   }),
 
   // 스튜디오 생성
-  http.post(`${BASE_URL}/api/v1/studios`, async ({ request }) => {
+  http.post(`${BASE_URL}/api/studios`, async ({ request }) => {
     const body = (await request.json()) as any;
     const { title, description, transmissionType, storageLocation, platforms } = body;
 
@@ -589,7 +589,7 @@ export const handlers = [
   }),
 
   // 스튜디오 조회
-  http.get(`${BASE_URL}/api/v1/studios/:id`, async ({ params }) => {
+  http.get(`${BASE_URL}/api/studios/:id`, async ({ params }) => {
     const { id } = params;
     console.log(`[MSW] 스튜디오 조회 요청: ${id}`);
 

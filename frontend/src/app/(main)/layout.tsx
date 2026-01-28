@@ -30,7 +30,7 @@ export default function MainLayout({
       if (!isLoggedIn) return;
       try {
         const response = await apiClient.get(
-          "/api/v1/notifications",
+          "/api/notifications",
           NotificationListResponseSchema,
         );
         setNotifications(

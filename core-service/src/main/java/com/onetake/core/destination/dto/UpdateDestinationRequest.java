@@ -8,8 +8,6 @@ import lombok.NoArgsConstructor;
 public class UpdateDestinationRequest {
 
     private String channelName;
-
-    private String streamUrl;
-
+    private String rtmpUrl;
     private String streamKey;
 }

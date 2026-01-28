@@ -9,16 +9,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CreateDestinationRequest {
 
-    @NotBlank(message = "플랫폼은 필수입니다.")
-    @Size(max = 50, message = "플랫폼 이름은 50자 이하여야 합니다.")
+    @NotBlank(message = "플랫폼은 필수입니다")
+    @Size(max = 50, message = "플랫폼 이름은 50자 이하여야 합니다")
     private String platform;
 
-    @NotBlank(message = "채널 ID는 필수입니다.")
+    @NotBlank(message = "채널 ID는 필수입니다")
     private String channelId;
 
     private String channelName;
-
-    private String streamUrl;
-
+    private String rtmpUrl;
     private String streamKey;
 }

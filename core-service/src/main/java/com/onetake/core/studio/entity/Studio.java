@@ -20,34 +20,25 @@ public class Studio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "studio_id", unique = true, nullable = false, updatable = false, length = 36)
+    @Column(name = "studio_id", unique = true, nullable = false, length = 36)
     private String studioId;
 
-    @Column(name = "title", nullable = false, length = 100)
-    private String title;
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
 
-    @Column(name = "description", length = 500)
-    private String description;
+    @Column(nullable = false, length = 100)
+    private String name;
 
-    @Column(name = "host_user_id", nullable = false)
-    private Long hostUserId;
+    @Column(length = 500)
+    private String thumbnail;
+
+    @Column(length = 50)
+    private String template;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(length = 20)
     @Builder.Default
-    private StudioStatus status = StudioStatus.PREPARING;
-
-    @Column(name = "thumbnail_url", length = 500)
-    private String thumbnailUrl;
-
-    @Column(name = "scheduled_at")
-    private LocalDateTime scheduledAt;
-
-    @Column(name = "started_at")
-    private LocalDateTime startedAt;
-
-    @Column(name = "ended_at")
-    private LocalDateTime endedAt;
+    private StudioStatus status = StudioStatus.READY;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -59,34 +50,29 @@ public class Studio {
 
     @PrePersist
     public void prePersist() {
-        if (this.studioId == null) {
-            this.studioId = UUID.randomUUID().toString();
+        if (studioId == null) {
+            studioId = UUID.randomUUID().toString();
         }
     }
 
-    public void updateTitle(String title) {
-        this.title = title;
+    public void updateInfo(String name, String thumbnail) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (thumbnail != null) {
+            this.thumbnail = thumbnail;
+        }
     }
 
-    public void updateDescription(String description) {
-        this.description = description;
+    public boolean isStreaming() {
+        return this.status == StudioStatus.LIVE;
     }
 
-    public void updateThumbnailUrl(String thumbnailUrl) {
-        this.thumbnailUrl = thumbnailUrl;
-    }
-
-    public void updateScheduledAt(LocalDateTime scheduledAt) {
-        this.scheduledAt = scheduledAt;
-    }
-
-    public void startLive() {
+    public void startStreaming() {
         this.status = StudioStatus.LIVE;
-        this.startedAt = LocalDateTime.now();
     }
 
-    public void endLive() {
+    public void endStreaming() {
         this.status = StudioStatus.ENDED;
-        this.endedAt = LocalDateTime.now();
     }
 }

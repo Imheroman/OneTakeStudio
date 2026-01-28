@@ -43,7 +43,7 @@ export function StudioCreation({
       };
 
       const response = await apiClient.post(
-        "/api/v1/studios",
+        "/api/studios",
         CreateStudioResponseSchema,
         request,
       );

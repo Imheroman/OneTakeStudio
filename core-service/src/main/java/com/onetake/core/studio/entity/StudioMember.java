@@ -2,12 +2,12 @@ package com.onetake.core.studio.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "studio_members")
+@Table(name = "studio_members",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"studio_id", "user_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -25,23 +25,26 @@ public class StudioMember {
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 20)
-    private MemberRole role;
+    @Column(length = 20, nullable = false)
+    private StudioMemberRole role;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "joined_at")
     @Builder.Default
-    private MemberStatus status = MemberStatus.INVITED;
+    private LocalDateTime joinedAt = LocalDateTime.now();
 
-    @CreationTimestamp
-    @Column(name = "joined_at", nullable = false, updatable = false)
-    private LocalDateTime joinedAt;
-
-    public void join() {
-        this.status = MemberStatus.JOINED;
+    public void changeRole(StudioMemberRole newRole) {
+        this.role = newRole;
     }
 
-    public void leave() {
-        this.status = MemberStatus.LEFT;
+    public boolean isHost() {
+        return this.role == StudioMemberRole.HOST;
+    }
+
+    public boolean isManager() {
+        return this.role == StudioMemberRole.MANAGER;
+    }
+
+    public boolean canManageMembers() {
+        return this.role == StudioMemberRole.HOST || this.role == StudioMemberRole.MANAGER;
     }
 }
