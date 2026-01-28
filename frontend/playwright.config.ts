@@ -42,26 +42,37 @@ export default defineConfig({
 
   // 테스트할 브라우저 프로젝트
   projects: [
+    // MSW 모킹 사용 테스트 (기본)
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'chromium-mocked',
+      use: { 
+        ...devices['Desktop Chrome'],
+      },
+      // MSW 모킹 테스트만 실행 (real-api가 아닌 파일)
+      testMatch: /.*(?<!real-api)\.spec\.ts$/,
     },
-    // 개발 초기에는 Chromium만 사용, 나중에 확장 가능
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
+    // 실제 API 사용 테스트
+    {
+      name: 'chromium-real-api',
+      use: { 
+        ...devices['Desktop Chrome'],
+      },
+      // 실제 API 테스트만 실행
+      testMatch: /.*real-api\.spec\.ts$/,
+      // 환경 변수 주입 (MSW 비활성화)
+      env: {
+        NEXT_PUBLIC_API_MOCKING: 'disabled',
+      },
+    },
   ],
 
-  // 개발 서버 자동 실행 (CI 환경에서는 수동으로 실행 필요)
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000, // 2분 타임아웃
-  },
+  // 개발 서버 자동 실행
+  // 로컬에서는 수동으로 서버를 실행해야 함: npm run dev
+  // CI 환경에서만 자동으로 서버 실행
+  // webServer: {
+  //   command: 'npm run dev',
+  //   url: 'http://localhost:3000',
+  //   reuseExistingServer: !process.env.CI,
+  //   timeout: 120 * 1000,
+  // },
 });

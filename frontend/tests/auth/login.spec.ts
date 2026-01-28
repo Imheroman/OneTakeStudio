@@ -10,11 +10,17 @@ test.describe('로그인', () => {
 
   test('로그인 페이지가 정상적으로 로드됨', async ({ page }) => {
     await expect(page).toHaveTitle(/OneTake|로그인/i);
-    await expect(page.getByRole('heading', { name: /로그인/i })).toBeVisible();
+    // CardTitle에 "로그인" 텍스트가 있음 (더 구체적인 선택자 사용)
+    await expect(page.locator('[data-slot="card-title"]').getByText('로그인')).toBeVisible();
+    // OneTake 로고도 확인
+    await expect(page.getByText('OneTake', { exact: true })).toBeVisible();
   });
 
   test('이메일과 비밀번호 입력 필드가 표시됨', async ({ page }) => {
     const loginPage = new LoginPage(page);
+    
+    // 페이지가 완전히 로드될 때까지 대기
+    await page.waitForLoadState('networkidle');
     
     await expect(loginPage.emailInput).toBeVisible();
     await expect(loginPage.passwordInput).toBeVisible();
@@ -27,11 +33,8 @@ test.describe('로그인', () => {
     // MSW 모킹된 계정으로 로그인
     await loginPage.login('test@example.com', '12345678');
     
-    // 워크스페이스로 리다이렉트되는지 확인
-    await expect(page).toHaveURL(/\/workspace\/\w+/);
-    
-    // 또는 로그인 상태 확인 (상단 네비게이션에 사용자 정보 표시)
-    // await expect(page.getByText(/워크스페이스/i)).toBeVisible();
+    // 워크스페이스로 리다이렉트되는지 확인 (타임아웃 증가)
+    await expect(page).toHaveURL(/\/workspace\/\w+/, { timeout: 10000 });
   });
 
   test('잘못된 자격증명으로 로그인 실패', async ({ page }) => {

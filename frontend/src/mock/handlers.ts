@@ -88,22 +88,31 @@ export const handlers = [
     if (email === "test@example.com" && password === "12345678") {
       // 서버에서 생성된 고유 ID (실제로는 UUID 등 사용)
       const userId = "user_" + Math.random().toString(36).substring(2, 11);
+      // 실제 API 응답 형식에 맞춤
       return HttpResponse.json(
         {
-          user: {
-            id: userId,
-            email: email,
-            name: "홍길동",
+          success: true,
+          message: "로그인 성공",
+          data: {
+            accessToken: "fake-jwt-token-one-take",
+            refreshToken: "fake-refresh-token-one-take",
+            user: {
+              userId: userId,
+              email: email,
+              nickname: "테스트 사용자",
+              profileImageUrl: null,
+            },
           },
-          accessToken: "fake-jwt-token-one-take",
-          message: "로그인 성공!",
         },
         { status: 200 },
       );
     }
 
     return HttpResponse.json(
-      { message: "이메일 또는 비밀번호가 일치하지 않습니다." },
+      { 
+        success: false,
+        message: "이메일 또는 비밀번호가 일치하지 않습니다." 
+      },
       { status: 401 },
     );
   }),

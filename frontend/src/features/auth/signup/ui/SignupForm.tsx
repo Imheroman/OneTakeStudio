@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { AuthResponseSchema, type SignupRequest } from "@/entities/user/model";
+import { SimpleResponseSchema, type SignupRequest } from "@/entities/user/model";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -33,13 +33,15 @@ import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 const formSchema = z
   .object({
-    name: z.string().min(2, { message: "이름은 2글자 이상이어야 합니다." }),
     nickname: z
       .string()
       .min(2, { message: "닉네임은 2글자 이상이어야 합니다." }),
     email: z
       .string()
       .email({ message: "올바른 이메일 형식을 입력해주세요." }),
+    verificationCode: z
+      .string()
+      .min(6, { message: "인증 코드를 입력해주세요." }),
     password: z
       .string()
       .min(8, { message: "비밀번호는 8글자 이상이어야 합니다." }),
@@ -61,48 +63,182 @@ export function SignupForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isCodeSent, setIsCodeSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
       nickname: "",
       email: "",
+      verificationCode: "",
       password: "",
       confirmPassword: "",
       terms: false,
     },
   });
 
+  // 이메일 인증 코드 발송
+  const handleSendVerificationCode = async () => {
+    const email = form.getValues("email");
+    
+    // 이메일 형식 직접 검증
+    if (!email || !email.trim()) {
+      form.setError("email", { message: "이메일을 입력해주세요." });
+      return;
+    }
+    
+    // zod email validation 사용 (deprecated 파라미터 제거)
+    const emailSchema = z.string().email();
+    const emailValidation = emailSchema.safeParse(email);
+    
+    if (!emailValidation.success) {
+      form.setError("email", { 
+        message: emailValidation.error.issues[0]?.message || "올바른 이메일 형식을 입력해주세요." 
+      });
+      return;
+    }
+
+    try {
+      setIsSendingCode(true);
+      setServerError("");
+      
+      await apiClient.post(
+        "/api/auth/send-verification",
+        SimpleResponseSchema,
+        { email }
+      );
+
+      setIsCodeSent(true);
+      setIsEmailVerified(false); // 새 코드 발송 시 인증 상태 초기화
+      alert("인증 코드가 이메일로 발송되었습니다.");
+    } catch (error: any) {
+      console.error("인증 코드 발송 에러:", error);
+      setServerError(
+        error.message || error.response?.data?.message || "인증 코드 발송에 실패했습니다."
+      );
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  // 이메일 인증 코드 확인
+  const handleVerifyEmail = async () => {
+    const email = form.getValues("email");
+    const code = form.getValues("verificationCode");
+
+    if (!email || !email.trim()) {
+      form.setError("email", { message: "이메일을 입력해주세요." });
+      return;
+    }
+
+    if (!code || !code.trim()) {
+      form.setError("verificationCode", { message: "인증 코드를 입력해주세요." });
+      return;
+    }
+
+    try {
+      setIsVerifying(true);
+      setServerError("");
+
+      await apiClient.post(
+        "/api/auth/verify-email",
+        SimpleResponseSchema,
+        { email: email.trim(), code: code.trim() }
+      );
+
+      setIsEmailVerified(true);
+      alert("이메일 인증이 완료되었습니다.");
+    } catch (error: any) {
+      console.error("이메일 인증 에러:", error);
+      const errorMessage = error.response?.data?.message || error.message || "인증 코드가 올바르지 않습니다.";
+      form.setError("verificationCode", { message: errorMessage });
+      setServerError(errorMessage);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // 이메일 인증이 완료되었는지 확인
+    if (!isEmailVerified) {
+      setServerError("먼저 이메일 인증 코드를 발송하고 인증을 완료해주세요.");
+      return;
+    }
+
+    // 인증 코드는 이미 검증되었으므로 저장된 값 사용
+    if (!values.verificationCode || values.verificationCode.trim().length === 0) {
+      form.setError("verificationCode", { message: "인증 코드를 입력해주세요." });
+      return;
+    }
+
+    const signupData: SignupRequest = {
+      email: values.email.trim(),
+      password: values.password,
+      verificationCode: values.verificationCode.trim(),
+      nickname: values.nickname.trim(),
+    };
+
     try {
       setIsSubmitting(true);
       setServerError("");
 
-      const signupData: SignupRequest = {
-        email: values.email,
-        password: values.password,
-        name: values.name,
-        nickname: values.nickname,
-      };
-
       const response = await apiClient.post(
-        "/api/auth/signup",
-        AuthResponseSchema,
+        "/api/auth/register",
+        SimpleResponseSchema,
         signupData,
       );
 
-      if (response.accessToken && response.user) {
-        login(response.user, response.accessToken);
-        router.push(`/workspace/${response.user.id}`);
-      } else {
+      if (response.success) {
+        // 회원가입 성공 시 로그인 페이지로 이동
+        alert("회원가입이 완료되었습니다. 로그인해주세요.");
         router.push("/login");
       }
     } catch (error: any) {
       console.error("회원가입 에러:", error);
-      setServerError(
-        error.response?.data?.message || "회원가입 중 문제가 발생했습니다.",
-      );
+      
+      // 400 Bad Request 에러 상세 로깅
+      if (error.response?.status === 400) {
+        const responseData = error.response?.data;
+        console.error("400 Bad Request 상세:", {
+          status: error.response.status,
+          data: responseData,
+          requestData: signupData,
+          headers: error.response.headers,
+        });
+        
+        // 백엔드 ApiResponse 형식: { resultCode, success, message, data, errorCode }
+        let errorMessage = "회원가입 요청이 올바르지 않습니다.";
+        
+        if (responseData?.message) {
+          errorMessage = responseData.message;
+        } else if (typeof responseData === 'string') {
+          errorMessage = responseData;
+        }
+        
+        // 일반적인 400 에러 원인 안내
+        if (errorMessage.includes("인증") || errorMessage.includes("verification")) {
+          errorMessage += " 이메일 인증 코드를 다시 확인해주세요.";
+        } else if (errorMessage.includes("이메일") || errorMessage.includes("email")) {
+          errorMessage += " 이메일 형식과 중복 여부를 확인해주세요.";
+        } else if (errorMessage.includes("닉네임") || errorMessage.includes("nickname")) {
+          errorMessage += " 닉네임은 2-20자이며 중복되지 않아야 합니다.";
+        }
+        
+        setServerError(errorMessage);
+      } else if (error.message?.includes("Network Error") || error.code === "ERR_NETWORK") {
+        setServerError("네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.");
+      } else if (error.message?.includes("API 응답 검증 실패")) {
+        setServerError("서버 응답 형식이 올바르지 않습니다.");
+      } else {
+        setServerError(
+          error.message || 
+          error.response?.data?.message || 
+          "회원가입 중 문제가 발생했습니다."
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -131,52 +267,104 @@ export function SignupForm() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>이름</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="nickname"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nickname</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Choose a nickname" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="nickname"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>닉네임</FormLabel>
+                    <FormControl>
+                      <Input placeholder="닉네임을 입력하세요" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="email"
-                        placeholder="Enter your email" 
-                        {...field} 
-                      />
-                    </FormControl>
+                    <FormLabel>이메일</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input 
+                          type="email"
+                          placeholder="이메일을 입력하세요" 
+                          {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            // 이메일 변경 시 인증 상태 초기화
+                            if (isEmailVerified || isCodeSent) {
+                              setIsEmailVerified(false);
+                              setIsCodeSent(false);
+                              form.setValue("verificationCode", "");
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendVerificationCode}
+                        disabled={isSendingCode || !form.getValues("email")}
+                        className="whitespace-nowrap"
+                      >
+                        {isSendingCode ? (
+                          <Loader2 className="animate-spin h-4 w-4" />
+                        ) : isCodeSent ? (
+                          "재발송"
+                        ) : (
+                          "인증코드 발송"
+                        )}
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {isCodeSent && (
+                <FormField
+                  control={form.control}
+                  name="verificationCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>인증 코드</FormLabel>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input 
+                            placeholder="이메일로 받은 인증 코드를 입력하세요" 
+                            {...field}
+                            disabled={isEmailVerified}
+                            className={isEmailVerified ? "bg-green-50 border-green-500" : ""}
+                          />
+                        </FormControl>
+                        <Button
+                          type="button"
+                          variant={isEmailVerified ? "outline" : "default"}
+                          onClick={handleVerifyEmail}
+                          disabled={isVerifying || isEmailVerified || !form.getValues("verificationCode")}
+                          className="whitespace-nowrap"
+                        >
+                          {isVerifying ? (
+                            <Loader2 className="animate-spin h-4 w-4" />
+                          ) : isEmailVerified ? (
+                            "✓ 완료"
+                          ) : (
+                            "확인"
+                          )}
+                        </Button>
+                      </div>
+                      {isEmailVerified && (
+                        <p className="text-sm text-green-600 font-medium">이메일 인증이 완료되었습니다.</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
