@@ -81,7 +81,7 @@ export default function MyPage() {
     try {
       setIsLoading(true);
       // API 요청 (MSW가 가로챔)
-      // const response = await apiClient.put("/api/v1/users/me", values);
+      // const response = await apiClient.put("/api/users/me", values);
 
       console.log("프로필 업데이트:", values);
 
@@ -104,7 +104,7 @@ export default function MyPage() {
     try {
       setIsLoading(true);
       // API 요청
-      // await apiClient.put("/api/v1/users/password", values);
+      // await apiClient.put("/api/users/password", values);
 
       console.log("비밀번호 변경 요청:", values);
       alert("비밀번호가 성공적으로 변경되었습니다.");

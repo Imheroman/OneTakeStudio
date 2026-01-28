@@ -44,8 +44,8 @@ export default function StoragePage() {
     const fetchStorageData = async () => {
       try {
         const [storageResponse, filesResponse] = await Promise.all([
-          apiClient.get("/api/v1/storage", StorageDataSchema),
-          apiClient.get("/api/v1/storage/files", StorageFilesResponseSchema),
+          apiClient.get("/api/storage", StorageDataSchema),
+          apiClient.get("/api/storage/files", StorageFilesResponseSchema),
         ]);
 
         setStorageData(storageResponse);

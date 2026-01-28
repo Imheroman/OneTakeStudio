@@ -20,8 +20,8 @@ export function VideoLibrary() {
         setIsLoading(true);
         const url =
           filter !== "all"
-            ? `/api/v1/library/videos?type=${filter}`
-            : "/api/v1/library/videos";
+            ? `/api/library/videos?type=${filter}`
+            : "/api/library/videos";
         const response = await apiClient.get(url, VideoListResponseSchema);
         setVideos(response.videos);
       } catch (error) {
