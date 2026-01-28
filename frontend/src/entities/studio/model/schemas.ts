@@ -72,18 +72,16 @@ export const RecentStudioListResponseSchema = z.object({
   studios: z.array(RecentStudioSchema),
 });
 
-// 스튜디오 생성 요청 스키마
+// 스튜디오 생성 요청 스키마 (백엔드 CreateStudioRequest)
+// 백엔드는 name과 template만 받음
 export const CreateStudioRequestSchema = z.object({
-  title: z.string().min(1, "제목을 입력해주세요."),
-  description: z.string().optional(),
-  transmissionType: TransmissionTypeSchema,
-  storageLocation: StorageLocationSchema,
-  platforms: z.array(PlatformSchema).min(1, "최소 1개 이상의 플랫폼을 선택해주세요."),
+  name: z.string().min(1, "스튜디오 이름을 입력해주세요.").max(100, "스튜디오 이름은 100자를 초과할 수 없습니다."),
+  template: z.string().max(50, "템플릿 이름은 50자를 초과할 수 없습니다.").optional(),
 });
 
 // 스튜디오 생성 응답 스키마 (ApiResponse<StudioDetailResponse>)
+// 백엔드 응답 형식: { success: boolean, message?: string, data: StudioDetailResponse }
 export const CreateStudioResponseSchema = z.object({
-  resultCode: z.string(),
   success: z.boolean(),
   message: z.string().optional(),
   data: StudioSchema,

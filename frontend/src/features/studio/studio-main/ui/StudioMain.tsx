@@ -42,12 +42,10 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const fetchStudio = async () => {
     try {
       setIsLoading(true);
-      // 백엔드 ApiResponse 래핑 형식: { resultCode, success, message, data: StudioDetail }
-      const ApiResponseSchema = StudioDetailSchema;
+      // 백엔드 ApiResponse 래핑 형식: { success, message?, data: StudioDetail }
       const response = await apiClient.get(
         `/api/studios/${studioId}`,
         z.object({
-          resultCode: z.string(),
           success: z.boolean(),
           message: z.string().optional(),
           data: StudioDetailSchema,
@@ -95,8 +93,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const handleExit = () => {
     if (confirm("스튜디오를 나가시겠습니까?")) {
       // 워크스페이스 홈으로 이동
-      if (user?.id) {
-        router.push(`/workspace/${user.id}`);
+      if (user?.userId) {
+        router.push(`/workspace/${user.userId}`);
       } else {
         router.back();
       }
@@ -144,7 +142,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           </div>
 
           {/* 레이아웃 컨트롤 */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <LayoutControls
               currentLayout={currentLayout}
               onLayoutChange={setCurrentLayout}
@@ -153,7 +151,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           </div>
 
           {/* 하단 패널 */}
-          <div className="grid grid-cols-2 gap-4 flex-shrink-0 min-h-0">
+          <div className="grid grid-cols-2 gap-4 shrink-0 min-h-0">
             {/* Scenes 패널 */}
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <ScenesPanel
@@ -176,7 +174,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           </div>
 
           {/* 컨트롤 바 */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <ControlBar
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
