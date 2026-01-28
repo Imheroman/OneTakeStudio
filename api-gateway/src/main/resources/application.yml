@@ -73,6 +73,10 @@ spring:
                 allowCredentials: true
                 maxAge: 3600
 
+# JWT
+jwt:
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
+
 # Eureka Client
 eureka:
   client:

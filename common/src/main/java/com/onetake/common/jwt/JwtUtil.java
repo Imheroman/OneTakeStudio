@@ -20,11 +20,19 @@ public class JwtUtil {
     }
 
     public String generateAccessToken(String userId, String email, String nickname) {
-        return Jwts.builder()
+        return generateAccessToken(userId, email, nickname, null);
+    }
+
+    public String generateAccessToken(String userId, String email, String nickname, Long internalId) {
+        var builder = Jwts.builder()
                 .subject(userId)
                 .claim("email", email)
                 .claim("nickname", nickname)
-                .claim("type", "access")
+                .claim("type", "access");
+        if (internalId != null) {
+            builder.claim("iid", internalId);
+        }
+        return builder
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(secretKey)
@@ -80,5 +88,9 @@ public class JwtUtil {
 
     public boolean isRefreshToken(String token) {
         return "refresh".equals(getTokenType(token));
+    }
+
+    public Long getInternalId(String token) {
+        return parseToken(token).get("iid", Long.class);
     }
 }

@@ -10,6 +10,7 @@ import { ScenesPanel } from "@/widgets/studio/scenes-panel";
 import { SourcesPanel } from "@/widgets/studio/sources-panel";
 import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
+import { z } from "zod";
 import { apiClient } from "@/shared/api/client";
 import {
   StudioDetailSchema,
@@ -41,15 +42,18 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const fetchStudio = async () => {
     try {
       setIsLoading(true);
+      // 백엔드 ApiResponse 래핑 형식: { resultCode, success, message, data: StudioDetail }
+      const ApiResponseSchema = StudioDetailSchema;
       const response = await apiClient.get(
         `/api/studios/${studioId}`,
-        StudioDetailSchema,
+        z.object({
+          resultCode: z.string(),
+          success: z.boolean(),
+          message: z.string().optional(),
+          data: StudioDetailSchema,
+        }),
       );
-      setStudio(response);
-      setCurrentLayout(response.currentLayout);
-      setActiveSceneId(
-        response.scenes.find((s) => s.isActive)?.id || response.scenes[0]?.id || "",
-      );
+      setStudio(response.data);
     } catch (error) {
       console.error("스튜디오 조회 실패:", error);
     } finally {
@@ -121,7 +125,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* 헤더 */}
         <StudioHeader
-          studioTitle={studio.title}
+          studioTitle={studio.name}
           onGoLive={handleGoLive}
           isLive={isLive}
         />
@@ -133,7 +137,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             <PreviewArea
               className="h-full"
               layout={currentLayout}
-              sources={studio.sources}
+              sources={studio.sources ?? []}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
             />
@@ -153,7 +157,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             {/* Scenes 패널 */}
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <ScenesPanel
-                scenes={studio.scenes}
+                scenes={studio.scenes ?? []}
                 activeSceneId={activeSceneId}
                 onSceneSelect={handleSceneSelect}
                 onAddScene={handleAddScene}
@@ -164,7 +168,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             {/* Sources 패널 */}
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <SourcesPanel
-                sources={studio.sources}
+                sources={studio.sources ?? []}
                 onAddSource={handleAddSource}
                 onSourceToggle={handleSourceToggle}
               />

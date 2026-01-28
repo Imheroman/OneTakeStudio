@@ -70,7 +70,8 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(
                 user.getUserId(),
                 user.getEmail(),
-                user.getNickname()
+                user.getNickname(),
+                user.getId()
         );
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
@@ -105,7 +106,8 @@ public class AuthService {
         String newAccessToken = jwtUtil.generateAccessToken(
                 user.getUserId(),
                 user.getEmail(),
-                user.getNickname()
+                user.getNickname(),
+                user.getId()
         );
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
@@ -207,7 +209,8 @@ public class AuthService {
         String accessToken = jwtUtil.generateAccessToken(
                 user.getUserId(),
                 user.getEmail(),
-                user.getNickname()
+                user.getNickname(),
+                user.getId()
         );
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
