@@ -65,7 +65,7 @@ export function InviteMemberDialog({
       try {
         setIsSearching(true);
         const response = await apiClient.get(
-          `/api/v1/favorites/search?q=${encodeURIComponent(debouncedSearchQuery)}`,
+          `/api/favorites/search?q=${encodeURIComponent(debouncedSearchQuery)}`,
           UserSearchResponseSchema,
         );
         // 이미 등록된 사용자 제외
@@ -93,7 +93,7 @@ export function InviteMemberDialog({
     try {
       setIsSearching(true);
       const response = await apiClient.get(
-        `/api/v1/favorites/search?q=${encodeURIComponent(searchQuery)}`,
+        `/api/favorites/search?q=${encodeURIComponent(searchQuery)}`,
         UserSearchResponseSchema,
       );
       // 이미 등록된 사용자 제외

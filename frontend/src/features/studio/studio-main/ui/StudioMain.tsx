@@ -42,7 +42,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     try {
       setIsLoading(true);
       const response = await apiClient.get(
-        `/api/v1/studios/${studioId}`,
+        `/api/studios/${studioId}`,
         StudioDetailSchema,
       );
       setStudio(response);

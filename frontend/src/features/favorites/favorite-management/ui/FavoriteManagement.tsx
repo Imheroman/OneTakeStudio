@@ -28,7 +28,7 @@ export function FavoriteManagement() {
     try {
       setIsLoading(true);
       const response = await apiClient.get(
-        "/api/v1/favorites",
+        "/api/favorites",
         FavoriteListResponseSchema,
       );
       setFavorites(response.favorites);
@@ -43,7 +43,7 @@ export function FavoriteManagement() {
   const handleInvite = async (user: UserSearchResult) => {
     try {
       await apiClient.post(
-        "/api/v1/favorites",
+        "/api/favorites",
         AddFavoriteResponseSchema,
         {
           userId: user.id,
@@ -66,7 +66,7 @@ export function FavoriteManagement() {
 
     try {
       await apiClient.delete(
-        `/api/v1/favorites/${id}`,
+        `/api/favorites/${id}`,
         DeleteResponseSchema,
       );
       // 목록 새로고침
