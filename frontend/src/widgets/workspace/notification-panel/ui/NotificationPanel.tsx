@@ -2,7 +2,6 @@
 
 import { X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
-import { cn } from "@/shared/lib/utils";
 import type { Notification } from "@/entities/notification/model";
 
 export interface NotificationWithActions extends Notification {
@@ -43,9 +42,7 @@ export function NotificationPanel({
       {/* 알림 목록 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {notifications.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            알림이 없습니다.
-          </div>
+          <div className="text-center text-gray-500 py-8">알림이 없습니다.</div>
         ) : (
           notifications.map((notification) => (
             <div
@@ -78,7 +75,8 @@ export function NotificationPanel({
                         onAccept?.(notification.id);
                       }}
                     >
-                      수락
+                      {/* ✨ [수정] 타입에 따라 버튼 텍스트 변경 */}
+                      {notification.type === "ai_shorts" ? "결과 보기" : "수락"}
                     </Button>
                   )}
                   {notification.actions.decline && (

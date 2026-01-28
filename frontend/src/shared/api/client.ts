@@ -3,7 +3,8 @@ import { z, ZodTypeAny } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+// const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = "";
 
 // 2. Axios 인스턴스 생성
 const axiosInstance = axios.create({
