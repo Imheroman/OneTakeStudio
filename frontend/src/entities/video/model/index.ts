@@ -7,10 +7,14 @@ export type {
   VideoStatus,
   VideoType,
   VideoListResponse,
+  ShortsStatus,
+  ShortsStatusResponse,
 } from "./schemas";
 
 // 스키마 export
 export {
   VideoSchema,
   VideoListResponseSchema,
+  ShortsStatusSchema,
+  ShortsStatusResponseSchema,
 } from "./schemas";

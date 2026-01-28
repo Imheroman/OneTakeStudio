@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useShortsStore } from "@/stores/useShortsStore";
+import { apiClient } from "@/shared/api/client";
+import { ShortsStatusResponseSchema } from "@/entities/video/model";
 
 export const useShortsPolling = () => {
   const { setShortsStatus, addNotification } = useShortsStore();
@@ -9,8 +11,10 @@ export const useShortsPolling = () => {
     // 1초마다 서버 상태 체크 (Polling)
     const intervalId = setInterval(async () => {
       try {
-        const res = await fetch("/api/V1/shorts/status");
-        const data = await res.json();
+        const data = await apiClient.get(
+          "/api/v1/shorts/status",
+          ShortsStatusResponseSchema,
+        );
 
         // 생성 중이거나 완료되었을 때만 로직 수행
         if (data.status === "processing" || data.status === "completed") {
