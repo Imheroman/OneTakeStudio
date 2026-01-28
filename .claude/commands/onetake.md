@@ -5,6 +5,61 @@ description: OneTakeStudio MSA 개발 프로젝트 통합 가이드. Spring Boot
 
 # OneTakeStudio MSA 개발 프로젝트 (최종 통합 가이드)
 
+## 📁 프로젝트 경로 및 구조
+
+### Git 레포: 단일 레포, 브랜치 분리
+- **레포 경로**: `C:\Users\SSAFY\Desktop\project\backend\onetakestudio-backend`
+- **백엔드 브랜치**: `be-dev` (작업), `master` (메인)
+- **프론트엔드 브랜치**: `FE/dev` (같은 레포, `frontend/` 폴더)
+- **GitLab**: `https://lab.ssafy.com/s14-webmobile1-sub1/S14P11C206`
+
+### 백엔드 모듈 구조 (be-dev 브랜치)
+```
+onetakestudio-backend/
+├── pom.xml                          ← 루트 POM (모듈 정의)
+├── docker-compose.yml               ← MySQL, PostgreSQL, Redis, LiveKit, MinIO
+├── common/                          ← 공통 라이브러리 (JAR, 서버 아님)
+│   └── src/main/java/com/onetake/common/
+│       ├── dto/ApiResponse.java
+│       └── jwt/JwtUtil.java
+├── core-service/                    ← Core Service (MySQL, port: 0 랜덤)
+│   └── src/main/java/com/onetake/core/
+│       ├── CoreServiceApplication.java
+│       ├── config/                  ← SecurityConfig, JwtConfig, AsyncConfig, RestTemplateConfig
+│       ├── security/                ← CustomUserDetails, CurrentUser, JwtAuthenticationFilter
+│       ├── auth/                    ← 인증 (controller, service, dto, entity, exception, repository, scheduler)
+│       ├── user/                    ← 사용자 (controller, service, dto, entity, exception, repository)
+│       ├── studio/                  ← 스튜디오 (entity, repository) ★ CRUD는 팀원 담당
+│       ├── destination/             ← 송출 채널 (controller, service, dto, entity, exception, repository)
+│       └── workspace/               ← 워크스페이스 대시보드 (controller, service, dto)
+├── media-service/                   ← Media Service (PostgreSQL, port: 8081)
+│   └── src/main/java/com/onetake/media/
+│       ├── MediaServiceApplication.java
+│       ├── global/                  ← 공통 (config, exception, common)
+│       ├── stream/                  ← WebRTC 스트림 (LiveKit 토큰)
+│       ├── recording/               ← 녹화 (LiveKit Egress)
+│       ├── publish/                 ← RTMP 송출
+│       └── screenshare/             ← 화면 공유
+├── eureka-server/                   ← Eureka Service Discovery (port: 8761)
+│   └── src/main/java/com/onetake/eureka/EurekaServerApplication.java
+└── api-gateway/                     ← API Gateway (port: 8080)
+    └── src/main/java/com/onetake/gateway/ApiGatewayApplication.java
+```
+
+### 실행 순서
+1. Docker Compose (`docker-compose up -d`) → MySQL, PostgreSQL, Redis, LiveKit
+2. Eureka Server (port 8761)
+3. Core Service (port 0 → 랜덤, Eureka 등록)
+4. Media Service (port 8081)
+5. API Gateway (port 8080) → 클라이언트 진입점
+
+### 프론트엔드 (FE/dev 브랜치)
+- 경로: 같은 레포의 `FE/dev` 브랜치 → `frontend/` 폴더
+- Next.js + React + TypeScript
+- `npm run dev`로 실행 (port 3000)
+
+---
+
 ## 📌 프로젝트 개요
 
 **OneTakeStudio**는 "송출부터 편집까지 원테이크"를 실현하는 **웹 기반 멀티 플랫폼 라이브 스트리밍 플랫폼**입니다.
@@ -209,7 +264,71 @@ publish_sessions.egress_id VARCHAR(100)
 - ✅ 이메일로 로그인 (username 제거)
 - ✅ 이메일 인증 (6자리 코드, 5분 유효)
 - ✅ 비밀번호 찾기/재설정 (이메일로 재설정 링크 발송)
-- ❌ OAuth 소셜 로그인 없음 (추후 추가 가능)
+- ✅ OAuth 소셜 로그인 (Google, Kakao, Naver)
+
+### JWT 토큰 관리 (Redis 블랙리스트)
+
+**k3s 환경 특성상 각 서비스에서 개별 JWT 검증 + Redis 공유**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              k3s Ingress (Traefik/Nginx)                     │
+│              라우팅만 담당 - JWT 검증 X                        │
+└─────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┴───────────────────┐
+        ▼                                       ▼
+┌──────────────────────────┐         ┌──────────────────────────┐
+│   Core Service (Pod)     │         │  Media Service (Pod)     │
+│   JwtFilter + Redis체크   │         │  JwtFilter + Redis체크    │
+│   로그아웃 시 블랙리스트 등록│         │  @RequestHeader X-User-Id │
+└──────────────────────────┘         └──────────────────────────┘
+                │                               │
+                └───────────────┬───────────────┘
+                                ▼
+                        ┌───────────────┐
+                        │  Redis (Pod)  │
+                        │  블랙리스트    │
+                        └───────────────┘
+```
+
+**common 모듈 구조** (라이브러리, 서버 아님):
+```
+common/                      ← JAR 라이브러리 (실행 X)
+├── JwtUtil.java             ← JWT 생성/검증
+├── TokenBlacklistService.java ← Redis 블랙리스트 체크
+├── JwtAuthenticationFilter.java ← 공통 인증 필터
+└── ApiResponse.java         ← 공통 응답 DTO
+
+Core Service (서버)           Media Service (서버)
+├── common 의존               ├── common 의존
+├── Redis 연결                ├── Redis 연결
+└── 로그아웃 API              └── X-User-Id 헤더 사용
+```
+
+**Redis 블랙리스트 저장 형식**:
+```
+Key: blacklist:{jti}         # JWT ID (토큰 고유값)
+Value: 1
+TTL: 토큰 남은 만료시간
+```
+
+**로그아웃 흐름**:
+1. 클라이언트 → Core Service `/api/auth/logout` 요청
+2. Core Service → Redis에 토큰 JTI 저장 (블랙리스트 등록)
+3. 이후 요청 시 Core/Media 모두 Redis 블랙리스트 체크
+4. 블랙리스트에 있으면 401 Unauthorized
+
+**Media Service 사용자 정보 전달**:
+```java
+// Media Service - StreamController.java
+@PostMapping("/stream/join")
+public ResponseEntity<ApiResponse<StreamTokenResponse>> joinStream(
+        @RequestHeader("X-User-Id") Long userId,  // ← 인증된 사용자 ID
+        @Valid @RequestBody StreamTokenRequest request) {
+    // userId로 권한 확인 후 처리
+}
+```
 
 ### User 테이블
 ```sql

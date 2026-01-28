@@ -1,6 +1,7 @@
 package com.onetake.core.destination.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 public class CreateDestinationRequest {
 
     @NotBlank(message = "플랫폼은 필수입니다")
+    @Size(max = 50, message = "플랫폼 이름은 50자 이하여야 합니다")
     private String platform;
 
     @NotBlank(message = "채널 ID는 필수입니다")

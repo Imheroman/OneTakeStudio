@@ -2,6 +2,7 @@ package com.onetake.core.auth.exception;
 
 import com.onetake.common.dto.ApiResponse;
 import com.onetake.core.destination.exception.DestinationAlreadyExistsException;
+import com.onetake.core.destination.exception.DestinationException;
 import com.onetake.core.destination.exception.DestinationNotFoundException;
 import com.onetake.core.user.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,14 @@ public class GlobalExceptionHandler {
         log.warn("UserNotFoundException: {}", e.getMessage());
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(DestinationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDestinationException(DestinationException e) {
+        log.warn("DestinationException: {}", e.getMessage());
+        return ResponseEntity
+                .status(e.getStatus())
                 .body(ApiResponse.error(e.getMessage()));
     }
 
