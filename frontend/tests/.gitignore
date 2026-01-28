@@ -1,0 +1,9 @@
+# Playwright 테스트 결과
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Playwright 디버그 파일
+*.webm
+*.png
