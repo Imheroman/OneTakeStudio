@@ -6,7 +6,6 @@ import { PreviewArea } from "@/widgets/studio/preview-area";
 import { StagingArea } from "@/widgets/studio/staging-area";
 import { LayoutControls } from "@/widgets/studio/layout-controls";
 import { ScenesPanel } from "@/widgets/studio/scenes-panel";
-import { SourcesPanel } from "@/widgets/studio/sources-panel";
 import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
 import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
@@ -50,6 +49,10 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
+    previewResolution,
+    setPreviewResolution,
+    sourceTransforms,
+    setSourceTransform,
     setIsVideoEnabled,
     setIsAudioEnabled,
     isRecordingLocal,
@@ -61,7 +64,6 @@ export function StudioMain({ studioId }: StudioMainProps) {
   } = useStudioMain(studioId, { getPreviewStreamRef });
 
   const audioLevel = useAudioLevel(isAudioEnabled);
-  /** 백스테이지 전체 소스에 스트림 생성 → 백스테이지에 추가 시 바로 미리보기 노출. Add to stage 시 PreviewArea에만 추가 표시 */
   const { getStream: getSourceStream, streamIds: availableStreamIds } =
     useSourceStreams(sources, { isVideoEnabled, isAudioEnabled });
 
@@ -102,8 +104,11 @@ export function StudioMain({ studioId }: StudioMainProps) {
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
               isEditMode={isEditMode}
+              resolution={previewResolution}
               getSourceStream={getSourceStream}
               getPreviewStreamRef={getPreviewStreamRef}
+              sourceTransforms={sourceTransforms}
+              setSourceTransform={setSourceTransform}
             />
           </div>
 
@@ -130,7 +135,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 shrink-0 min-h-0">
+          <div className="shrink-0 min-h-0">
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <ScenesPanel
                 scenes={scenesForPanel}
@@ -139,15 +144,6 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 onAddScene={handleAddScene}
                 onRemoveScene={handleRemoveScene}
               />
-            </div>
-
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
-            <SourcesPanel
-              sources={sources}
-              canAddSource={canAddSource}
-              onAddSource={handleAddSource}
-              onSourceToggle={handleSourceToggle}
-            />
             </div>
 
             <AddSourceDialog
@@ -159,6 +155,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
 
           <div className="shrink-0">
             <ControlBar
+              resolution={previewResolution}
+              onResolutionChange={setPreviewResolution}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
               audioLevel={audioLevel}

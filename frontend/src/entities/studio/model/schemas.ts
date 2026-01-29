@@ -65,6 +65,7 @@ export const UpdateSceneRequestSchema = z.object({
 export const SourceTypeSchema = z.enum([
   "video",
   "audio",
+  "screen",
   "image",
   "text",
   "browser",

@@ -1,12 +1,11 @@
-import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import axios, { AxiosInstance, AxiosError } from "axios";
 import { z, ZodTypeAny } from "zod";
-import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
-// 2. Axios 인스턴스 생성
-const axiosInstance = axios.create({
+// 2. Axios 인스턴스 생성 (토큰 인터셉터는 app 레이어에서 등록)
+export const axiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
   headers: {
@@ -191,19 +190,7 @@ export const apiClient = {
   },
 };
 
-// 3. 요청 인터셉터: 모든 요청에 토큰 주입
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const accessToken = useAuthStore.getState().accessToken;
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
-
-// 4. 응답 인터셉터: 공통 에러 핸들링
+// 3. 응답 인터셉터: 공통 에러 핸들링 (요청 시 토큰 주입은 app 레이어에서 등록)
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {

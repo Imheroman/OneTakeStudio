@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, Plus, Minus } from "lucide-react";
+import { Mic, Monitor, Plus, Minus } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { Source } from "@/entities/studio/model";
 
@@ -9,10 +9,8 @@ interface StagingSourceTileProps {
   source: Source;
   index: number;
   isEditMode: boolean;
-  /** PreviewArea에 올라가 있는지 (Add to stage 한 소스만 true) */
   isOnStage: boolean;
   isDragging?: boolean;
-  /** 공유 스트림. 백스테이지 추가 시 바로 생성되어 미리보기 노출 */
   stream?: MediaStream | null;
   onToggle: (sourceId: string) => void;
   onAddToStage: (sourceId: string) => void;
@@ -39,9 +37,8 @@ export function StagingSourceTile({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
-  // 백스테이지 추가 시 스트림 생성 → 타일에서 바로 미리보기 노출
   useEffect(() => {
-    if (source.type !== "video") return;
+    if (source.type !== "video" && source.type !== "screen") return;
     if (streamProp && videoRef.current) {
       videoRef.current.srcObject = streamProp;
     }
@@ -85,7 +82,7 @@ export function StagingSourceTile({
       )}
     >
       <div className="flex-1 min-h-0 relative">
-        {source.type === "video" ? (
+        {source.type === "video" || source.type === "screen" ? (
           streamProp ? (
             <video
               ref={videoRef}
@@ -96,7 +93,11 @@ export function StagingSourceTile({
             />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center bg-gray-700 gap-1">
-              <span className="text-2xl text-gray-500">📹</span>
+              {source.type === "screen" ? (
+                <Monitor className="h-8 w-8 text-gray-500" />
+              ) : (
+                <span className="text-2xl text-gray-500">📹</span>
+              )}
               <span className="text-[10px] text-gray-500">연결 중...</span>
             </div>
           )
@@ -105,7 +106,6 @@ export function StagingSourceTile({
             <Mic className="h-8 w-8 text-gray-400" />
           </div>
         )}
-        {/* 호버 시 Add to stage / Remove from stage 버튼 (StreamYard 스타일) */}
         {isHovered && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
             {isOnStage ? (

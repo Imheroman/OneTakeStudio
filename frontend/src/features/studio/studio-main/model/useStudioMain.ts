@@ -29,10 +29,18 @@ const ApiResponseSceneSchema = z.object({
   data: SceneResponseSchema,
 });
 
-/** Ref for a function that returns the preview canvas stream (used for local recording). */
 export type GetPreviewStreamRef = {
   current: (() => MediaStream | null) | null;
 };
+
+/** 프리뷰 캔버스 내 소스별 위치·크기·레이어(드래그/리사이즈/z-order용) */
+export interface SourceTransform {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+}
 
 export function useStudioMain(
   studioId: string,
@@ -49,23 +57,22 @@ export function useStudioMain(
   const [isLive, setIsLive] = useState(false);
 
   const [sources, setSources] = useState<Source[]>([]);
-  /** "Add to stage"로 PreviewArea에 올린 소스 ID. 백스테이지 소스는 여기 포함 시에만 메인 프리뷰에 표시 */
   const [onStageSourceIds, setOnStageSourceIds] = useState<string[]>([]);
   const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
-  /** 편집 모드: true = OBS처럼 드래그/수정 가능, false = 라이브 모드(잠금, ON/OFF·프리셋만) */
   const [isEditMode, setIsEditMode] = useState(true);
 
+  const [previewResolution, setPreviewResolution] = useState<"720p" | "1080p">("720p");
+  /** 소스별 위치·크기·zIndex (Konva 드래그/리사이즈/레이어 반영). 없으면 레이아웃 기본값 사용. */
+  const [sourceTransforms, setSourceTransforms] = useState<Record<string, SourceTransform>>({});
   const [isRecordingLocal, setIsRecordingLocal] = useState(false);
   const [isRecordingCloud, setIsRecordingCloud] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
-  /** PreviewArea(메인 프리뷰)에 표시할 소스만. 백스테이지에 추가 후 Add to stage 한 것만 포함 */
   const displaySources = useMemo(
     () => sources.filter((s) => onStageSourceIds.includes(s.id)),
     [sources, onStageSourceIds],
   );
-  /** 씬이 선택된 경우에만 소스 추가 가능 (씬 우선 플로우) */
   const canAddSource = !!activeSceneId;
 
   const layoutElementsToSources = useCallback(
@@ -111,7 +118,6 @@ export function useStudioMain(
     return id ? list.find((s) => s.sceneId === id) : null;
   }, [studio?.scenes, activeSceneId]);
 
-  // 씬 우선 플로우: 선택된 씬에만 소스 종속. 씬 없으면 sources 비움, 씬 전환 시 해당 씬 레이아웃으로 동기화.
   const prevSceneIdRef = useRef<string>("");
   useEffect(() => {
     if (!activeScene) {
@@ -127,6 +133,7 @@ export function useStudioMain(
       const nextSources = layoutElementsToSources(Array.isArray(elements) ? elements : []);
       setSources(nextSources);
       setOnStageSourceIds(nextSources.map((s) => s.id));
+      setSourceTransforms({});
     }
   }, [activeSceneId, activeScene, layoutElementsToSources]);
 
@@ -162,7 +169,6 @@ export function useStudioMain(
     fetchStudio();
   }, [fetchStudio]);
 
-  // 최초 로드 시 또는 씬 목록만 바뀌었을 때 첫 씬 선택
   useEffect(() => {
     if (!studio?.scenes?.length || activeSceneId) return;
     const first = studio.scenes[0];
@@ -170,7 +176,6 @@ export function useStudioMain(
     setActiveSceneId(String((active ?? first).sceneId));
   }, [studio?.scenes, activeSceneId]);
 
-  // 씬이 2개 이상일 때: 선택된 씬이 없거나 삭제된 씬을 가리키면 남은 씬 중 첫 씬으로 복구
   useEffect(() => {
     if (!studio?.scenes?.length) return;
     if (activeScene) return;
@@ -178,9 +183,23 @@ export function useStudioMain(
     setActiveSceneId(String(first.sceneId));
   }, [studio?.scenes, activeScene, activeSceneId]);
 
+  useEffect(() => {
+    if (!studio?.scenes?.length) return;
+    const exists = studio.scenes.some((s) => String(s.sceneId) === activeSceneId);
+    if (exists) return;
+    setActiveSceneId(String(studio.scenes[0].sceneId));
+  }, [studio?.scenes, activeSceneId]);
+
+  useEffect(() => {
+    setOnStageSourceIds((prev) => {
+      const valid = prev.filter((id) => sources.some((s) => s.id === id));
+      return valid.length === prev.length ? prev : valid;
+    });
+  }, [sources]);
+
   const handleGoLive = () => {
     setIsLive(true);
-    setIsEditMode(false); // Go Live 시 잠금(편집 → 라이브)
+    setIsEditMode(false);
   };
 
   const handleSceneSelect = (sceneId: string) => {
@@ -213,7 +232,6 @@ export function useStudioMain(
         z.object({ success: z.boolean(), message: z.string().optional() }),
       );
       await fetchStudio();
-      if (activeSceneId === sceneId) setActiveSceneId("");
     } catch (error) {
       console.error("씬 삭제 실패:", error);
     }
@@ -224,23 +242,26 @@ export function useStudioMain(
   };
 
   const handleAddSourceConfirm = useCallback(
-    (type: "video" | "audio", deviceId?: string) => {
+    (type: "video" | "audio" | "screen", deviceId?: string) => {
       const id =
         type === "video"
           ? `video-${Date.now()}`
-          : `audio-${Date.now()}`;
-      const name = type === "video" ? "웹캠" : "마이크";
+          : type === "screen"
+            ? `screen-${Date.now()}`
+            : `audio-${Date.now()}`;
+      const name = type === "video" ? "웹캠" : type === "screen" ? "화면 공유" : "마이크";
       const resolvedDeviceId =
-        deviceId ??
-        (type === "video"
-          ? getPreferredVideoDeviceId() ?? undefined
-          : getPreferredAudioDeviceId() ?? undefined);
+        type === "screen"
+          ? undefined
+          : deviceId ??
+            (type === "video"
+              ? getPreferredVideoDeviceId() ?? undefined
+              : getPreferredAudioDeviceId() ?? undefined);
       setSources((prev) => [
         ...prev,
         { id, type, name, isVisible: true, deviceId: resolvedDeviceId },
       ]);
       setShowAddSourceDialog(false);
-      // 새 소스는 백스테이지에 추가됨 → 백스테이지 영역에 미리보기 노출. Add to stage 시 PreviewArea에 추가
     },
     [],
   );
@@ -261,9 +282,22 @@ export function useStudioMain(
     );
   }, []);
 
-  /** 백스테이지에서 드래그로 소스 순서 변경 */
   const handleReorderSources = useCallback((newOrder: Source[]) => {
     setSources(newOrder);
+  }, []);
+
+  const setSourceTransform = useCallback((sourceId: string, partial: Partial<SourceTransform>) => {
+    setSourceTransforms((prev) => {
+      const current = prev[sourceId];
+      const next: SourceTransform = {
+        x: partial.x ?? current?.x ?? 0,
+        y: partial.y ?? current?.y ?? 0,
+        width: partial.width ?? current?.width ?? 0,
+        height: partial.height ?? current?.height ?? 0,
+        zIndex: partial.zIndex ?? current?.zIndex ?? 0,
+      };
+      return { ...prev, [sourceId]: next };
+    });
   }, []);
 
   const handleSaveSceneLayout = useCallback(async () => {
@@ -414,6 +448,10 @@ export function useStudioMain(
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
+    previewResolution,
+    setPreviewResolution,
+    sourceTransforms,
+    setSourceTransform,
     setIsVideoEnabled: setIsVideoEnabledState,
     setIsAudioEnabled: setIsAudioEnabledState,
     isRecordingLocal,

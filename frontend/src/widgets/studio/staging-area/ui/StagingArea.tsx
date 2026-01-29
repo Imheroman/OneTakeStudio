@@ -6,14 +6,10 @@ import { StagingSourceTile } from "./StagingSourceTile";
 import type { Source } from "@/entities/studio/model";
 
 interface StagingAreaProps {
-  /** 백스테이지에 올라온 전체 소스 (추가 시 미리보기 노출) */
   sources: Source[];
-  /** PreviewArea에 올라간 소스 ID (Add to stage 한 것만) */
   onStageSourceIds: string[];
   canAddSource: boolean;
-  /** 편집 모드일 때만 드래그로 순서 변경 가능 */
   isEditMode: boolean;
-  /** 소스별 공유 스트림. 백스테이지 전체 소스에 대해 생성(useSourceStreams(sources)). */
   getSourceStream?: (sourceId: string) => MediaStream | undefined;
   onReorder: (newOrder: Source[]) => void;
   onAddSource: () => void;

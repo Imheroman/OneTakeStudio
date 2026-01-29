@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { MSWComponent } from "@/mock/MSWComponent";
+import { ApiAuthProvider } from "@/app/providers/ApiAuthProvider";
 import "@/styles/globals.css";
 
 // 폰트 설정
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="ko"><body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ApiAuthProvider />
         {/* MSW 활성화 조건문 (환경변수 기반) */}
         {process.env.NEXT_PUBLIC_API_MOCKING === "enabled" && <MSWComponent />}
         {children}

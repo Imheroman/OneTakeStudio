@@ -13,7 +13,7 @@ export type LayoutType =
   | "custom";
 
 /** 소스 타입 (entities/studio SourceType과 동일) */
-export type SourceType = "video" | "audio" | "image" | "text" | "browser";
+export type SourceType = "video" | "audio" | "screen" | "image" | "text" | "browser";
 
 /** 소스 정보 (entities/studio Source와 동일 구조) */
 export interface Source {

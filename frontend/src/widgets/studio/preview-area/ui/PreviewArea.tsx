@@ -1,30 +1,90 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback, useLayoutEffect } from "react";
+import { Stage, Layer, Group, Image, Rect, Transformer } from "react-konva";
+import Konva from "konva";
 import { Camera } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { useCanvasPreview } from "@/hooks/studio/useCanvasPreview";
 import type { LayoutType, Source } from "@/entities/studio/model";
-import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
+import type { GetPreviewStreamRef, SourceTransform } from "@/features/studio/studio-main";
+import { arrangeSourcesInLayout } from "@/shared/lib/canvas";
 import {
   setPreferredVideoDeviceId,
   setPreferredAudioDeviceId,
 } from "@/shared/lib/device-preferences";
 
+export type PreviewResolution = "720p" | "1080p";
+
+const RESOLUTION_SIZE: Record<PreviewResolution, { width: number; height: number }> = {
+  "720p": { width: 1280, height: 720 },
+  "1080p": { width: 1920, height: 1080 },
+};
+
 interface PreviewAreaProps {
   className?: string;
   layout?: LayoutType;
   sources?: Source[];
-  /** 스트림이 준비된 소스 ID 목록. 변경 시 effect 재실행해 새 스트림을 캔버스에 반영 */
   availableStreamIds?: string[];
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
-  /** 편집 모드: false면 라이브 모드(잠금). 향후 스테이징 드래그/리사이즈 비활성화에 사용 */
   isEditMode?: boolean;
-  /** 소스별 공유 스트림(useSourceStreams). 있으면 내부에서 getUserMedia 호출하지 않음. */
+  resolution?: PreviewResolution;
   getSourceStream?: (sourceId: string) => MediaStream | undefined;
-  /** 로컬 녹화 시 캔버스 스트림을 가져오는 함수를 설정합니다. */
   getPreviewStreamRef?: GetPreviewStreamRef | null;
+  sourceTransforms?: Record<string, SourceTransform>;
+  setSourceTransform?: (sourceId: string, partial: Partial<SourceTransform>) => void;
+}
+
+/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기 */
+function VideoSourceNode({
+  sourceId,
+  video,
+  x,
+  y,
+  width,
+  height,
+  layerRef,
+  isVisible,
+}: {
+  sourceId: string;
+  video: HTMLVideoElement;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  layerRef: React.RefObject<Konva.Layer | null>;
+  isVisible: boolean;
+}) {
+  const imageRef = useRef<Konva.Image>(null);
+
+  useLayoutEffect(() => {
+    if (!video || !layerRef.current || !isVisible) return;
+    let rafId: number;
+
+    const tick = () => {
+      const img = imageRef.current;
+      if (img && video.readyState >= 2) {
+        img.image(video);
+        layerRef.current?.batchDraw();
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [video, layerRef, isVisible]);
+
+  if (!isVisible) return null;
+  return (
+    <Image
+      ref={imageRef}
+      image={video}
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      listening={true}
+    />
+  );
 }
 
 export function PreviewArea({
@@ -35,36 +95,121 @@ export function PreviewArea({
   isVideoEnabled = true,
   isAudioEnabled = true,
   isEditMode = true,
+  resolution = "720p",
   getSourceStream,
   getPreviewStreamRef,
+  sourceTransforms = {},
+  setSourceTransform,
 }: PreviewAreaProps) {
-  const { canvasRef, registerSourceElement, unregisterSourceElement, getCaptureStream } =
-    useCanvasPreview({
-      layout,
-      sources,
-      isVideoEnabled,
-      isAudioEnabled,
-    });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const layerRef = useRef<Konva.Layer>(null);
+  const stageRef = useRef<Konva.Stage>(null);
+  const nodeRefs = useRef<Map<string, Konva.Group>>(new Map());
+  const trRef = useRef<Konva.Transformer>(null);
 
-  // 소스 엘리먼트 등록/해제 (getSourceStream 있으면 공유 스트림 사용 → 트랙 중복 방지)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [sourceElements, setSourceElements] = useState<
+    Map<string, HTMLVideoElement | HTMLImageElement>
+  >(new Map());
+
+  const { width: stageWidth, height: stageHeight } = RESOLUTION_SIZE[resolution];
+  const scale =
+    containerSize.width > 0 && containerSize.height > 0
+      ? Math.min(containerSize.width / stageWidth, containerSize.height / stageHeight)
+      : 1;
+
+  const displaySources = sources.filter((s) => s.isVisible);
+  const sortedSources = [...displaySources].sort(
+    (a, b) => (sourceTransforms[b.id]?.zIndex ?? 0) - (sourceTransforms[a.id]?.zIndex ?? 0),
+  );
+  const arranged = arrangeSourcesInLayout(
+    layout,
+    sortedSources.map((s, i) => ({ source: s, index: i })),
+    stageWidth,
+    stageHeight,
+  );
+
+  const getTransform = useCallback(
+    (sourceId: string, index: number) => {
+      const t = sourceTransforms[sourceId];
+      const cell = arranged[index];
+      if (t && t.width > 0 && t.height > 0) return t;
+      if (cell)
+        return {
+          x: cell.x,
+          y: cell.y,
+          width: cell.width,
+          height: cell.height,
+          zIndex: index,
+        };
+      return { x: 0, y: 0, width: stageWidth, height: stageHeight, zIndex: index };
+    },
+    [sourceTransforms, arranged, stageWidth, stageHeight],
+  );
+
   useEffect(() => {
-    const streamsMap = new Map<string, MediaStream>();
-    const useSharedStreams = typeof getSourceStream === "function";
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const rect = el.getBoundingClientRect();
+      setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+    });
+    ro.observe(el);
+    const rect = el.getBoundingClientRect();
+    setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (selectedId) {
+      const node = nodeRefs.current.get(selectedId);
+      trRef.current?.nodes(node ? [node] : []);
+      layerRef.current?.batchDraw();
+    } else {
+      trRef.current?.nodes([]);
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!getPreviewStreamRef) return;
+    getPreviewStreamRef.current = () => {
+      const layer = layerRef.current;
+      if (!layer) return null;
+      const canvas = (layer.getCanvas() as { _canvas?: HTMLCanvasElement })?._canvas;
+      return canvas?.captureStream?.(30) ?? null;
+    };
+    return () => {
+      getPreviewStreamRef.current = null;
+    };
+  }, [getPreviewStreamRef]);
+
+  const streamsMap = useRef<Map<string, MediaStream>>(new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    setSourceElements(new Map());
+
+    const addElement = (sourceId: string, element: HTMLVideoElement | HTMLImageElement) => {
+      if (cancelled) return;
+      setSourceElements((prev) => new Map(prev).set(sourceId, element));
+    };
 
     const setupSources = async () => {
       for (const source of sources) {
+        if (cancelled) return;
         if (source.type === "image") {
-          const img = new Image();
+          const img = document.createElement("img");
           img.crossOrigin = "anonymous";
           img.src = `https://picsum.photos/800/600?random=${source.id}`;
-          img.onload = () => registerSourceElement(source.id, img);
+          img.onload = () => addElement(source.id, img);
           img.onerror = () => console.warn(`이미지 로드 실패: ${source.name}`);
-        } else if (source.type === "video") {
+        } else if (source.type === "video" || source.type === "screen") {
           let stream: MediaStream | null = null;
-          if (useSharedStreams) {
+          if (typeof getSourceStream === "function") {
             stream = getSourceStream(source.id) ?? null;
           }
-          if (!stream && !useSharedStreams) {
+          if (!stream && typeof getSourceStream !== "function" && source.type === "video") {
             try {
               stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -75,58 +220,70 @@ export function PreviewArea({
                 },
                 audio: isAudioEnabled,
               });
+              if (cancelled) {
+                stream.getTracks().forEach((t) => t.stop());
+                return;
+              }
               const videoTrack = stream.getVideoTracks()[0];
               if (videoTrack?.getSettings().deviceId)
                 setPreferredVideoDeviceId(videoTrack.getSettings().deviceId!);
-              streamsMap.set(source.id, stream);
+              streamsMap.current.set(source.id, stream);
             } catch (error) {
               console.error("웹캠 접근 실패:", error);
               continue;
             }
           }
-          if (stream) {
+          if (stream && !cancelled) {
             const video = document.createElement("video");
             video.srcObject = stream;
             video.autoplay = true;
             video.muted = true;
             video.playsInline = true;
             video.onloadedmetadata = () => {
-              video.play().catch(() => {});
-              registerSourceElement(source.id, video, stream!);
+              if (!cancelled) {
+                video.play().catch(() => {});
+                addElement(source.id, video);
+              }
             };
             video.onerror = () => {
-              if (!useSharedStreams) {
+              if (typeof getSourceStream !== "function") {
                 stream!.getTracks().forEach((t) => t.stop());
-                streamsMap.delete(source.id);
+                streamsMap.current.delete(source.id);
               }
             };
           }
         } else if (source.type === "audio") {
           let stream: MediaStream | null = null;
-          if (useSharedStreams) {
+          if (typeof getSourceStream === "function") {
             stream = getSourceStream(source.id) ?? null;
           }
-          if (!stream && !useSharedStreams) {
+          if (!stream && typeof getSourceStream !== "function") {
             try {
               stream = await navigator.mediaDevices.getUserMedia({
                 audio: source.deviceId ? { deviceId: { ideal: source.deviceId } } : true,
               });
+              if (cancelled) {
+                stream.getTracks().forEach((t) => t.stop());
+                return;
+              }
               const audioTrack = stream.getAudioTracks()[0];
               if (audioTrack?.getSettings().deviceId)
                 setPreferredAudioDeviceId(audioTrack.getSettings().deviceId!);
-              streamsMap.set(source.id, stream);
+              streamsMap.current.set(source.id, stream);
             } catch (error) {
               console.error("마이크 접근 실패:", error);
               continue;
             }
           }
-          if (stream) {
+          if (stream && !cancelled) {
             const video = document.createElement("video");
             video.srcObject = stream;
             video.autoplay = true;
             video.muted = true;
             video.playsInline = true;
-            video.onloadedmetadata = () => registerSourceElement(source.id, video, stream!);
+            video.onloadedmetadata = () => {
+              if (!cancelled) addElement(source.id, video);
+            };
           }
         }
       }
@@ -135,33 +292,42 @@ export function PreviewArea({
     setupSources();
 
     return () => {
-      if (!useSharedStreams) {
-        streamsMap.forEach((stream) => stream.getTracks().forEach((t) => t.stop()));
-        streamsMap.clear();
-      }
-      sources.forEach((source) => unregisterSourceElement(source.id));
+      cancelled = true;
+      streamsMap.current.forEach((stream) =>
+        stream.getTracks().forEach((t) => t.stop()),
+      );
+      streamsMap.current.clear();
     };
-  }, [
-    sources,
-    availableStreamIds,
-    registerSourceElement,
-    unregisterSourceElement,
-    isAudioEnabled,
-    getSourceStream,
-  ]);
-
-  useEffect(() => {
-    if (!getPreviewStreamRef) return;
-    getPreviewStreamRef.current = () => getCaptureStream(30);
-    return () => {
-      getPreviewStreamRef.current = null;
-    };
-  }, [getPreviewStreamRef, getCaptureStream]);
+  }, [sources, availableStreamIds, isAudioEnabled, getSourceStream]);
 
   const hasSources = sources.length > 0 && sources.some((s) => s.isVisible);
 
+  if (!hasSources) {
+    return (
+      <div
+        className={cn(
+          "bg-black rounded-lg border border-gray-700 h-full w-full relative overflow-hidden flex flex-col items-center justify-center text-gray-500",
+          className,
+        )}
+      >
+        <span
+          className={cn(
+            "absolute top-2 left-2 z-10 px-2.5 py-1 rounded text-xs font-semibold uppercase tracking-wide",
+            isEditMode ? "bg-amber-500/90 text-amber-950" : "bg-red-600 text-white",
+          )}
+        >
+          {isEditMode ? resolution : `Live ${resolution}`}
+        </span>
+        <Camera className="h-14 w-14 text-gray-600 mb-3" />
+        <p className="text-sm font-medium text-gray-400">프리뷰 영역</p>
+        <p className="text-xs mt-1">소스를 추가하면 여기에 표시됩니다.</p>
+      </div>
+    );
+  }
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         "bg-black rounded-lg border border-gray-700 h-full w-full relative overflow-hidden",
         className,
@@ -170,26 +336,159 @@ export function PreviewArea({
       <span
         className={cn(
           "absolute top-2 left-2 z-10 px-2.5 py-1 rounded text-xs font-semibold uppercase tracking-wide",
-          isEditMode
-            ? "bg-amber-500/90 text-amber-950"
-            : "bg-red-600 text-white",
+          isEditMode ? "bg-amber-500/90 text-amber-950" : "bg-red-600 text-white",
         )}
       >
-        {isEditMode ? "프리뷰" : "Live"}
+        {isEditMode ? resolution : `Live ${resolution}`}
       </span>
-      {hasSources ? (
-        <canvas
-          ref={canvasRef}
-          className="w-full h-full object-contain"
-          style={{ display: "block" }}
-        />
-      ) : (
-        <div className="flex flex-col items-center justify-center h-full w-full text-gray-500">
-          <Camera className="h-14 w-14 text-gray-600 mb-3" />
-          <p className="text-sm font-medium text-gray-400">프리뷰 영역</p>
-          <p className="text-xs mt-1">소스를 추가하면 여기에 표시됩니다.</p>
+      <div
+        style={{
+          width: stageWidth * scale,
+          height: stageHeight * scale,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        className="absolute inset-0 m-auto"
+      >
+        <div
+          style={{
+            width: stageWidth,
+            height: stageHeight,
+            transform: `scale(${scale})`,
+            transformOrigin: "0 0",
+          }}
+        >
+          <Stage
+            ref={stageRef}
+            width={stageWidth}
+            height={stageHeight}
+            onClick={(e) => {
+              const stage = e.target.getStage();
+              const layer = layerRef.current;
+              let node: Konva.Node | null = e.target;
+              while (node && node.getParent() !== layer) node = node.getParent();
+              const group = node?.getClassName() === "Group" ? node : null;
+              const id = group?.id();
+              if (!id || !sortedSources.some((s) => s.id === id)) {
+                setSelectedId(null);
+                return;
+              }
+              setSelectedId(id);
+              if (isEditMode && setSourceTransform) {
+                const maxZ = Math.max(
+                  0,
+                  ...Object.values(sourceTransforms).map((t) => t.zIndex),
+                  sortedSources.length - 1,
+                );
+                setSourceTransform(id, { zIndex: maxZ + 1 });
+              }
+            }}
+          >
+            <Layer ref={layerRef}>
+              <Rect x={0} y={0} width={stageWidth} height={stageHeight} fill="black" />
+              {!isVideoEnabled && (
+                <Rect
+                  x={0}
+                  y={0}
+                  width={stageWidth}
+                  height={stageHeight}
+                  fill="#1a1a1a"
+                  listening={false}
+                />
+              )}
+              {sortedSources.map((source, index) => {
+                const transform = getTransform(source.id, index);
+                const el = sourceElements.get(source.id);
+                return (
+                  <Group
+                    key={source.id}
+                    id={source.id}
+                    ref={(node) => {
+                      if (node) nodeRefs.current.set(source.id, node);
+                    }}
+                    x={transform.x}
+                    y={transform.y}
+                    draggable={isEditMode}
+                    onDragEnd={(e) => {
+                      const node = e.target;
+                      setSourceTransform?.(source.id, {
+                        x: node.x(),
+                        y: node.y(),
+                      });
+                    }}
+                    onTransformEnd={(e) => {
+                      const node = e.target as Konva.Group;
+                      const rect = node.getClientRect();
+                      setSourceTransform?.(source.id, {
+                        x: rect.x,
+                        y: rect.y,
+                        width: Math.max(1, rect.width),
+                        height: Math.max(1, rect.height),
+                      });
+                      node.scaleX(1);
+                      node.scaleY(1);
+                      node.position({ x: rect.x, y: rect.y });
+                      node.getChildren().forEach((child) => {
+                        child.width(rect.width);
+                        child.height(rect.height);
+                      });
+                    }}
+                  >
+                    {source.type === "video" || source.type === "screen" ? (
+                      el && el instanceof HTMLVideoElement ? (
+                        <VideoSourceNode
+                          sourceId={source.id}
+                          video={el}
+                          x={0}
+                          y={0}
+                          width={transform.width}
+                          height={transform.height}
+                          layerRef={layerRef}
+                          isVisible={source.isVisible}
+                        />
+                      ) : (
+                        <Rect
+                          width={transform.width}
+                          height={transform.height}
+                          fill="#1a1a1a"
+                          stroke="#333"
+                          strokeWidth={2}
+                        />
+                      )
+                    ) : source.type === "image" ? (
+                      el && el instanceof HTMLImageElement ? (
+                        <Image
+                          image={el}
+                          width={transform.width}
+                          height={transform.height}
+                          listening={true}
+                        />
+                      ) : (
+                        <Rect
+                          width={transform.width}
+                          height={transform.height}
+                          fill="#1a1a1a"
+                          stroke="#333"
+                          strokeWidth={2}
+                        />
+                      )
+                    ) : (
+                      <Rect
+                        width={transform.width}
+                        height={transform.height}
+                        fill="rgba(100,100,200,0.5)"
+                        listening={true}
+                      />
+                    )}
+                  </Group>
+                );
+              })}
+              {isEditMode && <Transformer ref={trRef} />}
+            </Layer>
+          </Stage>
         </div>
-      )}
+      </div>
     </div>
   );
 }

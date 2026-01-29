@@ -60,6 +60,37 @@
     멀티 소스 “출력” 자체는 현재 Raw Canvas 방식으로 가능하며, 위 수정으로 스테이지 소스 미출력 문제를 해결하는 것이 우선.
   - **프리뷰 내 드래그·리사이즈·레이어 편집**을 본격적으로 넣을 계획이 있으면, 그때 Konva/react-konva 도입을 검토하는 것이 타당함.
   - 도입 시에는 기존 `arrangeSourcesInLayout`/`renderSourceByType`를 Konva Stage/Layer/Image + `Konva.Animation`(비디오 갱신) 구조로 단계적으로 치환하는 방식을 권장.
+- **다시 올릴 때 프레임 비율**  
+  캔버스 재마운트 직후 `getBoundingClientRect()`가 플레이스홀더 기준이 되는 문제 → double rAF로 레이아웃 후 한 번 더 `updateCanvasSize()` 호출로 해소 (PREVIEW_FRAME_ANALYSIS.md 참고).
+
+---
+
+## Konva 전환 시점 재검토 (rAF 루프·재등록)
+
+### 현재 방식의 동작 보장
+
+- **렌더 루프**: 매 프레임 `sources`(props) + `sourceElementsRef`(PreviewArea가 `registerSourceElement`로 채움) 기준으로 그리기.
+- **내렸다 올린 소스**: `sources`는 스테이지 추가 시 바로 반영되고, PreviewArea effect가 비디오 `onloadedmetadata` 시 `registerSourceElement` 호출 → **다음 프레임부터** 루프에서 자동으로 그려짐. 별도 "루프 등록" 절차 없음.
+- **정리**: 재등록 소스는 이미 올바르게 루프에 반영되며, 추가 코드 없이 동작함.
+
+### Konva로 전환했을 때
+
+| 구분 | Raw Canvas (현재) | Konva |
+|------|-------------------|--------|
+| **비디오 갱신** | 매 프레임 직접 `drawImage` | `Konva.Animation` 등으로 주기적 `layer.draw()` 필요 → 역할은 동일 |
+| **소스·노드 관리** | `sources` + `sourceElementsRef` 수동 동기화 | Stage/Layer/Image를 React 상태로 선언하면 노드 추가·제거가 선언적 |
+| **크기·재마운트** | 컨테이너 `getBoundingClientRect` + rAF 타이밍 이슈 가능 | Stage `width`/`height`를 props로 주면 리사이즈는 단순해짐 |
+| **드래그·리사이즈** | 직접 구현 필요 | 노드 이벤트·드래그·트랜스폼 내장 |
+
+### 전환 시점 권장
+
+- **지금 전환해도 되는 경우**  
+  - 프리뷰 내 **드래그·리사이즈·레이어 편집**을 곧 넣을 예정이거나,  
+  - rAF/등록/크기 타이밍 이슈를 더 줄이고 **선언적 구조**로 정리하고 싶을 때  
+  → Konva 도입을 검토할 만함. 비디오는 여전히 애니메이션 루프가 필요하지만, "어떤 소스가 어디에 있는지"는 Stage/Layer/Image로 관리할 수 있음.
+- **당장은 유지해도 되는 경우**  
+  - "출력만" 필요하고, 드래그/리사이즈는 당분간 없을 때  
+  → 현재 Raw Canvas + 수정된 `useCanvasPreview`로 충분. 재등록 소스도 루프에 정상 반영됨.
 
 ---
 

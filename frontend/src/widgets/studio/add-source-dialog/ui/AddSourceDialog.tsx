@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Camera, Mic } from "lucide-react";
+import { Camera, Mic, Monitor } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +15,8 @@ import { cn } from "@/shared/lib/utils";
 interface AddSourceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** type와 선택한 deviceId 전달. deviceId는 선택 시에만 전달됨. */
-  onSelect: (type: "video" | "audio", deviceId?: string) => void;
+  /** type와 선택한 deviceId 전달. screen은 deviceId 없음. */
+  onSelect: (type: "video" | "audio" | "screen", deviceId?: string) => void;
 }
 
 /** 권한 허용 시 장치 라벨이 채워지도록 한 번만 미디어 접근 요청 */
@@ -91,6 +91,29 @@ export function AddSourceDialog({
           </div>
         ) : (
           <div className="grid gap-4 py-2 overflow-y-auto min-h-0 max-h-[50vh]">
+            {/* 화면 공유 */}
+            <section className="min-w-0">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2 shrink-0">
+                <Monitor className="h-4 w-4" />
+                화면 공유
+              </h3>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full h-10 justify-start gap-2",
+                  "bg-gray-700 border-gray-600 text-gray-200",
+                  "hover:bg-gray-600 hover:border-gray-500",
+                )}
+                onClick={() => {
+                  onSelect("screen");
+                  onOpenChange(false);
+                }}
+              >
+                <Monitor className="h-4 w-4 shrink-0" />
+                <span>화면 공유 추가</span>
+              </Button>
+            </section>
+
             {/* 비디오 소스 */}
             <section className="min-w-0">
               <h3 className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2 shrink-0">

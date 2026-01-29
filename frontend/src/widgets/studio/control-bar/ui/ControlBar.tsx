@@ -5,7 +5,11 @@ import { Camera, Mic, Settings, LogOut, Circle, ChevronDown } from "lucide-react
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 
+export type PreviewResolution = "720p" | "1080p";
+
 interface ControlBarProps {
+  resolution?: PreviewResolution;
+  onResolutionChange?: (resolution: PreviewResolution) => void;
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
   audioLevel?: number;
@@ -22,6 +26,8 @@ interface ControlBarProps {
 }
 
 export function ControlBar({
+  resolution = "720p",
+  onResolutionChange,
   isVideoEnabled,
   isAudioEnabled,
   audioLevel = 0,
@@ -37,21 +43,23 @@ export function ControlBar({
   onStopCloudRecording,
 }: ControlBarProps) {
   const [showRecordMenu, setShowRecordMenu] = useState(false);
+  const [showResolutionMenu, setShowResolutionMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const resolutionMenuRef = useRef<HTMLDivElement>(null);
 
   const isRecording = isRecordingLocal || isRecordingCloud;
   const recordingLabel = isRecordingLocal ? "로컬 녹화 중" : "클라우드 녹화 중";
 
   useEffect(() => {
-    if (!showRecordMenu) return;
+    if (!showRecordMenu && !showResolutionMenu) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowRecordMenu(false);
-      }
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) setShowRecordMenu(false);
+      if (resolutionMenuRef.current && !resolutionMenuRef.current.contains(target)) setShowResolutionMenu(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showRecordMenu]);
+  }, [showRecordMenu, showResolutionMenu]);
 
   const handleStopRecording = () => {
     if (isRecordingLocal) onStopLocalRecording?.();
@@ -60,6 +68,51 @@ export function ControlBar({
 
   return (
     <div className="flex items-center justify-center gap-4 py-2">
+      {onResolutionChange && (
+        <div className="relative" ref={resolutionMenuRef}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowResolutionMenu((v) => !v)}
+            className="h-12 gap-2 bg-gray-700 text-gray-300 hover:bg-gray-600 min-w-[80px]"
+            title="출력 해상도"
+          >
+            <span className="text-sm font-medium">{resolution}</span>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+          {showResolutionMenu && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 py-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 min-w-[100px]">
+              <button
+                type="button"
+                onClick={() => {
+                  onResolutionChange("720p");
+                  setShowResolutionMenu(false);
+                }}
+                className={cn(
+                  "w-full px-4 py-2 text-left text-sm hover:bg-gray-700 rounded-t-lg",
+                  resolution === "720p" ? "text-indigo-300 bg-gray-700/50" : "text-gray-200",
+                )}
+              >
+                720p
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onResolutionChange("1080p");
+                  setShowResolutionMenu(false);
+                }}
+                className={cn(
+                  "w-full px-4 py-2 text-left text-sm hover:bg-gray-700 rounded-b-lg",
+                  resolution === "1080p" ? "text-indigo-300 bg-gray-700/50" : "text-gray-200",
+                )}
+              >
+                1080p
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <Button
         variant="ghost"
         size="icon"

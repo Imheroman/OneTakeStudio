@@ -1,9 +1,4 @@
-/**
- * 소스별 미디어 스트림 단일 관리
- * PreviewArea와 StagingArea가 같은 스트림을 공유해 getUserMedia 중복 호출을 막습니다.
- */
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { Source } from "@/entities/studio/model";
 import {
   setPreferredVideoDeviceId,
@@ -25,17 +20,20 @@ export function useSourceStreams(
   );
   const requestedRef = useRef<Set<string>>(new Set());
   const streamsMapRef = useRef<Map<string, MediaStream>>(streamsMap);
+  const sourceIdsRef = useRef<Set<string>>(new Set());
   streamsMapRef.current = streamsMap;
 
   useEffect(() => {
     const needStream = (s: Source) =>
-      (s.type === "video" && isVideoEnabled) || s.type === "audio";
+      (s.type === "video" && isVideoEnabled) ||
+      s.type === "audio" ||
+      (s.type === "screen" && isVideoEnabled);
     const sourceIds = new Set(
       sources.filter(needStream).map((s) => s.id)
     );
+    sourceIdsRef.current = sourceIds;
     const sourceById = new Map(sources.map((s) => [s.id, s]));
 
-    // 제거: 더 이상 소스 목록에 없는 스트림 정리
     setStreamsMap((prev) => {
       let changed = false;
       const next = new Map(prev);
@@ -50,15 +48,37 @@ export function useSourceStreams(
       return changed ? next : prev;
     });
 
-    // 추가: 새로 필요한 소스에 대해 getUserMedia 1회만
     sourceIds.forEach((id) => {
       if (requestedRef.current.has(id)) return;
       const source = sourceById.get(id);
       if (!source) return;
 
       requestedRef.current.add(id);
-      const constraints: MediaStreamConstraints = {};
 
+      if (source.type === "screen") {
+        const nav = typeof navigator !== "undefined" ? navigator : null;
+        const mediaDevices = nav?.mediaDevices as MediaDevices | undefined;
+        if (!mediaDevices?.getDisplayMedia) {
+          requestedRef.current.delete(id);
+          return;
+        }
+        mediaDevices
+          .getDisplayMedia({ video: true, audio: isAudioEnabled })
+          .then((stream) => {
+            if (!sourceIdsRef.current.has(id)) {
+              stream.getTracks().forEach((t) => t.stop());
+              return;
+            }
+            setStreamsMap((prev) => new Map(prev).set(id, stream));
+          })
+          .catch((err) => {
+            requestedRef.current.delete(id);
+            console.warn("useSourceStreams (screen):", id, err);
+          });
+        return;
+      }
+
+      const constraints: MediaStreamConstraints = {};
       if (source.type === "video") {
         constraints.video = source.deviceId
           ? { deviceId: { ideal: source.deviceId }, width: { ideal: 1920, min: 640 }, height: { ideal: 1080, min: 480 }, frameRate: { ideal: 30 } }
@@ -74,6 +94,10 @@ export function useSourceStreams(
       navigator.mediaDevices
         .getUserMedia(constraints)
         .then((stream) => {
+          if (!sourceIdsRef.current.has(id)) {
+            stream.getTracks().forEach((t) => t.stop());
+            return;
+          }
           const vt = stream.getVideoTracks()[0];
           if (vt) {
             const settings = vt.getSettings();
@@ -93,7 +117,6 @@ export function useSourceStreams(
     });
   }, [sources, isVideoEnabled, isAudioEnabled]);
 
-  // 언마운트 시 전체 정리
   useEffect(() => {
     return () => {
       streamsMapRef.current.forEach((stream) => {
@@ -103,10 +126,10 @@ export function useSourceStreams(
     };
   }, []);
 
-  const getStream = (sourceId: string): MediaStream | undefined =>
-    streamsMap.get(sourceId);
-
-  /** 스트림이 준비된 소스 ID 목록. 이 값이 바뀔 때마다 소비 컴포넌트가 리렌더되어 새 스트림을 반영할 수 있음 */
+  const getStream = useCallback(
+    (sourceId: string): MediaStream | undefined => streamsMap.get(sourceId),
+    [streamsMap]
+  );
   const streamIds = Array.from(streamsMap.keys());
 
   return { streamsMap, getStream, streamIds };

@@ -12,7 +12,7 @@ app (pages)  →  widgets  →  features  →  entities  →  shared
 ```
 
 - **규칙**: 각 레이어는 **같은 레이어** 또는 **아래 레이어**만 import 가능.
-- **shared**: 어떤 FSD 레이어(entities, features, widgets, app)도 참조하면 안 됨.
+- **shared**: 어떤 FSD 레이어(entities, features, widgets, app) 및 **app 수준 상태(stores)** 도 참조하면 안 됨.
 
 ---
 
@@ -35,6 +35,7 @@ app (pages)  →  widgets  →  features  →  entities  →  shared
 |------|------|------|
 | **1단계** | shared → entities 제거 (canvas 타입을 shared에 정의) | ✅ 완료 (2026-01-29) |
 | **2단계** | features → widgets 제거 (page → widget → feature 흐름으로 리팩터) | ✅ 완료 (2026-01-29) |
+| **3단계** | shared → stores 제거 (API 토큰 인터셉터를 app 레이어로 이동) | ✅ 완료 (2026-01-29) |
 
 ---
 
@@ -71,11 +72,24 @@ app (pages)  →  widgets  →  features  →  entities  →  shared
 
 ---
 
+### 3. ~~shared → stores~~ → ✅ 3단계에서 해결됨
+
+**규칙**: shared는 최하위 레이어이므로 app 수준 상태(stores)를 참조하면 안 됨.
+
+**위반**: `shared/api/client.ts`에서 `useAuthStore`를 import하여 요청 인터셉터에서 토큰을 주입하고 있었음.
+
+**조치 완료 (3단계)**:
+- `shared/api/client.ts`에서 `useAuthStore` import 및 요청 인터셉터 제거. `axiosInstance`만 export.
+- `app/providers/ApiAuthProvider.tsx` 추가: app 레이어에서 stores와 shared를 연결하여, 마운트 시 `axiosInstance`에 토큰 인터셉터를 등록.
+- `app/layout.tsx`에서 `<ApiAuthProvider />` 렌더링.
+
+---
+
 ## ⚠️ 참고 사항 (FSD와의 관계)
 
 | 항목 | 위치 | 비고 |
 |------|------|------|
-| **stores** | `src/stores/` | FSD 레이어 밖. `useAuthStore`가 `@/entities/user/model` 참조 → app/위젯 레벨에서 쓰이므로 허용 범위로 볼 수 있음. |
+| **stores** | `src/stores/` | FSD 레이어 밖. app/features/widgets에서만 사용. **shared는 stores를 참조하지 않음** (3단계에서 해소). |
 | **hooks** | `src/hooks/` | `hooks/studio`, `hooks/common` 등. 위젯/feature에서 사용 시 해당 레이어 규칙만 지키면 됨. |
 | **mock** | `src/mock/` | MSW 등 테스트/모킹 전용. app에서만 로드하면 FSD와 무관. |
 
@@ -86,8 +100,8 @@ app (pages)  →  widgets  →  features  →  entities  →  shared
 | 구분 | 결과 |
 |------|------|
 | **레이어 구조** | app, widgets, features, entities, shared 디렉터리 구조는 FSD와 일치 ✅ |
-| **의존성 위반** | ~~shared → entities~~ ✅ 해결, ~~features → widgets~~ ✅ 2단계에서 해결 |
-| **전체 평가** | 1·2단계 적용으로 shared 순수성 확보 및 features → widgets 제거 완료. page → widget → feature 흐름 정립. |
+| **의존성 위반** | ~~shared → entities~~ ✅ 해결, ~~features → widgets~~ ✅ 2단계 해결, ~~shared → stores~~ ✅ 3단계 해결 |
+| **전체 평가** | 1·2·3단계 적용으로 shared가 entities/widgets/stores를 참조하지 않음. page → widget → feature 흐름 정립. |
 
 ---
 
@@ -101,7 +115,22 @@ app (pages)  →  widgets  →  features  →  entities  →  shared
    - “페이지용 복합 UI”는 **widget**으로 새로 만들거나 기존 widget을 재구성해,  
    - **page → widget → feature** 흐름으로 맞춤.
 
-3. (선택) **stores/hooks**를 FSD 레이어에 맞춰 배치  
+3. ~~**shared → stores 제거**~~ → **완료 (3단계)**  
+   - `shared/api/client.ts`에서 `useAuthStore` 제거. 토큰 인터셉터는 `app/providers/ApiAuthProvider.tsx`에서 등록.
+
+4. (선택) **stores/hooks**를 FSD 레이어에 맞춰 배치  
    - 예: 도메인별 store는 해당 **entity/feature** 옆이나 `shared`로 이동 검토.
+
+---
+
+## 스튜디오 프리뷰(Konva) 변경 검증 (2026-01-29)
+
+| 대상 | 의존 관계 | FSD 준수 |
+|------|-----------|----------|
+| **widgets/studio/preview-area** | → entities/studio (LayoutType, Source), → features/studio/studio-main (GetPreviewStreamRef, SourceTransform), → shared (utils, canvas, device-preferences) | ✅ widget은 feature·entities·shared만 참조 |
+| **features/studio/studio-main** | → entities, shared, stores (useAuthStore) | ✅ feature는 하위 레이어만 참조 |
+| **hooks/studio** | → entities, shared | ✅ shared는 stores/entities를 참조하지 않음 (hooks는 app 계층에서 사용) |
+
+**결론**: Konva 전환·드래그/리사이즈/레이어·해상도·소스 패널 제거 등 이번 변경에서 **새 FSD 위반 없음**. page → widget(StudioMain) → feature(useStudioMain) + hooks(useSourceStreams) 흐름 유지.
 
 이 검증 결과와 점진적 조치를 반영하면 FSD 구조가 더 일관되게 유지됩니다.
