@@ -16,7 +16,7 @@ export default function LandingPage() {
     // 로그인된 유저는 본인의 워크스페이스로 자동 리다이렉트
     if (!hasHydrated) return;
     if (isLoggedIn && user) {
-      router.replace(`/workspace/${user.id}`);
+      router.replace(`/workspace/${user.userId}`);
     }
   }, [hasHydrated, isLoggedIn, user, router]);
 
@@ -41,11 +41,13 @@ export default function LandingPage() {
           <div className="rounded-3xl border border-gray-200 p-10">
             <h2 className="text-2xl font-extrabold text-gray-900">GUIDE</h2>
             <p className="mt-2 text-gray-600">
-              아직 데모 영상/페이지가 준비 중이라면, 임시로 이 섹션을 “데모 보기”
-              버튼의 목적지로 사용하면 돼요.
+              아직 데모 영상/페이지가 준비 중이라면, 임시로 이 섹션을 “데모
+              보기” 버튼의 목적지로 사용하면 돼요.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Button className="bg-indigo-600 hover:bg-indigo-700">데모 시작</Button>
+              <Button className="bg-indigo-600 hover:bg-indigo-700">
+                데모 시작
+              </Button>
               <Button variant="outline">가이드 문서</Button>
             </div>
           </div>
@@ -57,13 +59,15 @@ export default function LandingPage() {
           <div className="rounded-3xl border border-gray-200 p-10">
             <h2 className="text-2xl font-extrabold text-gray-900">CONTACT</h2>
             <p className="mt-2 text-gray-600">
-              문의 채널은 추후 확정. 지금은 폼/메일/디스코드 중 아무거나로 연결하면
-              돼요.
+              문의 채널은 추후 확정. 지금은 폼/메일/디스코드 중 아무거나로
+              연결하면 돼요.
             </p>
             <div className="mt-6 grid sm:grid-cols-2 gap-4 text-sm">
               <div className="rounded-2xl bg-gray-50 p-5 border border-gray-200">
                 <div className="font-bold text-gray-900">이메일</div>
-                <div className="text-gray-600 mt-1">contact@onetake.example</div>
+                <div className="text-gray-600 mt-1">
+                  contact@onetake.example
+                </div>
               </div>
               <div className="rounded-2xl bg-gray-50 p-5 border border-gray-200">
                 <div className="font-bold text-gray-900">가이드/문서</div>

@@ -28,9 +28,15 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
   const [recentStudios, setRecentStudios] = useState<RecentStudio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [createDialogType, setCreateDialogType] = useState<"live" | "recording">("live");
+  const [createDialogType, setCreateDialogType] = useState<
+    "live" | "recording"
+  >("live");
 
   useEffect(() => {
+    if (!userId || userId === "undefined") {
+      setIsLoading(false);
+      return;
+    }
     const fetchRecentStudios = async () => {
       try {
         const response = await apiClient.get(
@@ -53,7 +59,8 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
       <PageHeader
         title={
           <>
-            <span className="text-indigo-600">{userName ?? userId}</span>님, 반가워요!
+            <span className="text-indigo-600">{userName ?? userId}</span>님,
+            반가워요!
           </>
         }
         description="오늘도 당신만의 멋진 방송을 만들어보세요."
@@ -112,37 +119,45 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                    <TableCell
+                      colSpan={3}
+                      className="text-center text-gray-500 py-8"
+                    >
                       로딩 중...
                     </TableCell>
                   </TableRow>
                 ) : recentStudios.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                    <TableCell
+                      colSpan={3}
+                      className="text-center text-gray-500 py-8"
+                    >
                       최근 스튜디오가 없습니다.
                     </TableCell>
                   </TableRow>
                 ) : (
                   recentStudios.map((studio) => (
-                  <TableRow
-                    key={studio.id}
-                    className="hover:bg-gray-50/80 transition-colors"
-                  >
-                    <TableCell className="font-medium text-gray-700 py-4">
-                      {studio.title}
-                    </TableCell>
-                    <TableCell className="text-gray-500">{studio.date}</TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/studio/${studio.id}`}>
-                        <Button
-                          size="sm"
-                          className="bg-indigo-600 hover:bg-indigo-700"
-                        >
-                          Enter Studio
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
+                    <TableRow
+                      key={studio.id}
+                      className="hover:bg-gray-50/80 transition-colors"
+                    >
+                      <TableCell className="font-medium text-gray-700 py-4">
+                        {studio.title}
+                      </TableCell>
+                      <TableCell className="text-gray-500">
+                        {studio.date}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/studio/${studio.id}`}>
+                          <Button
+                            size="sm"
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            Enter Studio
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
               </TableBody>
