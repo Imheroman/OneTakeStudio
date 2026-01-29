@@ -1,6 +1,7 @@
 "use client";
 
-import { Camera, Mic, Settings, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Camera, Mic, Settings, LogOut, Circle, ChevronDown } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 
@@ -12,6 +13,12 @@ interface ControlBarProps {
   onAudioToggle: () => void;
   onSettings: () => void;
   onExit: () => void;
+  isRecordingLocal?: boolean;
+  isRecordingCloud?: boolean;
+  onStartLocalRecording?: () => void;
+  onStopLocalRecording?: () => void;
+  onStartCloudRecording?: () => void;
+  onStopCloudRecording?: () => void;
 }
 
 export function ControlBar({
@@ -22,7 +29,35 @@ export function ControlBar({
   onAudioToggle,
   onSettings,
   onExit,
+  isRecordingLocal = false,
+  isRecordingCloud = false,
+  onStartLocalRecording,
+  onStopLocalRecording,
+  onStartCloudRecording,
+  onStopCloudRecording,
 }: ControlBarProps) {
+  const [showRecordMenu, setShowRecordMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const isRecording = isRecordingLocal || isRecordingCloud;
+  const recordingLabel = isRecordingLocal ? "로컬 녹화 중" : "클라우드 녹화 중";
+
+  useEffect(() => {
+    if (!showRecordMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowRecordMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showRecordMenu]);
+
+  const handleStopRecording = () => {
+    if (isRecordingLocal) onStopLocalRecording?.();
+    else if (isRecordingCloud) onStopCloudRecording?.();
+  };
+
   return (
     <div className="flex items-center justify-center gap-4 py-2">
       <Button
@@ -65,6 +100,69 @@ export function ControlBar({
           </div>
         )}
       </div>
+
+      {(onStartLocalRecording ?? onStartCloudRecording ?? onStopLocalRecording ?? onStopCloudRecording) && (
+        <div className="relative" ref={menuRef}>
+          {isRecording ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStopRecording}
+              className="h-12 gap-2 bg-red-600/80 text-white hover:bg-red-600"
+              title={recordingLabel}
+            >
+              <Circle className="h-4 w-4 fill-current" />
+              <span className="text-sm">녹화 중지</span>
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowRecordMenu((v) => !v)}
+                className="h-12 gap-2 bg-gray-700 text-gray-300 hover:bg-gray-600"
+                title="녹화"
+              >
+                <Circle className="h-4 w-4" />
+                <span className="text-sm">녹화</span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              {showRecordMenu && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 py-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 min-w-[140px]">
+                  {onStartLocalRecording && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onStartLocalRecording();
+                        setShowRecordMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-700 rounded-t-lg"
+                    >
+                      로컬 녹화
+                    </button>
+                  )}
+                  {onStartCloudRecording && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onStartCloudRecording();
+                        setShowRecordMenu(false);
+                      }}
+                      className={cn(
+                        "w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-700",
+                        onStartLocalRecording ? "" : "rounded-t-lg",
+                        "rounded-b-lg"
+                      )}
+                    >
+                      클라우드 녹화
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <Button
         variant="ghost"

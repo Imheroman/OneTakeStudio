@@ -1,4 +1,4 @@
-# 스튜디오 기능 점진 구현 계획
+#git 스튜디오 기능 점진 구현 계획
 
 백엔드 구현 상태를 기준으로, 필요한 기능을 단계별로 구현하고 중간 커밋 포인트를 둡니다.
 
@@ -67,13 +67,13 @@
 
 ---
 
-## Phase 4: 녹화 (로컬 / 클라우드) (커밋 4)
+## Phase 4: 녹화 (로컬 / 클라우드) (커밋 4) ✅
 
 **목표**: 로컬 녹화(MediaRecorder + 캔버스/스트림)와 클라우드 녹화(media-service API) 연동.
 
-- [ ] **로컬 녹화**: 프리뷰 캔버스 또는 합성 스트림을 `captureStream()` / MediaRecorder로 녹화, 파일 다운로드
-- [ ] **클라우드 녹화**: `POST /api/v1/media/record/start` (studioId, outputFormat, quality 등), 중지 시 `POST .../record/{studioId}/stop`
-- [ ] ControlBar 또는 전용 영역: “녹화” 버튼 → 로컬/클라우드 선택 후 시작/중지
+- [x] **로컬 녹화**: 프리뷰 캔버스 또는 합성 스트림을 `captureStream()` / MediaRecorder로 녹화, 파일 다운로드
+- [x] **클라우드 녹화**: `POST /api/recordings/start` (studioId, outputFormat, quality 등), 중지 시 `POST /api/recordings/{studioId}/stop`
+- [x] ControlBar 또는 전용 영역: “녹화” 버튼 → 로컬/클라우드 선택 후 시작/중지
 
 **커밋 메시지 제안**:  
 `feat(studio): 로컬/클라우드 녹화 연동`

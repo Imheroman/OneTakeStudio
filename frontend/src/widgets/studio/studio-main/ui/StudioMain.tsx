@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { StudioHeader } from "@/widgets/studio/studio-header";
 import { PreviewArea } from "@/widgets/studio/preview-area";
 import { LayoutControls } from "@/widgets/studio/layout-controls";
@@ -10,12 +11,15 @@ import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
 import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
 import { useStudioMain } from "@/features/studio/studio-main";
 import { useAudioLevel } from "@/hooks/studio";
+import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
 
 interface StudioMainProps {
   studioId: string;
 }
 
 export function StudioMain({ studioId }: StudioMainProps) {
+  const getPreviewStreamRef = useRef<(() => MediaStream | null) | null>(null);
+
   const {
     studio,
     isLoading,
@@ -40,7 +44,13 @@ export function StudioMain({ studioId }: StudioMainProps) {
     setShowAddSourceDialog,
     setIsVideoEnabled,
     setIsAudioEnabled,
-  } = useStudioMain(studioId);
+    isRecordingLocal,
+    isRecordingCloud,
+    handleStartLocalRecording,
+    handleStopLocalRecording,
+    handleStartCloudRecording,
+    handleStopCloudRecording,
+  } = useStudioMain(studioId, { getPreviewStreamRef });
 
   const audioLevel = useAudioLevel(isAudioEnabled);
 
@@ -77,6 +87,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
               sources={displaySources}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
+              getPreviewStreamRef={getPreviewStreamRef}
             />
           </div>
 
@@ -124,6 +135,12 @@ export function StudioMain({ studioId }: StudioMainProps) {
               onAudioToggle={() => setIsAudioEnabled(!isAudioEnabled)}
               onSettings={() => console.log("Settings")}
               onExit={handleExit}
+              isRecordingLocal={isRecordingLocal}
+              isRecordingCloud={isRecordingCloud}
+              onStartLocalRecording={handleStartLocalRecording}
+              onStopLocalRecording={handleStopLocalRecording}
+              onStartCloudRecording={handleStartCloudRecording}
+              onStopCloudRecording={handleStopCloudRecording}
             />
           </div>
         </div>

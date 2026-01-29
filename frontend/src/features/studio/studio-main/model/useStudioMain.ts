@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { z } from "zod";
@@ -14,6 +14,10 @@ import {
   type Source,
   type Scene,
 } from "@/entities/studio/model";
+import {
+  ApiResponseRecordingSchema,
+  type RecordingStartRequest,
+} from "@/entities/recording/model";
 
 const ApiResponseSceneSchema = z.object({
   success: z.boolean(),
@@ -21,7 +25,15 @@ const ApiResponseSceneSchema = z.object({
   data: SceneResponseSchema,
 });
 
-export function useStudioMain(studioId: string) {
+/** Ref for a function that returns the preview canvas stream (used for local recording). */
+export type GetPreviewStreamRef = {
+  current: (() => MediaStream | null) | null;
+};
+
+export function useStudioMain(
+  studioId: string,
+  options?: { getPreviewStreamRef?: GetPreviewStreamRef | null }
+) {
   const router = useRouter();
   const { user } = useAuthStore();
   const [studio, setStudio] = useState<StudioDetail | null>(null);
@@ -44,6 +56,11 @@ export function useStudioMain(studioId: string) {
 
   const [sources, setSources] = useState<Source[]>([defaultVideoSource]);
   const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
+
+  const [isRecordingLocal, setIsRecordingLocal] = useState(false);
+  const [isRecordingCloud, setIsRecordingCloud] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
   const displaySources = sources;
 
@@ -225,6 +242,85 @@ export function useStudioMain(studioId: string) {
     }
   };
 
+  const getPreviewStreamRef = options?.getPreviewStreamRef;
+
+  const handleStartLocalRecording = useCallback(() => {
+    const getStream = getPreviewStreamRef?.current;
+    const stream = getStream?.() ?? null;
+    if (!stream || stream.getVideoTracks().length === 0) {
+      console.warn("로컬 녹화: 캔버스 스트림을 사용할 수 없습니다.");
+      return;
+    }
+    try {
+      recordedChunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm";
+      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `studio-recording-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        recordedChunksRef.current = [];
+      };
+      recorder.start(1000);
+      mediaRecorderRef.current = recorder;
+      setIsRecordingLocal(true);
+    } catch (err) {
+      console.error("로컬 녹화 시작 실패:", err);
+    }
+  }, [getPreviewStreamRef]);
+
+  const handleStopLocalRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+      mediaRecorderRef.current = null;
+    }
+    setIsRecordingLocal(false);
+  }, []);
+
+  const handleStartCloudRecording = useCallback(async () => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid)) return;
+    try {
+      const body: RecordingStartRequest = {
+        studioId: sid,
+        outputFormat: "mp4",
+        quality: "1080p",
+      };
+      await apiClient.post(
+        "/api/recordings/start",
+        ApiResponseRecordingSchema,
+        body
+      );
+      setIsRecordingCloud(true);
+    } catch (err) {
+      console.error("클라우드 녹화 시작 실패:", err);
+    }
+  }, [studioId]);
+
+  const handleStopCloudRecording = useCallback(async () => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid)) return;
+    try {
+      await apiClient.post(
+        `/api/recordings/${sid}/stop`,
+        ApiResponseRecordingSchema
+      );
+      setIsRecordingCloud(false);
+    } catch (err) {
+      console.error("클라우드 녹화 중지 실패:", err);
+    }
+  }, [studioId]);
+
   const setCurrentLayoutState = setCurrentLayout;
   const setIsVideoEnabledState = setIsVideoEnabled;
   const setIsAudioEnabledState = setIsAudioEnabled;
@@ -253,5 +349,11 @@ export function useStudioMain(studioId: string) {
     setShowAddSourceDialog,
     setIsVideoEnabled: setIsVideoEnabledState,
     setIsAudioEnabled: setIsAudioEnabledState,
+    isRecordingLocal,
+    isRecordingCloud,
+    handleStartLocalRecording,
+    handleStopLocalRecording,
+    handleStartCloudRecording,
+    handleStopCloudRecording,
   };
 }

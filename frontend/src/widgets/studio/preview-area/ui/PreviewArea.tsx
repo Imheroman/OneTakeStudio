@@ -5,6 +5,7 @@ import { Camera } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useCanvasPreview } from "@/hooks/studio/useCanvasPreview";
 import type { LayoutType, Source } from "@/entities/studio/model";
+import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
 
 interface PreviewAreaProps {
   className?: string;
@@ -12,6 +13,8 @@ interface PreviewAreaProps {
   sources?: Source[];
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
+  /** 로컬 녹화 시 캔버스 스트림을 가져오는 함수를 설정합니다. */
+  getPreviewStreamRef?: GetPreviewStreamRef | null;
 }
 
 export function PreviewArea({
@@ -20,8 +23,9 @@ export function PreviewArea({
   sources = [],
   isVideoEnabled = true,
   isAudioEnabled = true,
+  getPreviewStreamRef,
 }: PreviewAreaProps) {
-  const { canvasRef, registerSourceElement, unregisterSourceElement } =
+  const { canvasRef, registerSourceElement, unregisterSourceElement, getCaptureStream } =
     useCanvasPreview({
       layout,
       sources,
@@ -111,6 +115,14 @@ export function PreviewArea({
       });
     };
   }, [sources, registerSourceElement, unregisterSourceElement, isAudioEnabled]);
+
+  useEffect(() => {
+    if (!getPreviewStreamRef) return;
+    getPreviewStreamRef.current = () => getCaptureStream(30);
+    return () => {
+      getPreviewStreamRef.current = null;
+    };
+  }, [getPreviewStreamRef, getCaptureStream]);
 
   const hasSources = sources.length > 0 && sources.some((s) => s.isVisible);
 

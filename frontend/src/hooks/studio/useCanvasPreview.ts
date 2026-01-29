@@ -169,9 +169,19 @@ export function useCanvasPreview({
     };
   }, [render, canvasSize]);
 
+  const getCaptureStream = useCallback((frameRate = 30): MediaStream | null => {
+    if (!canvasRef.current) return null;
+    try {
+      return canvasRef.current.captureStream(frameRate) ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   return {
     canvasRef,
     registerSourceElement,
     unregisterSourceElement,
+    getCaptureStream,
   };
 }
