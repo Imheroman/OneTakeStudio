@@ -1,13 +1,27 @@
-export const VideoPlayer = ({ videoId }: { videoId: string }) => {
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center text-white relative group">
-      <div className="text-2xl font-medium mb-2">Video Preview</div>
-      <p className="text-gray-400 text-sm">ID: {videoId}</p>
+"use client";
 
-      {/* 플레이어 컨트롤 바 (예시) */}
-      <div className="absolute bottom-0 w-full h-12 bg-gradient-to-t from-black/80 to-transparent flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="text-xs">0:00 / 4:23</span>
+interface VideoPlayerProps {
+  videoUrl?: string;
+}
+
+export const VideoPlayer = ({ videoUrl }: VideoPlayerProps) => {
+  if (!videoUrl) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center text-white/80">
+        <p className="text-sm">영상 URL이 없습니다.</p>
       </div>
-    </div>
+    );
+  }
+  return (
+    <video
+      className="w-full h-full object-contain"
+      src={videoUrl}
+      controls
+      controlsList="nodownload"
+      playsInline
+      preload="metadata"
+    >
+      브라우저가 비디오 재생을 지원하지 않습니다.
+    </video>
   );
 };

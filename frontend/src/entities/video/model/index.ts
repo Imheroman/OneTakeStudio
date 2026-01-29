@@ -7,6 +7,9 @@ export type {
   VideoStatus,
   VideoType,
   VideoListResponse,
+  Clip,
+  VideoDetail,
+  CreateClipRequest,
   ShortsStatus,
   ShortsStatusResponse,
 } from "./schemas";
@@ -14,7 +17,13 @@ export type {
 // 스키마 export
 export {
   VideoSchema,
-  VideoListResponseSchema,
+  VideoListDataSchema,
+  VideoListApiResponseSchema,
+  ClipSchema,
+  VideoDetailDataSchema,
+  VideoDetailApiResponseSchema,
+  CreateClipRequestSchema,
+  CreateClipApiResponseSchema,
   ShortsStatusSchema,
   ShortsStatusResponseSchema,
 } from "./schemas";

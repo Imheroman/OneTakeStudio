@@ -3,27 +3,35 @@
 import { useState, useEffect } from "react";
 import { VideoCard } from "@/widgets/library/video-card";
 import { VideoFilter, type FilterType } from "@/widgets/library/video-filter";
+import { UploadVideoModal } from "@/widgets/library/upload-video-modal";
 import { apiClient } from "@/shared/api/client";
-import {
-  VideoListResponseSchema,
-  type Video,
-} from "@/entities/video/model";
+import { VideoListApiResponseSchema, type Video } from "@/entities/video/model";
+import { Button } from "@/shared/ui/button";
+import { Upload } from "lucide-react";
 
-export function VideoLibrary() {
+interface VideoLibraryProps {
+  /** 업로드 시에만 사용(선택). 없으면 전체 영상 목록만 표시 */
+  studioId?: string;
+}
+
+export function VideoLibrary({ studioId }: VideoLibraryProps) {
   const [videos, setVideos] = useState<Video[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
+  // 사용자 전체 영상 목록 조회 (studioId 없이). 필터만 적용
   useEffect(() => {
     const fetchVideos = async () => {
       try {
         setIsLoading(true);
-        const url =
-          filter !== "all"
-            ? `/api/library/videos?type=${filter}`
-            : "/api/library/videos";
-        const response = await apiClient.get(url, VideoListResponseSchema);
-        setVideos(response.videos);
+        const params = new URLSearchParams();
+        if (filter !== "all") params.set("type", filter);
+        const url = params.toString()
+          ? `/api/library/videos?${params.toString()}`
+          : "/api/library/videos";
+        const response = await apiClient.get(url, VideoListApiResponseSchema);
+        setVideos(response.data.videos);
       } catch (error) {
         console.error("비디오 목록 조회 실패:", error);
       } finally {
@@ -35,16 +43,39 @@ export function VideoLibrary() {
   }, [filter]);
 
   const handleMoreClick = (video: Video) => {
-    // 더보기 메뉴 처리 (추후 구현)
     console.log("More clicked:", video);
+  };
+
+  const handleUploadSuccess = () => {
+    setUploadModalOpen(false);
+    setIsLoading(true);
+    const params = new URLSearchParams();
+    if (filter !== "all") params.set("type", filter);
+    const url = params.toString()
+      ? `/api/library/videos?${params.toString()}`
+      : "/api/library/videos";
+    apiClient
+      .get(url, VideoListApiResponseSchema)
+      .then((res) => setVideos(res.data.videos))
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   };
 
   return (
     <div className="space-y-6">
-      {/* 헤더 및 필터 */}
-      <div className="flex items-center justify-between">
+      {/* 헤더, 업로드 버튼, 필터 */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Video Library</h1>
-        <VideoFilter value={filter} onChange={setFilter} />
+        <div className="flex items-center gap-3">
+          <VideoFilter value={filter} onChange={setFilter} />
+          <Button
+            onClick={() => setUploadModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload File
+          </Button>
+        </div>
       </div>
 
       {/* 비디오 그리드 */}
@@ -72,6 +103,13 @@ export function VideoLibrary() {
           ))}
         </div>
       )}
+
+      <UploadVideoModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        studioId={studioId ?? ""}
+        onSuccess={handleUploadSuccess}
+      />
     </div>
   );
 }

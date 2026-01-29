@@ -109,9 +109,9 @@ export const handlers = [
     }
 
     return HttpResponse.json(
-      { 
+      {
         success: false,
-        message: "이메일 또는 비밀번호가 일치하지 않습니다." 
+        message: "이메일 또는 비밀번호가 일치하지 않습니다.",
       },
       { status: 401 },
     );
@@ -211,19 +211,21 @@ export const handlers = [
     });
   }),
 
-  // 비디오 라이브러리 목록 조회
+  // 비디오 라이브러리 목록 조회 (백엔드 형식: { success, data })
   http.get(`${BASE_URL}/api/library/videos`, async ({ request }) => {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
+    const studioId = url.searchParams.get("studioId");
 
     console.log(
       "[MSW] 비디오 라이브러리 목록 요청",
       type ? `(type: ${type})` : "",
+      studioId ? `(studioId: ${studioId})` : "",
     );
 
     const allVideos = [
       {
-        id: 1,
+        id: "rec-1",
         title: "Weekly Podcast Episode #45",
         date: "Jan 15, 2026",
         duration: "42:18",
@@ -231,7 +233,7 @@ export const handlers = [
         status: "Uploaded" as const,
       },
       {
-        id: 2,
+        id: "rec-2",
         title: "Product Demo - Q1 Launch",
         date: "Jan 14, 2026",
         duration: "15:32",
@@ -239,7 +241,7 @@ export const handlers = [
         status: "Uploaded" as const,
       },
       {
-        id: 3,
+        id: "rec-3",
         title: "Tutorial: Getting Started",
         date: "Jan 12, 2026",
         duration: "28:14",
@@ -247,7 +249,7 @@ export const handlers = [
         status: "Saved" as const,
       },
       {
-        id: 4,
+        id: "clip-4",
         title: "Live Stream Highlight Reel",
         date: "Jan 10, 2026",
         duration: "8:52",
@@ -255,7 +257,7 @@ export const handlers = [
         status: "Uploaded" as const,
       },
       {
-        id: 5,
+        id: "clip-5",
         title: "Summer Vlog Highlights",
         date: "Jan 8, 2026",
         duration: "5:23",
@@ -263,7 +265,7 @@ export const handlers = [
         status: "Saved" as const,
       },
       {
-        id: 6,
+        id: "rec-6",
         title: "Team Meeting Recording",
         date: "Jan 6, 2026",
         duration: "1:12:45",
@@ -271,7 +273,7 @@ export const handlers = [
         status: "Uploaded" as const,
       },
       {
-        id: 7,
+        id: "clip-7",
         title: "Quick Tips - Editing Basics",
         date: "Jan 4, 2026",
         duration: "3:45",
@@ -279,7 +281,7 @@ export const handlers = [
         status: "Uploaded" as const,
       },
       {
-        id: 8,
+        id: "clip-8",
         title: "Gaming Stream Highlights",
         date: "Jan 2, 2026",
         duration: "12:30",
@@ -294,8 +296,73 @@ export const handlers = [
         : allVideos;
 
     return HttpResponse.json({
-      videos: filteredVideos,
-      total: filteredVideos.length,
+      success: true,
+      data: { videos: filteredVideos, total: filteredVideos.length },
+    });
+  }),
+
+  // 비디오 상세 조회 (백엔드 형식: { success, data })
+  http.get(`${BASE_URL}/api/library/videos/:videoId`, async ({ params }) => {
+    const { videoId } = params;
+    console.log("[MSW] 비디오 상세 요청:", videoId);
+    const detail = {
+      id: videoId,
+      title: "Weekly Podcast Episode #45",
+      date: "Jan 15, 2026, 03:16 PM",
+      duration: "42:18",
+      description:
+        "Weekly podcast discussing the latest industry trends and insights.",
+      videoUrl: null as string | null,
+      thumbnailUrl: null as string | null,
+      clips: [] as {
+        id: string;
+        title: string;
+        duration?: string;
+        url?: string | null;
+        thumbnailUrl?: string | null;
+        status?: string;
+      }[],
+    };
+    if (videoId?.startsWith("rec-")) {
+      detail.clips = [
+        {
+          id: "clip-a",
+          title: "Shorts 1",
+          duration: "0:45",
+          url: null,
+          thumbnailUrl: null,
+          status: "READY",
+        },
+        {
+          id: "clip-b",
+          title: "Shorts 2",
+          duration: "0:52",
+          url: null,
+          thumbnailUrl: null,
+          status: "READY",
+        },
+      ];
+    }
+    return HttpResponse.json({ success: true, data: detail });
+  }),
+
+  // 클립 생성 (트림 저장)
+  http.post(`${BASE_URL}/api/library/clips`, async ({ request }) => {
+    const body = (await request.json()) as {
+      recordingId: string;
+      title: string;
+      startTimeSec: number;
+      endTimeSec: number;
+    };
+    console.log("[MSW] 클립 생성:", body);
+    return HttpResponse.json({
+      success: true,
+      data: {
+        clipId: "clip-new",
+        title: body.title,
+        duration: body.endTimeSec - body.startTimeSec,
+        status: "PROCESSING",
+      },
     });
   }),
 
@@ -627,7 +694,8 @@ export const handlers = [
     console.log(`[MSW] 스튜디오 조회 요청: ${id}`);
 
     // 백엔드 StudioDetailResponse 형식에 맞춘 응답
-    const studioId = typeof id === "string" ? parseInt(id) || Date.now() : Date.now();
+    const studioId =
+      typeof id === "string" ? parseInt(id) || Date.now() : Date.now();
     const studioDetailResponse = {
       studioId: studioId,
       name: "새 스튜디오",
@@ -638,8 +706,20 @@ export const handlers = [
       joinUrl: `https://onetake.app/studio/${studioId}/join`,
       members: [],
       scenes: [
-        { sceneId: 1, name: "Scene 1 - Intro", isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
-        { sceneId: 2, name: "Scene 2 - Main Camera", isActive: false, sortOrder: 2, createdAt: new Date().toISOString() },
+        {
+          sceneId: 1,
+          name: "Scene 1 - Intro",
+          isActive: true,
+          sortOrder: 1,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          sceneId: 2,
+          name: "Scene 2 - Main Camera",
+          isActive: false,
+          sortOrder: 2,
+          createdAt: new Date().toISOString(),
+        },
       ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { VideoLibrary } from "@/features/library/video-library";
+
+function LibraryContent() {
+  const searchParams = useSearchParams();
+  const studioId = searchParams.get("studioId") ?? undefined;
+  return <VideoLibrary studioId={studioId} />;
+}
 
 export default function LibraryPage() {
   const { isLoggedIn, hasHydrated } = useAuthStore();
@@ -18,5 +24,9 @@ export default function LibraryPage() {
   if (!hasHydrated) return null;
   if (!isLoggedIn) return null;
 
-  return <VideoLibrary />;
+  return (
+    <Suspense fallback={<div className="p-8">로딩 중...</div>}>
+      <LibraryContent />
+    </Suspense>
+  );
 }

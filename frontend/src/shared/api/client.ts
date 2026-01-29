@@ -83,8 +83,13 @@ export const apiClient = {
       })
       .catch((error: any) => {
         // 네트워크 에러 처리
-        if (error.code === "ERR_NETWORK" || error.message?.includes("Network Error")) {
-          const networkError = new Error("네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.");
+        if (
+          error.code === "ERR_NETWORK" ||
+          error.message?.includes("Network Error")
+        ) {
+          const networkError = new Error(
+            "네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.",
+          );
           (networkError as any).isNetworkError = true;
           throw networkError;
         }
@@ -189,14 +194,36 @@ export const apiClient = {
         }
       });
   },
+
+  /**
+   * FormData 업로드 (multipart/form-data, Content-Type 자동 설정)
+   */
+  postForm: (
+    url: string,
+    formData: FormData,
+    config?: any,
+  ): Promise<unknown> => {
+    return axiosInstance
+      .post(url, formData, {
+        ...config,
+        headers: {
+          ...config?.headers,
+          "Content-Type": undefined, // 브라우저가 boundary 포함 multipart/form-data 설정
+        },
+      })
+      .then((res) => res.data);
+  },
 };
 
-// 3. 요청 인터셉터: 모든 요청에 토큰 주입
+// 3. 요청 인터셉터: 토큰 + X-User-Id (백엔드 Library/Media API용)
 axiosInstance.interceptors.request.use(
   (config) => {
-    const accessToken = useAuthStore.getState().accessToken;
+    const { accessToken, user } = useAuthStore.getState();
     if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    if (user?.userId && config.headers) {
+      config.headers["X-User-Id"] = user.userId;
     }
     return config;
   },
