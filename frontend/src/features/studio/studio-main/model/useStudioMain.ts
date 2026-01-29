@@ -75,6 +75,14 @@ export function useStudioMain(
   );
   const canAddSource = !!activeSceneId;
 
+  const stageSize = useMemo(
+    () =>
+      previewResolution === "1080p"
+        ? { width: 1920, height: 1080 }
+        : { width: 1280, height: 720 },
+    [previewResolution],
+  );
+
   const layoutElementsToSources = useCallback(
     (elements: unknown[] | null | undefined): Source[] => {
       if (!elements?.length) return [];
@@ -197,6 +205,26 @@ export function useStudioMain(
     });
   }, [sources]);
 
+  const displaySourceOrderKey = useMemo(
+    () => displaySources.map((s) => s.id).join(","),
+    [displaySources],
+  );
+  useEffect(() => {
+    if (displaySources.length === 0) return;
+    setSourceTransforms((prev) => {
+      const next = { ...prev };
+      displaySources.forEach((s, i) => {
+        const z = displaySources.length - 1 - i;
+        const current = prev[s.id];
+        next[s.id] = {
+          ...(current ?? { x: 0, y: 0, width: 0, height: 0, zIndex: 0 }),
+          zIndex: z,
+        };
+      });
+      return next;
+    });
+  }, [displaySourceOrderKey, displaySources]);
+
   const handleGoLive = () => {
     setIsLive(true);
     setIsEditMode(false);
@@ -266,9 +294,58 @@ export function useStudioMain(
     [],
   );
 
-  const handleAddToStage = useCallback((sourceId: string) => {
-    setOnStageSourceIds((prev) => (prev.includes(sourceId) ? prev : [...prev, sourceId]));
+  const setSourceTransform = useCallback((sourceId: string, partial: Partial<SourceTransform>) => {
+    setSourceTransforms((prev) => {
+      const current = prev[sourceId];
+      const next: SourceTransform = {
+        x: partial.x ?? current?.x ?? 0,
+        y: partial.y ?? current?.y ?? 0,
+        width: partial.width ?? current?.width ?? 0,
+        height: partial.height ?? current?.height ?? 0,
+        zIndex: partial.zIndex ?? current?.zIndex ?? 0,
+      };
+      return { ...prev, [sourceId]: next };
+    });
   }, []);
+
+  const handleAddToStage = useCallback(
+    (sourceId: string) => {
+      setOnStageSourceIds((prev) => (prev.includes(sourceId) ? prev : [...prev, sourceId]));
+      const source = sources.find((s) => s.id === sourceId);
+      if (!source || !(source.type === "video" || source.type === "screen")) return;
+      const { width: stageWidth, height: stageHeight } = stageSize;
+      if (source.type === "video") {
+        setSourceTransform(sourceId, {
+          x: stageWidth * 0.75,
+          y: stageHeight * 0.75,
+          width: stageWidth * 0.25,
+          height: stageHeight * 0.25,
+          zIndex: 0,
+        });
+      } else if (source.type === "screen") {
+        setSourceTransform(sourceId, {
+          x: 0,
+          y: 0,
+          width: stageWidth,
+          height: stageHeight,
+          zIndex: 0,
+        });
+      }
+    },
+    [sources, stageSize, setSourceTransform],
+  );
+
+  const handleBringSourceToFront = useCallback((sourceId: string) => {
+    setSources((prev) => {
+      const firstOnStage = prev.findIndex((s) => onStageSourceIds.includes(s.id));
+      const idx = prev.findIndex((s) => s.id === sourceId);
+      if (idx < 0 || idx === firstOnStage) return prev;
+      const next = [...prev];
+      const [removed] = next.splice(idx, 1);
+      next.splice(firstOnStage, 0, removed);
+      return next;
+    });
+  }, [onStageSourceIds]);
 
   const handleRemoveFromStage = useCallback((sourceId: string) => {
     setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
@@ -284,20 +361,6 @@ export function useStudioMain(
 
   const handleReorderSources = useCallback((newOrder: Source[]) => {
     setSources(newOrder);
-  }, []);
-
-  const setSourceTransform = useCallback((sourceId: string, partial: Partial<SourceTransform>) => {
-    setSourceTransforms((prev) => {
-      const current = prev[sourceId];
-      const next: SourceTransform = {
-        x: partial.x ?? current?.x ?? 0,
-        y: partial.y ?? current?.y ?? 0,
-        width: partial.width ?? current?.width ?? 0,
-        height: partial.height ?? current?.height ?? 0,
-        zIndex: partial.zIndex ?? current?.zIndex ?? 0,
-      };
-      return { ...prev, [sourceId]: next };
-    });
   }, []);
 
   const handleSaveSceneLayout = useCallback(async () => {
@@ -445,6 +508,7 @@ export function useStudioMain(
     handleAddToStage,
     handleRemoveFromStage,
     handleReorderSources,
+    handleBringSourceToFront,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,

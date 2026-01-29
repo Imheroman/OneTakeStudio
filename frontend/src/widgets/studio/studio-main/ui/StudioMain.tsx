@@ -46,6 +46,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleAddToStage,
     handleRemoveFromStage,
     handleReorderSources,
+    handleBringSourceToFront,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
@@ -109,6 +110,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
               getPreviewStreamRef={getPreviewStreamRef}
               sourceTransforms={sourceTransforms}
               setSourceTransform={setSourceTransform}
+              onBringSourceToFront={handleBringSourceToFront}
             />
           </div>
 

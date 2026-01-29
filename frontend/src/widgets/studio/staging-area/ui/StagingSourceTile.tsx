@@ -8,6 +8,8 @@ import type { Source } from "@/entities/studio/model";
 interface StagingSourceTileProps {
   source: Source;
   index: number;
+  /** 백스테이지 순서 기준 레이어 번호 (1=맨 앞, 2=그 다음 …). 온 스테이지일 때만 표시 */
+  layerOrder?: number;
   isEditMode: boolean;
   isOnStage: boolean;
   isDragging?: boolean;
@@ -23,6 +25,7 @@ interface StagingSourceTileProps {
 export function StagingSourceTile({
   source,
   index,
+  layerOrder,
   isEditMode,
   isOnStage,
   isDragging,
@@ -82,6 +85,14 @@ export function StagingSourceTile({
       )}
     >
       <div className="flex-1 min-h-0 relative">
+        {layerOrder != null && (
+          <span
+            className="absolute top-1 left-1 z-10 w-6 h-6 rounded-full bg-gray-900/90 text-white text-xs font-bold flex items-center justify-center border border-gray-600"
+            aria-label={`레이어 ${layerOrder}`}
+          >
+            {layerOrder}
+          </span>
+        )}
         {source.type === "video" || source.type === "screen" ? (
           streamProp ? (
             <video

@@ -39,6 +39,7 @@ export function StagingArea({
   onRemoveFromStage,
 }: StagingAreaProps) {
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const displaySources = sources.filter((s) => onStageSourceIds.includes(s.id));
 
   const handleDragStart = useCallback((_e: React.DragEvent, index: number) => {
     setDraggingIndex(index);
@@ -72,23 +73,28 @@ export function StagingArea({
         )}
       </div>
       <div className="flex items-center gap-3 overflow-x-auto overflow-y-hidden py-1 min-h-[112px]">
-        {sources.map((source, index) => (
-          <StagingSourceTile
-            key={source.id}
-            source={source}
-            index={index}
-            isEditMode={isEditMode}
-            isOnStage={onStageSourceIds.includes(source.id)}
-            isDragging={draggingIndex === index}
-            stream={getSourceStream?.(source.id)}
-            onToggle={onSourceToggle}
-            onAddToStage={onAddToStage}
-            onRemoveFromStage={onRemoveFromStage}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          />
-        ))}
+        {sources.map((source, index) => {
+          const onStageIndex = displaySources.findIndex((s) => s.id === source.id);
+          const layerOrder = onStageIndex >= 0 ? onStageIndex + 1 : undefined;
+          return (
+            <StagingSourceTile
+              key={source.id}
+              source={source}
+              index={index}
+              layerOrder={layerOrder}
+              isEditMode={isEditMode}
+              isOnStage={onStageSourceIds.includes(source.id)}
+              isDragging={draggingIndex === index}
+              stream={getSourceStream?.(source.id)}
+              onToggle={onSourceToggle}
+              onAddToStage={onAddToStage}
+              onRemoveFromStage={onRemoveFromStage}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            />
+          );
+        })}
         {canAddSource && (
           <button
             type="button"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useLayoutEffect } from "react";
-import { Stage, Layer, Group, Image, Rect, Transformer } from "react-konva";
+import { Stage, Layer, Group, Image, Rect, Text, Transformer } from "react-konva";
 import Konva from "konva";
 import { Camera } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
@@ -33,6 +33,7 @@ interface PreviewAreaProps {
   getPreviewStreamRef?: GetPreviewStreamRef | null;
   sourceTransforms?: Record<string, SourceTransform>;
   setSourceTransform?: (sourceId: string, partial: Partial<SourceTransform>) => void;
+  onBringSourceToFront?: (sourceId: string) => void;
 }
 
 /** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기 */
@@ -100,6 +101,7 @@ export function PreviewArea({
   getPreviewStreamRef,
   sourceTransforms = {},
   setSourceTransform,
+  onBringSourceToFront,
 }: PreviewAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<Konva.Layer>(null);
@@ -120,8 +122,9 @@ export function PreviewArea({
       : 1;
 
   const displaySources = sources.filter((s) => s.isVisible);
+  /** 1=맨 앞(상단), 숫자 커질수록 뒤: 낮은 zIndex 먼저 그려서 높은 zIndex가 위에 오도록 */
   const sortedSources = [...displaySources].sort(
-    (a, b) => (sourceTransforms[b.id]?.zIndex ?? 0) - (sourceTransforms[a.id]?.zIndex ?? 0),
+    (a, b) => (sourceTransforms[a.id]?.zIndex ?? 0) - (sourceTransforms[b.id]?.zIndex ?? 0),
   );
   const arranged = arrangeSourcesInLayout(
     layout,
@@ -375,13 +378,8 @@ export function PreviewArea({
                 return;
               }
               setSelectedId(id);
-              if (isEditMode && setSourceTransform) {
-                const maxZ = Math.max(
-                  0,
-                  ...Object.values(sourceTransforms).map((t) => t.zIndex),
-                  sortedSources.length - 1,
-                );
-                setSourceTransform(id, { zIndex: maxZ + 1 });
+              if (isEditMode && onBringSourceToFront) {
+                onBringSourceToFront(id);
               }
             }}
           >
@@ -480,6 +478,27 @@ export function PreviewArea({
                         fill="rgba(100,100,200,0.5)"
                         listening={true}
                       />
+                    )}
+                    {isEditMode && (
+                      <>
+                        <Rect
+                          x={2}
+                          y={2}
+                          width={22}
+                          height={20}
+                          fill="rgba(0,0,0,0.7)"
+                          listening={false}
+                        />
+                        <Text
+                          x={6}
+                          y={4}
+                          text={String(sortedSources.length - index)}
+                          fontSize={13}
+                          fontFamily="Arial"
+                          fill="white"
+                          listening={false}
+                        />
+                      </>
                     )}
                   </Group>
                 );
