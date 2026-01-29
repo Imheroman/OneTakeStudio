@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { apiClient } from "@/shared/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
@@ -40,15 +39,17 @@ export default function OAuthCallbackPage() {
           return;
         }
 
+        // TODO: 백엔드 OAuth 콜백 엔드포인트 구현 대기
         // 백엔드에서 OAuth 콜백 처리
         // 백엔드는 인증 코드를 토큰으로 교환하고 채널 정보를 저장
-        const response = await apiClient.get(
-          `/api/channels/oauth/callback?code=${code}&state=${state}`,
-          OAuthCallbackResponseSchema,
-        );
+        // const response = await apiClient.get(
+        //   `/api/destinations/oauth/callback?code=${code}&state=${state}`,
+        //   OAuthCallbackResponseSchema,
+        // );
 
+        // 임시 처리: 백엔드 미구현으로 인해 성공 메시지만 표시
         setStatus("success");
-        setMessage(response.message || "채널이 성공적으로 연결되었습니다.");
+        setMessage("채널 연결이 완료되었습니다. (백엔드 구현 대기 중)");
 
         // 2초 후 채널 페이지로 리다이렉트
         setTimeout(() => {

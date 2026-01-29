@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { StudioHeader } from "@/widgets/studio/studio-header";
@@ -10,6 +10,7 @@ import { ScenesPanel } from "@/widgets/studio/scenes-panel";
 import { SourcesPanel } from "@/widgets/studio/sources-panel";
 import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
+import { z } from "zod";
 import { apiClient } from "@/shared/api/client";
 import {
   StudioDetailSchema,
@@ -33,6 +34,24 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isLive, setIsLive] = useState(false);
+  
+  // 디폴트 웹캠 소스 (sources가 비어있을 때 사용)
+  const defaultVideoSource: Source = useMemo(
+    () => ({
+      id: "default-webcam",
+      type: "video" as const,
+      name: "웹캠",
+      isVisible: true,
+    }),
+    [],
+  );
+  
+  // 실제 사용할 sources (백엔드 sources가 있으면 사용, 없으면 디폴트 웹캠)
+  const displaySources = useMemo(() => {
+    return studio?.sources && studio.sources.length > 0
+      ? studio.sources
+      : [defaultVideoSource];
+  }, [studio?.sources, defaultVideoSource]);
 
   useEffect(() => {
     fetchStudio();
@@ -41,15 +60,16 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const fetchStudio = async () => {
     try {
       setIsLoading(true);
+      // 백엔드 ApiResponse 래핑 형식: { success, message?, data: StudioDetail }
       const response = await apiClient.get(
         `/api/studios/${studioId}`,
-        StudioDetailSchema,
+        z.object({
+          success: z.boolean(),
+          message: z.string().optional(),
+          data: StudioDetailSchema,
+        }),
       );
-      setStudio(response);
-      setCurrentLayout(response.currentLayout);
-      setActiveSceneId(
-        response.scenes.find((s) => s.isActive)?.id || response.scenes[0]?.id || "",
-      );
+      setStudio(response.data);
     } catch (error) {
       console.error("스튜디오 조회 실패:", error);
     } finally {
@@ -91,8 +111,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const handleExit = () => {
     if (confirm("스튜디오를 나가시겠습니까?")) {
       // 워크스페이스 홈으로 이동
-      if (user?.id) {
-        router.push(`/workspace/${user.id}`);
+      if (user?.userId) {
+        router.push(`/workspace/${user.userId}`);
       } else {
         router.back();
       }
@@ -121,7 +141,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* 헤더 */}
         <StudioHeader
-          studioTitle={studio.title}
+          studioTitle={studio.name}
           onGoLive={handleGoLive}
           isLive={isLive}
         />
@@ -133,14 +153,14 @@ export function StudioMain({ studioId }: StudioMainProps) {
             <PreviewArea
               className="h-full"
               layout={currentLayout}
-              sources={studio.sources}
+              sources={displaySources}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
             />
           </div>
 
           {/* 레이아웃 컨트롤 */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <LayoutControls
               currentLayout={currentLayout}
               onLayoutChange={setCurrentLayout}
@@ -149,11 +169,11 @@ export function StudioMain({ studioId }: StudioMainProps) {
           </div>
 
           {/* 하단 패널 */}
-          <div className="grid grid-cols-2 gap-4 flex-shrink-0 min-h-0">
+          <div className="grid grid-cols-2 gap-4 shrink-0 min-h-0">
             {/* Scenes 패널 */}
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <ScenesPanel
-                scenes={studio.scenes}
+                scenes={studio.scenes ?? []}
                 activeSceneId={activeSceneId}
                 onSceneSelect={handleSceneSelect}
                 onAddScene={handleAddScene}
@@ -164,7 +184,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             {/* Sources 패널 */}
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <SourcesPanel
-                sources={studio.sources}
+                sources={displaySources}
                 onAddSource={handleAddSource}
                 onSourceToggle={handleSourceToggle}
               />
@@ -172,7 +192,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           </div>
 
           {/* 컨트롤 바 */}
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <ControlBar
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}

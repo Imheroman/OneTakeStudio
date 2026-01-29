@@ -31,33 +31,86 @@ export function PreviewArea({
 
   // 소스 엘리먼트 등록/해제
   useEffect(() => {
-    sources.forEach((source) => {
-      if (source.type === "image") {
-        // 이미지 소스 테스트용 (개발 환경)
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        // 테스트용 이미지 URL (실제로는 소스에서 가져와야 함)
-        img.src = `https://picsum.photos/800/600?random=${source.id}`;
-        img.onload = () => {
-          registerSourceElement(source.id, img);
-        };
-        img.onerror = () => {
-          console.warn(`이미지 로드 실패: ${source.name}`);
-        };
-      } else if (source.type === "video") {
-        // 비디오 소스의 경우 MediaStream 가져오기
-        // 실제 구현에서는 getUserMedia 또는 다른 소스에서 가져옴
-        // 현재는 플레이스홀더만 표시
+    const streamsMap = new Map<string, MediaStream>();
+
+    const setupSources = async () => {
+      for (const source of sources) {
+        if (source.type === "image") {
+          // 이미지 소스 테스트용 (개발 환경)
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          // 테스트용 이미지 URL (실제로는 소스에서 가져와야 함)
+          img.src = `https://picsum.photos/800/600?random=${source.id}`;
+          img.onload = () => {
+            registerSourceElement(source.id, img);
+          };
+          img.onerror = () => {
+            console.warn(`이미지 로드 실패: ${source.name}`);
+          };
+        } else if (source.type === "video") {
+          // 비디오 소스의 경우 웹캠 연결
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+              audio: isAudioEnabled,
+            });
+
+            streamsMap.set(source.id, stream);
+
+            const video = document.createElement("video");
+            video.srcObject = stream;
+            video.autoplay = true;
+            video.muted = true;
+            video.playsInline = true;
+
+            // 비디오가 로드되면 등록
+            video.onloadedmetadata = () => {
+              video.play().catch((error) => {
+                console.error("비디오 재생 실패:", error);
+              });
+              registerSourceElement(source.id, video, stream);
+            };
+
+            video.onerror = (error) => {
+              console.error("비디오 로드 실패:", error);
+              // 스트림 정리
+              stream.getTracks().forEach((track) => track.stop());
+              streamsMap.delete(source.id);
+            };
+          } catch (error) {
+            console.error("웹캠 접근 실패:", error);
+            // 권한 거부 또는 기타 오류 처리
+            if (error instanceof Error) {
+              if (error.name === "NotAllowedError") {
+                console.warn("웹캠 권한이 거부되었습니다.");
+              } else if (error.name === "NotFoundError") {
+                console.warn("웹캠을 찾을 수 없습니다.");
+              }
+            }
+          }
+        }
+        // text, audio, browser 타입은 렌더러에서 처리
       }
-      // text, audio, browser 타입은 렌더러에서 처리
-    });
+    };
+
+    setupSources();
 
     return () => {
+      // 모든 스트림 정리
+      streamsMap.forEach((stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+      });
+      streamsMap.clear();
+
+      // 소스 엘리먼트 해제
       sources.forEach((source) => {
         unregisterSourceElement(source.id);
       });
     };
-  }, [sources, registerSourceElement, unregisterSourceElement]);
+  }, [sources, registerSourceElement, unregisterSourceElement, isAudioEnabled]);
 
   const hasSources = sources.length > 0 && sources.some((s) => s.isVisible);
 

@@ -17,6 +17,7 @@ public class StudioDetailResponse {
 
     private Long studioId;
     private String name;
+    private String description;
     private String thumbnail;
     private String template;
     private String status;
@@ -30,6 +31,7 @@ public class StudioDetailResponse {
         return StudioDetailResponse.builder()
                 .studioId(studio.getId())
                 .name(studio.getName())
+                .description(studio.getDescription())
                 .thumbnail(studio.getThumbnail())
                 .template(studio.getTemplate())
                 .status(studio.getStatus().name().toLowerCase())
@@ -45,6 +47,7 @@ public class StudioDetailResponse {
         return StudioDetailResponse.builder()
                 .studioId(studio.getId())
                 .name(studio.getName())
+                .description(studio.getDescription())
                 .thumbnail(studio.getThumbnail())
                 .template(studio.getTemplate())
                 .status(studio.getStatus().name().toLowerCase())

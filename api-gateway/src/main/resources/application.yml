@@ -13,7 +13,7 @@ spring:
               enabled: true
               lower-case-service-id: true
           routes:
-            # Core Service Routes
+            # Core Service Routes (쇼츠 API는 백엔드 미구현 → video-service 추가 시 별도 라우트 예정)
             - id: core-service
               uri: lb://core-service
               predicates:
@@ -72,6 +72,10 @@ spring:
                   - "Authorization"
                 allowCredentials: true
                 maxAge: 3600
+
+# JWT
+jwt:
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
 
 # Eureka Client
 eureka:

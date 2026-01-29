@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
-import { useRouter } from "next/navigation"; // 라우터 import
+import { useRouter } from "next/navigation";
+
+/** 쇼츠 API는 백엔드 미구현 → MSW 모킹 시에만 생성 요청 가능 */
+const isShortsApiAvailable = () =>
+  process.env.NEXT_PUBLIC_API_MOCKING === "enabled";
 
 interface ShortsConfiguratorProps {
   videoId: string;
@@ -14,33 +18,23 @@ type Language = "ko" | "en" | "ja" | "zh";
 
 export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
   const router = useRouter();
+  const shortsApiAvailable = isShortsApiAvailable();
 
-  // 상태 관리
   const [bgColor, setBgColor] = useState<BgColor>("black");
   const [useSubtitles, setUseSubtitles] = useState(true);
   const [language, setLanguage] = useState<Language>("ko");
-  const [isSubmitting, setIsSubmitting] = useState(false); // 중복 클릭 방지용
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 2. 생성 요청 핸들러 수정 (API 요청으로 변경)
   const handleCreate = async () => {
     if (isSubmitting) return;
+
+    if (!shortsApiAvailable) return; // 버튼 비활성화로 진입 불가, 방어용
+
     setIsSubmitting(true);
-
     try {
-      // (선택) 디버깅용 로그
-      console.log("Request Shorts Generation:", {
-        videoId,
-        bgColor,
-        useSubtitles,
-        language,
-      });
-
-      // ✨ [변경] 스토어 함수 대신 API 직접 호출 (MSW가 가로챔)
       const response = await fetch("/api/v1/shorts/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           videoId,
           bgColor,
@@ -49,20 +43,16 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to start generation");
-      }
+      if (!response.ok) throw new Error("Failed to start generation");
 
-      // 사용자 알림
       alert(
         "쇼츠 생성이 시작되었습니다!\n잠시 후 상단 알림을 통해 확인하실 수 있습니다.",
       );
-
-      // 이전 페이지(상세 페이지)로 복귀
       router.back();
     } catch (error) {
       console.error(error);
       alert("쇼츠 생성 요청 중 오류가 발생했습니다.");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -200,14 +190,23 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
           )}
         </div>
 
-        {/* 3. 생성 요청 버튼 */}
+        {/* 3. 생성 요청 버튼 (백엔드 API 미구현 시 MSW 모킹으로만 동작) */}
         <Button
-          className="w-full py-6 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-200 transition-transform active:scale-[0.98]"
+          className="w-full py-6 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-200 transition-transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           onClick={handleCreate}
-          disabled={isSubmitting} // 요청 중 버튼 비활성화
+          disabled={isSubmitting || !shortsApiAvailable}
         >
-          {isSubmitting ? "요청 중..." : "쇼츠 생성 요청"}
+          {isSubmitting
+            ? "요청 중..."
+            : shortsApiAvailable
+              ? "쇼츠 생성 요청"
+              : "준비 중 (API 미구현)"}
         </Button>
+        {!shortsApiAvailable && (
+          <p className="text-xs text-gray-500 text-center">
+            쇼츠 API는 백엔드 미구현입니다. MSW 활성화 시 체험 가능.
+          </p>
+        )}
       </section>
     </div>
   );

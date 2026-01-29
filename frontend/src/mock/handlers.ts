@@ -1,8 +1,8 @@
 import { http, HttpResponse, passthrough } from "msw";
 
-// 환경 변수에서 베이스 URL을 가져옵니다.
+// MSW는 상대 경로를 가로채므로 BASE_URL은 빈 문자열로 설정
+// 실제 API 요청은 apiClient의 baseURL 설정을 따름
 const BASE_URL = "";
-// const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 // 타입 정의 (entities에서 import하지 않고 여기서 정의 - MSW는 독립적)
 type PlatformType = "youtube" | "twitch" | "facebook" | "custom_rtmp";
@@ -582,93 +582,75 @@ export const handlers = [
     );
   }),
 
-  // 스튜디오 생성
+  // 스튜디오 생성 (백엔드 ApiResponse<StudioDetailResponse> 형식)
   http.post(`${BASE_URL}/api/studios`, async ({ request }) => {
     const body = (await request.json()) as any;
-    const { title, description, transmissionType, storageLocation, platforms } =
-      body;
+
+    const { name, template } = body;
 
     console.log(`[MSW] 스튜디오 생성 요청:`, body);
 
-    // 스튜디오 ID 생성
-    const studioId = `studio_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    // 스튜디오 ID 생성 (number 타입)
+    const studioId = Date.now();
 
-    const newStudio = {
-      id: studioId,
-      title,
-      description: description || "",
-      transmissionType,
-      storageLocation,
-      platforms: platforms || [],
+    // 백엔드 StudioDetailResponse 형식에 맞춘 응답
+    const studioDetailResponse = {
+      studioId: studioId,
+      name: name || "새 스튜디오",
+      description: null,
+      thumbnail: null,
+      template: template || null,
+      status: "idle",
+      joinUrl: `https://onetake.app/studio/${studioId}/join`,
+      members: [],
+      scenes: [],
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    console.log(`[MSW] 스튜디오 생성 완료:`, newStudio);
+    console.log(`[MSW] 스튜디오 생성 완료:`, studioDetailResponse);
 
+    // 백엔드 ApiResponse 형식으로 반환
     return HttpResponse.json(
       {
-        studio: newStudio,
-        message: "스튜디오가 성공적으로 생성되었습니다.",
+        success: true,
+        message: "스튜디오 생성 성공",
+        data: studioDetailResponse,
       },
       { status: 201 },
     );
   }),
 
-  // 스튜디오 조회
+  // 스튜디오 조회 (백엔드 ApiResponse<StudioDetailResponse> 형식)
   http.get(`${BASE_URL}/api/studios/:id`, async ({ params }) => {
     const { id } = params;
     console.log(`[MSW] 스튜디오 조회 요청: ${id}`);
 
-    // 모의 스튜디오 데이터
-    const studioDetail = {
-      id: id as string,
-      title: "StudioTitle",
-      description: "스트리밍 스튜디오",
-      transmissionType: "live" as const,
-      storageLocation: "local" as const,
-      platforms: ["youtube", "twitch"] as const,
-      createdAt: new Date().toISOString(),
-      currentLayout: "full" as const,
-      isLive: false,
+    // 백엔드 StudioDetailResponse 형식에 맞춘 응답
+    const studioId = typeof id === "string" ? parseInt(id) || Date.now() : Date.now();
+    const studioDetailResponse = {
+      studioId: studioId,
+      name: "새 스튜디오",
+      description: null,
+      thumbnail: null,
+      template: "live",
+      status: "idle",
+      joinUrl: `https://onetake.app/studio/${studioId}/join`,
+      members: [],
       scenes: [
-        { id: "scene_1", name: "Scene 1 - Intro", isActive: true },
-        { id: "scene_2", name: "Scene 2 - Main Camera", isActive: false },
+        { sceneId: 1, name: "Scene 1 - Intro", isActive: true, sortOrder: 1, createdAt: new Date().toISOString() },
+        { sceneId: 2, name: "Scene 2 - Main Camera", isActive: false, sortOrder: 2, createdAt: new Date().toISOString() },
       ],
-      sources: [
-        {
-          id: "source_1",
-          type: "video" as const,
-          name: "Video Capture Device",
-          isVisible: true,
-        },
-        {
-          id: "source_2",
-          type: "audio" as const,
-          name: "Audio Input Capture",
-          isVisible: true,
-        },
-        {
-          id: "source_3",
-          type: "image" as const,
-          name: "Test Image",
-          isVisible: true,
-        },
-        {
-          id: "source_4",
-          type: "text" as const,
-          name: "Text Overlay",
-          isVisible: true,
-        },
-        {
-          id: "source_5",
-          type: "browser" as const,
-          name: "Browser Source",
-          isVisible: false,
-        },
-      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    return HttpResponse.json(studioDetail);
+    // 백엔드 ApiResponse 형식으로 반환
+    return HttpResponse.json({
+      success: true,
+      message: "스튜디오 상세 조회 성공",
+      data: studioDetailResponse,
+    });
   }),
   // --- 쇼츠 생성 및 상태 폴링 핸들러 ---
   // 1. 쇼츠 생성 요청 (POST)

@@ -34,7 +34,7 @@ export function ChannelManagement() {
     try {
       setIsLoading(true);
       const response = await apiClient.get(
-        "/api/channels",
+        "/api/destinations",
         ChannelListResponseSchema,
       );
       setChannels(response.channels);
@@ -73,7 +73,7 @@ export function ChannelManagement() {
 
     try {
       await apiClient.delete(
-        `/api/channels/${id}`,
+        `/api/destinations/${id}`,
         DeleteResponseSchema,
       );
       // 목록 새로고침

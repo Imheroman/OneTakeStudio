@@ -39,12 +39,20 @@ public class StudioService {
 
     @Transactional
     public StudioDetailResponse createStudio(String userId, CreateStudioRequest request) {
-        log.debug("스튜디오 생성 요청: userId={}, name={}", userId, request.getName());
+        String studioName = request.getEffectiveName();
+        if (studioName == null || studioName.isBlank()) {
+            throw new IllegalArgumentException("스튜디오 이름(name 또는 title)은 필수입니다.");
+        }
+
+        log.debug("스튜디오 생성 요청: userId={}, name={}", userId, studioName);
         Long internalUserId = getInternalUserId(userId);
 
         Studio studio = Studio.builder()
                 .ownerId(internalUserId)
-                .name(request.getName())
+                .hostUserId(internalUserId) // host_user_id는 owner_id와 동일하게 설정
+                .name(studioName)
+                .title(studioName) // title은 name과 동일하게 설정
+                .description(request.getDescription())
                 .template(request.getTemplate())
                 .build();
 
@@ -58,7 +66,8 @@ public class StudioService {
                 .build();
         studioMemberRepository.save(hostMember);
 
-        return StudioDetailResponse.from(saved);
+        // 생성 직후에는 members와 scenes가 비어있으므로 빈 리스트 전달
+        return StudioDetailResponse.from(saved, List.of(), List.of());
     }
 
     public List<StudioResponse> getMyStudios(String userId) {

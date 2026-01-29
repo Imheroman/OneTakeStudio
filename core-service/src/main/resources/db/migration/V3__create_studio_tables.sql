@@ -3,15 +3,19 @@ CREATE TABLE IF NOT EXISTS studios (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     studio_id CHAR(36) UNIQUE NOT NULL COMMENT '외부 노출 UUID',
     owner_id BIGINT NOT NULL,
+    host_user_id BIGINT NOT NULL COMMENT '스튜디오 호스트 사용자 ID (일반적으로 owner_id와 동일)',
     name VARCHAR(100) NOT NULL,
+    title VARCHAR(100) NOT NULL COMMENT '스튜디오 제목 (일반적으로 name과 동일)',
     thumbnail VARCHAR(500),
     template VARCHAR(50),
     status VARCHAR(20) DEFAULT 'READY' COMMENT 'READY/LIVE/ENDED',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (host_user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_studio_id (studio_id),
     INDEX idx_owner (owner_id),
+    INDEX idx_host_user (host_user_id),
     INDEX idx_status (status)
 );
 

@@ -98,6 +98,26 @@ export function LoginForm() {
       }
     } catch (error: any) {
       console.error("로그인 에러:", error);
+      const status = error?.response?.status;
+      
+      if (status === 503) {
+        setErrorMsg(
+          "서비스를 사용할 수 없습니다 (503).\n" +
+          "- Eureka에 core-service가 등록(UP)인지 확인\n" +
+          "- 실행 순서: Eureka → core-service → api-gateway\n" +
+          "- 모킹으로 우회하려면 NEXT_PUBLIC_API_MOCKING=enabled 후 프론트 dev 서버 재시작"
+        );
+        return;
+      }
+      
+      if (status === 500) {
+        setErrorMsg(
+          "서버 오류가 발생했습니다 (500).\n" +
+          "백엔드 로그를 확인해주세요."
+        );
+        return;
+      }
+      
       setErrorMsg(
         error.response?.data?.message || "이메일 또는 비밀번호를 확인해주세요.",
       );

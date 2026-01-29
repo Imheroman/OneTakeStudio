@@ -26,8 +26,17 @@ public class Studio {
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
+    @Column(name = "host_user_id", nullable = false)
+    private Long hostUserId;
+
     @Column(nullable = false, length = 100)
     private String name;
+
+    @Column(nullable = false, length = 100)
+    private String title;
+
+    @Column(length = 500)
+    private String description;
 
     @Column(length = 500)
     private String thumbnail;
