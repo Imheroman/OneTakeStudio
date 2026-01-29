@@ -43,7 +43,13 @@ public enum ErrorCode {
 
     // S3
     S3_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 업로드에 실패했습니다"),
-    S3_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F002", "파일 다운로드에 실패했습니다");
+    S3_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F002", "파일 다운로드에 실패했습니다"),
+
+    // Media Settings
+    MEDIA_SETTINGS_NOT_FOUND(HttpStatus.NOT_FOUND, "MS001", "미디어 설정을 찾을 수 없습니다"),
+    MEDIA_STATE_NOT_FOUND(HttpStatus.NOT_FOUND, "MS002", "미디어 상태를 찾을 수 없습니다"),
+    MEDIA_STATE_ALREADY_EXISTS(HttpStatus.CONFLICT, "MS003", "이미 활성화된 미디어 상태가 있습니다"),
+    MEDIA_DEVICE_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "MS004", "사용할 수 없는 미디어 장치입니다");
 
     private final HttpStatus status;
     private final String code;
