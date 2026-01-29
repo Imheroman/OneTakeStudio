@@ -16,6 +16,9 @@ export type {
   SourceType,
   CreateStudioRequest,
   CreateStudioResponse,
+  StudioMemberResponse,
+  InviteMemberRequest,
+  InviteResponse,
 } from "./schemas";
 
 // 스키마 export
@@ -33,4 +36,7 @@ export {
   PlatformSchema,
   LayoutTypeSchema,
   SourceTypeSchema,
+  StudioMemberResponseSchema,
+  InviteMemberRequestSchema,
+  InviteResponseSchema,
 } from "./schemas";

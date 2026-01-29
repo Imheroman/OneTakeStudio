@@ -7,22 +7,55 @@ const BASE_URL = "";
 // 타입 정의 (entities에서 import하지 않고 여기서 정의 - MSW는 독립적)
 type PlatformType = "youtube" | "twitch" | "facebook" | "custom_rtmp";
 
-// MSW 메모리 기반 상태 관리 (즐겨찾기)
+// MSW 메모리 기반 상태 관리 (즐겨찾기) — 스튜디오 초대 시 email 필요
 interface Favorite {
   id: string;
+  userId?: string;
   nickname: string;
   email?: string;
 }
 
-// 초기 즐겨찾기 데이터
+// 초기 즐겨찾기 데이터 (email 포함)
 let favorites: Favorite[] = [
-  { id: "admin", nickname: "나는 동언" },
-  { id: "editor", nickname: "나는 범수" },
-  { id: "collaborator", nickname: "어드민 히로" },
-  { id: "designer", nickname: "골드 태현" },
+  {
+    id: "admin",
+    userId: "admin",
+    nickname: "나는 동언",
+    email: "admin@example.com",
+  },
+  {
+    id: "editor",
+    userId: "editor",
+    nickname: "나는 범수",
+    email: "editor@example.com",
+  },
+  {
+    id: "collaborator",
+    userId: "collaborator",
+    nickname: "어드민 히로",
+    email: "collaborator@example.com",
+  },
+  {
+    id: "designer",
+    userId: "designer",
+    nickname: "골드 태현",
+    email: "designer@example.com",
+  },
 ];
 
 const MAX_FAVORITES = 10;
+
+// 녹화 상태 (MSW 메모리)
+let recordingState: {
+  active: { studioId: number; recordingId: string } | null;
+  list: {
+    recordingId: string;
+    studioId: number;
+    fileName: string;
+    startedAt: string;
+    durationSeconds: number;
+  }[];
+} = { active: null, list: [] };
 
 // [추가] 쇼츠 생성 상태 변수 (핸들러 밖에서 선언해야 상태가 유지됨)
 let shortsServerState = {
@@ -404,12 +437,18 @@ export const handlers = [
     });
   }),
 
-  // 즐겨찾기 목록 조회
+  // 즐겨찾기 목록 조회 (래퍼 없음: { favorites, total, maxCount })
   http.get(`${BASE_URL}/api/favorites`, async () => {
     console.log("[MSW] 즐겨찾기 목록 요청", favorites);
+    const list = favorites.map((f) => ({
+      favoriteId: f.id,
+      userId: f.userId ?? f.id,
+      nickname: f.nickname,
+      email: f.email ?? `${f.id}@example.com`,
+    }));
     return HttpResponse.json({
-      favorites,
-      total: favorites.length,
+      favorites: list,
+      total: list.length,
       maxCount: MAX_FAVORITES,
     });
   }),
@@ -732,6 +771,181 @@ export const handlers = [
       data: studioDetailResponse,
     });
   }),
+
+  // --- 스튜디오 멤버 (Core) ---
+  http.get(`${BASE_URL}/api/studios/:id/members`, async ({ params }) => {
+    const { id } = params;
+    console.log("[MSW] 스튜디오 멤버 목록:", id);
+    const members = [
+      {
+        memberId: 1,
+        userId: 100,
+        nickname: "오너",
+        email: "owner@example.com",
+        role: "owner",
+        joinedAt: new Date().toISOString(),
+      },
+    ];
+    return HttpResponse.json({ success: true, data: members });
+  }),
+  http.post(
+    `${BASE_URL}/api/studios/:id/members/invite`,
+    async ({ params, request }) => {
+      const { id } = params;
+      const body = (await request.json()) as { email: string; role: string };
+      console.log("[MSW] 스튜디오 멤버 초대:", id, body);
+      return HttpResponse.json({
+        success: true,
+        data: {
+          inviteId: "inv_" + Date.now(),
+          studioId: Number(id),
+          email: body.email,
+          role: body.role ?? "MEMBER",
+          status: "PENDING",
+          expiresAt: new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+        },
+      });
+    },
+  ),
+
+  // --- 채팅 (Media, 경로: /api/media/chat — V1 제외) ---
+  http.get(`${BASE_URL}/api/media/chat/:studioId`, async ({ params }) => {
+    const { studioId } = params;
+    console.log("[MSW] 채팅 히스토리:", studioId);
+    const data = [
+      {
+        messageId: "msg_1",
+        studioId: Number(studioId),
+        platform: "INTERNAL",
+        messageType: "NORMAL",
+        senderName: "진행자",
+        content: "채팅 히스토리 목업입니다.",
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    return HttpResponse.json({ success: true, data });
+  }),
+  http.post(`${BASE_URL}/api/media/chat`, async ({ request }) => {
+    const body = (await request.json()) as {
+      studioId: number;
+      content: string;
+      platform?: string;
+    };
+    console.log("[MSW] 채팅 전송:", body);
+    const msg = {
+      messageId: "msg_" + Date.now(),
+      studioId: body.studioId,
+      platform: body.platform ?? "INTERNAL",
+      messageType: "NORMAL",
+      senderName: "나",
+      content: body.content,
+      createdAt: new Date().toISOString(),
+    };
+    return HttpResponse.json({ success: true, data: msg });
+  }),
+
+  // --- 녹화 (Gateway: /api/recordings) ---
+  http.post(`${BASE_URL}/api/recordings/start`, async ({ request }) => {
+    const body = (await request.json()) as { studioId: number };
+    const recordingId = "rec_" + Date.now();
+    recordingState.active = { studioId: body.studioId, recordingId };
+    recordingState.list.push({
+      recordingId,
+      studioId: body.studioId,
+      fileName: `recording_${recordingId}.mp4`,
+      startedAt: new Date().toISOString(),
+      durationSeconds: 0,
+    });
+    console.log("[MSW] 녹화 시작:", body);
+    return HttpResponse.json({
+      success: true,
+      data: {
+        recordingId,
+        studioId: body.studioId,
+        status: "RECORDING",
+        fileName: `recording_${recordingId}.mp4`,
+        startedAt: new Date().toISOString(),
+      },
+    });
+  }),
+  http.post(`${BASE_URL}/api/recordings/:studioId/stop`, async ({ params }) => {
+    const studioId = Number(params.studioId);
+    const active =
+      recordingState.active?.studioId === studioId
+        ? recordingState.active
+        : null;
+    if (active) {
+      const idx = recordingState.list.findIndex(
+        (r) => r.recordingId === active.recordingId,
+      );
+      if (idx >= 0)
+        recordingState.list[idx] = {
+          ...recordingState.list[idx],
+          durationSeconds: 60,
+        };
+      recordingState.active = null;
+    }
+    console.log("[MSW] 녹화 중지:", studioId);
+    return HttpResponse.json({
+      success: true,
+      data: {
+        recordingId: active?.recordingId ?? "rec_0",
+        studioId,
+        status: "COMPLETED",
+        fileName: "recording.mp4",
+        durationSeconds: 60,
+        startedAt: new Date().toISOString(),
+        endedAt: new Date().toISOString(),
+      },
+    });
+  }),
+  http.get(
+    `${BASE_URL}/api/recordings/studio/:studioId`,
+    async ({ params }) => {
+      const studioId = Number(params.studioId);
+      const list = recordingState.list
+        .filter((r) => r.studioId === studioId)
+        .map((r) => ({
+          recordingId: r.recordingId,
+          studioId: r.studioId,
+          status: "COMPLETED" as const,
+          fileName: r.fileName,
+          startedAt: r.startedAt,
+          durationSeconds: r.durationSeconds,
+        }));
+      return HttpResponse.json({ success: true, data: list });
+    },
+  ),
+  http.get(
+    `${BASE_URL}/api/recordings/studio/:studioId/active`,
+    async ({ params }) => {
+      const studioId = Number(params.studioId);
+      const active =
+        recordingState.active?.studioId === studioId
+          ? recordingState.active
+          : null;
+      if (!active) return HttpResponse.json({ success: true, data: null });
+      const r = recordingState.list.find(
+        (x) => x.recordingId === active.recordingId,
+      );
+      return HttpResponse.json({
+        success: true,
+        data: r
+          ? {
+              recordingId: r.recordingId,
+              studioId: r.studioId,
+              status: "RECORDING" as const,
+              fileName: r.fileName,
+              startedAt: r.startedAt,
+              durationSeconds: r.durationSeconds,
+            }
+          : null,
+      });
+    },
+  ),
+
   // --- 쇼츠 생성 및 상태 폴링 핸들러 ---
   // 1. 쇼츠 생성 요청 (POST)
   http.post(`${BASE_URL}/api/v1/shorts/generate`, async ({ request }) => {

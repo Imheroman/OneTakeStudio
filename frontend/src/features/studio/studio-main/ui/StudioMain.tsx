@@ -34,7 +34,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isLive, setIsLive] = useState(false);
-  
+
   // 디폴트 웹캠 소스 (sources가 비어있을 때 사용)
   const defaultVideoSource: Source = useMemo(
     () => ({
@@ -45,7 +45,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     }),
     [],
   );
-  
+
   // 실제 사용할 sources (백엔드 sources가 있으면 사용, 없으면 디폴트 웹캠)
   const displaySources = useMemo(() => {
     return studio?.sources && studio.sources.length > 0
@@ -136,9 +136,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-900 overflow-hidden">
-      {/* 메인 컨텐츠 영역 */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div className="flex h-screen min-h-0 w-full bg-gray-900 overflow-x-auto overflow-y-hidden">
+      {/* 메인 컨텐츠 영역: 줄어들 수 있게 해서 오른쪽 사이드바가 항상 보이도록 */}
+      <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
         {/* 헤더 */}
         <StudioHeader
           studioTitle={studio.name}
@@ -206,7 +206,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
       </div>
 
       {/* 오른쪽 사이드바 */}
-      <StudioSidebar />
+      <StudioSidebar studioId={studioId} />
     </div>
   );
 }
