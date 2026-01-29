@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Radio, Video } from "lucide-react";
 import { Button } from "@/shared/ui/button";
@@ -14,10 +13,8 @@ import {
   TableRow,
 } from "@/shared/ui/table";
 import { ActionCard, PageHeader } from "@/shared/common";
-import { StudioCreation } from "@/features/studio/studio-creation";
-import { apiClient } from "@/shared/api/client";
-import type { RecentStudio } from "@/entities/studio/model";
-import { RecentStudioListResponseSchema } from "@/entities/studio/model";
+import { StudioCreation } from "@/widgets/studio/studio-creation";
+import { useWorkspaceHome } from "@/features/workspace/workspace-home";
 
 interface WorkspaceHomeProps {
   userId: string;
@@ -25,29 +22,15 @@ interface WorkspaceHomeProps {
 }
 
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
-  const [recentStudios, setRecentStudios] = useState<RecentStudio[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [createDialogType, setCreateDialogType] = useState<"live" | "recording">("live");
+  const {
+    recentStudios,
+    isLoading,
+    isCreateDialogOpen,
+    setIsCreateDialogOpen,
+    createDialogType,
+    openCreateDialog,
+  } = useWorkspaceHome(userId);
 
-  useEffect(() => {
-    const fetchRecentStudios = async () => {
-      try {
-        const response = await apiClient.get(
-          `/api/workspace/${userId}/studios/recent`,
-          RecentStudioListResponseSchema,
-        );
-        setRecentStudios(response.studios);
-      } catch (error) {
-        console.error("최근 스튜디오 조회 실패:", error);
-        // 에러 발생 시 빈 배열 유지
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRecentStudios();
-  }, [userId]);
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <PageHeader
@@ -68,8 +51,7 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
           actionLabel="Start Streaming"
           onClick={(e) => {
             e.preventDefault();
-            setCreateDialogType("live");
-            setIsCreateDialogOpen(true);
+            openCreateDialog("live");
           }}
         />
         <ActionCard
@@ -80,13 +62,11 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
           actionLabel="Start Recording"
           onClick={(e) => {
             e.preventDefault();
-            setCreateDialogType("recording");
-            setIsCreateDialogOpen(true);
+            openCreateDialog("recording");
           }}
         />
       </div>
 
-      {/* 스튜디오 생성 다이얼로그 */}
       <StudioCreation
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
@@ -124,25 +104,25 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
                   </TableRow>
                 ) : (
                   recentStudios.map((studio) => (
-                  <TableRow
-                    key={studio.id}
-                    className="hover:bg-gray-50/80 transition-colors"
-                  >
-                    <TableCell className="font-medium text-gray-700 py-4">
-                      {studio.title}
-                    </TableCell>
-                    <TableCell className="text-gray-500">{studio.date}</TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/studio/${studio.id}`}>
-                        <Button
-                          size="sm"
-                          className="bg-indigo-600 hover:bg-indigo-700"
-                        >
-                          Enter Studio
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
+                    <TableRow
+                      key={studio.id}
+                      className="hover:bg-gray-50/80 transition-colors"
+                    >
+                      <TableCell className="font-medium text-gray-700 py-4">
+                        {studio.title}
+                      </TableCell>
+                      <TableCell className="text-gray-500">{studio.date}</TableCell>
+                      <TableCell className="text-right">
+                        <Link href={`/studio/${studio.id}`}>
+                          <Button
+                            size="sm"
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                          >
+                            Enter Studio
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
               </TableBody>

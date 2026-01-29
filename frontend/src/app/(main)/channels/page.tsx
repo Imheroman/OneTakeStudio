@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRouter } from "next/navigation";
-import { ChannelManagement } from "@/features/channels/channel-management";
+import { ChannelManagement } from "@/widgets/channels/channel-management";
 
 export default function ChannelsPage() {
   const { isLoggedIn, hasHydrated } = useAuthStore();

@@ -1,1 +1,1 @@
-export { StudioMain } from "./ui/StudioMain";
+export { useStudioMain } from "./model/useStudioMain";

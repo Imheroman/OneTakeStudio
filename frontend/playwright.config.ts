@@ -51,18 +51,13 @@ export default defineConfig({
       // MSW 모킹 테스트만 실행 (real-api가 아닌 파일)
       testMatch: /.*(?<!real-api)\.spec\.ts$/,
     },
-    // 실제 API 사용 테스트
+    // 실제 API 사용 테스트 (실행 시 셸에서 NEXT_PUBLIC_API_MOCKING=disabled 지정 권장)
     {
       name: 'chromium-real-api',
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
       },
-      // 실제 API 테스트만 실행
       testMatch: /.*real-api\.spec\.ts$/,
-      // 환경 변수 주입 (MSW 비활성화)
-      env: {
-        NEXT_PUBLIC_API_MOCKING: 'disabled',
-      },
     },
   ],
 

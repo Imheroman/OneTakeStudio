@@ -1,1 +1,1 @@
-export { StudioCreation } from "./ui/StudioCreation";
+export { useStudioCreation } from "./model/useStudioCreation";

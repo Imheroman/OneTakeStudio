@@ -89,7 +89,7 @@ export function StudioHeader({
           icon={
             <Avatar>
               <AvatarFallback className="bg-gray-700 text-gray-300 font-bold">
-                {user?.name?.[0] ?? "U"}
+                {user?.nickname?.[0] ?? "U"}
               </AvatarFallback>
             </Avatar>
           }

@@ -3,7 +3,7 @@
 import { useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { WorkspaceHome } from "@/features/workspace/workspace-home/ui/WorkspaceHome";
+import { WorkspaceHome } from "@/widgets/workspace/workspace-home";
 
 interface WorkspacePageProps {
   params: Promise<{ id: string }>;

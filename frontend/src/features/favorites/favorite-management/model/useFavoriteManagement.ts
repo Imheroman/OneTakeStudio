@@ -1,10 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserPlus } from "lucide-react";
-import { Button } from "@/shared/ui/button";
-import { FavoriteTable } from "@/widgets/favorites/favorite-table";
-import { InviteMemberDialog } from "@/widgets/favorites/invite-member-dialog";
 import { apiClient } from "@/shared/api/client";
 import {
   FavoriteListResponseSchema,
@@ -14,15 +10,11 @@ import {
   type UserSearchResult,
 } from "@/entities/favorite/model";
 
-export function FavoriteManagement() {
+export function useFavoriteManagement() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [maxCount, setMaxCount] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  useEffect(() => {
-    fetchFavorites();
-  }, []);
 
   const fetchFavorites = async () => {
     try {
@@ -40,23 +32,24 @@ export function FavoriteManagement() {
     }
   };
 
+  useEffect(() => {
+    fetchFavorites();
+  }, []);
+
   const handleInvite = async (user: UserSearchResult) => {
     try {
       await apiClient.post(
         "/api/favorites",
         AddFavoriteResponseSchema,
-        {
-          userId: user.id,
-        },
+        { userId: user.id },
       );
-      // 목록 새로고침
       await fetchFavorites();
-      // 다이얼로그 닫기
       setIsDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("즐겨찾기 추가 실패:", error);
+      const err = error as { response?: { data?: { message?: string } } };
       alert(
-        error.response?.data?.message || "즐겨찾기 추가에 실패했습니다.",
+        err.response?.data?.message || "즐겨찾기 추가에 실패했습니다.",
       );
     }
   };
@@ -65,13 +58,11 @@ export function FavoriteManagement() {
     if (!confirm("정말 이 멤버를 즐겨찾기에서 제거하시겠습니까?")) {
       return;
     }
-
     try {
       await apiClient.delete(
         `/api/favorites/${id}`,
         DeleteResponseSchema,
       );
-      // 목록 새로고침
       fetchFavorites();
     } catch (error) {
       console.error("즐겨찾기 삭제 실패:", error);
@@ -82,37 +73,15 @@ export function FavoriteManagement() {
   const existingFavoriteIds = favorites.map((f) => f.id);
   const isMaxReached = favorites.length >= maxCount;
 
-  return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Favorites</h1>
-        <Button
-          onClick={() => setIsDialogOpen(true)}
-          disabled={isMaxReached}
-          className="bg-indigo-600 hover:bg-indigo-700"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Invite Member
-        </Button>
-      </div>
-
-      {/* 즐겨찾기 테이블 */}
-      <FavoriteTable
-        favorites={favorites}
-        onDelete={handleDelete}
-        isLoading={isLoading}
-      />
-
-      {/* 멤버 초대 다이얼로그 */}
-      <InviteMemberDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onInvite={handleInvite}
-        existingFavoriteIds={existingFavoriteIds}
-        maxCount={maxCount}
-        currentCount={favorites.length}
-      />
-    </div>
-  );
+  return {
+    favorites,
+    maxCount,
+    isLoading,
+    isDialogOpen,
+    setIsDialogOpen,
+    existingFavoriteIds,
+    isMaxReached,
+    handleInvite,
+    handleDelete,
+  };
 }

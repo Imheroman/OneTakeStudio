@@ -62,7 +62,7 @@ export default function MyPage() {
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      nickname: user?.name || "", // 현재 닉네임(이름) 불러오기
+      nickname: user?.nickname || "", // 현재 닉네임(이름) 불러오기
     },
   });
 
@@ -137,12 +137,12 @@ export default function MyPage() {
                 <Avatar className="h-24 w-24">
                   <AvatarImage src="" /> {/* 나중에 이미지 URL 연결 */}
                   <AvatarFallback className="bg-indigo-100 text-indigo-600 text-2xl font-bold">
-                    {user?.name?.[0] || "U"}
+                    {user?.nickname?.[0] || "U"}
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <CardTitle>{user?.name}</CardTitle>
-              <CardDescription>{user?.id}</CardDescription>
+              <CardTitle>{user?.nickname}</CardTitle>
+              <CardDescription>{user?.userId}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-sm text-gray-500 text-center">

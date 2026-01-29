@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
-export default function OAuthCallbackPage() {
+function ChannelsOAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoggedIn, hasHydrated } = useAuthStore();
@@ -111,5 +111,26 @@ export default function OAuthCallbackPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function OAuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <Card className="w-full max-w-md">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mb-4" />
+                <p className="text-gray-600">채널을 연결하는 중...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <ChannelsOAuthCallbackContent />
+    </Suspense>
   );
 }

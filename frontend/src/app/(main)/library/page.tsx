@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRouter } from "next/navigation";
-import { VideoLibrary } from "@/features/library/video-library";
+import { VideoLibrary } from "@/widgets/library/video-library";
 
 export default function LibraryPage() {
   const { isLoggedIn, hasHydrated } = useAuthStore();

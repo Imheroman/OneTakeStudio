@@ -48,7 +48,7 @@ export function WorkspaceTopNav() {
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40">
       <Link
-        href={user?.id ? `/workspace/${user.id}` : "/"}
+        href={user?.userId ? `/workspace/${user.userId}` : "/"}
         className="text-xl font-black italic text-indigo-600"
       >
         OneTake
@@ -78,7 +78,7 @@ export function WorkspaceTopNav() {
           icon={
             <Avatar>
               <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
-                {user?.name?.[0] ?? "U"}
+                {user?.nickname?.[0] ?? "U"}
               </AvatarFallback>
             </Avatar>
           }

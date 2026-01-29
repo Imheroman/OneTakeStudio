@@ -1,1 +1,1 @@
-export { VideoLibrary } from "./ui/VideoLibrary";
+export { useVideoLibrary, type FilterType } from "./model/useVideoLibrary";

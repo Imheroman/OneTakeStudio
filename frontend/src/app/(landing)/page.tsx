@@ -16,7 +16,7 @@ export default function LandingPage() {
     // 로그인된 유저는 본인의 워크스페이스로 자동 리다이렉트
     if (!hasHydrated) return;
     if (isLoggedIn && user) {
-      router.replace(`/workspace/${user.id}`);
+      router.replace(`/workspace/${user.userId}`);
     }
   }, [hasHydrated, isLoggedIn, user, router]);
 
