@@ -20,6 +20,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     currentLayout,
     setCurrentLayout,
     activeSceneId,
+    scenesForPanel,
     displaySources,
     isVideoEnabled,
     isAudioEnabled,
@@ -82,7 +83,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           <div className="grid grid-cols-2 gap-4 shrink-0 min-h-0">
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <ScenesPanel
-                scenes={studio.scenes ?? []}
+                scenes={scenesForPanel}
                 activeSceneId={activeSceneId}
                 onSceneSelect={handleSceneSelect}
                 onAddScene={handleAddScene}

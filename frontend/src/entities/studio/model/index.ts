@@ -16,6 +16,9 @@ export type {
   SourceType,
   CreateStudioRequest,
   CreateStudioResponse,
+  SceneResponse,
+  CreateSceneRequest,
+  UpdateSceneRequest,
 } from "./schemas";
 
 // 스키마 export
@@ -27,6 +30,9 @@ export {
   CreateStudioRequestSchema,
   CreateStudioResponseSchema,
   SceneSchema,
+  SceneResponseSchema,
+  CreateSceneRequestSchema,
+  UpdateSceneRequestSchema,
   SourceSchema,
   TransmissionTypeSchema,
   StorageLocationSchema,

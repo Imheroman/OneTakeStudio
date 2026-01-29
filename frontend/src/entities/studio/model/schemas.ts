@@ -21,11 +21,44 @@ export const LayoutTypeSchema = z.enum([
   "custom",
 ]);
 
-// 씬 스키마
+// 백엔드 SceneLayoutDto (layout.elements는 소스 구성 등)
+export const SceneLayoutDtoSchema = z
+  .object({
+    type: z.string().optional(),
+    elements: z.array(z.record(z.unknown())).optional(),
+  })
+  .nullable()
+  .optional();
+
+// 백엔드 SceneResponse
+export const SceneResponseSchema = z.object({
+  sceneId: z.number(),
+  name: z.string(),
+  thumbnail: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().optional(),
+  layout: SceneLayoutDtoSchema,
+  createdAt: z.string().optional(),
+});
+
+// UI용 씬 스키마 (ScenesPanel 등, id는 문자열)
 export const SceneSchema = z.object({
   id: z.string(),
   name: z.string(),
   isActive: z.boolean(),
+});
+
+// 씬 생성 요청 (백엔드 CreateSceneRequest)
+export const CreateSceneRequestSchema = z.object({
+  name: z.string().min(1).max(50),
+  layout: SceneLayoutDtoSchema.optional(),
+});
+
+// 씬 수정 요청 (백엔드 UpdateSceneRequest)
+export const UpdateSceneRequestSchema = z.object({
+  name: z.string().max(50).optional(),
+  layout: SceneLayoutDtoSchema.optional(),
+  sortOrder: z.number().optional(),
 });
 
 // 소스 타입
@@ -55,7 +88,7 @@ export const StudioSchema = z.object({
   status: z.string(),
   joinUrl: z.string().optional(),
   members: z.array(z.any()).nullable().optional(),
-  scenes: z.array(z.any()).nullable().optional(),
+  scenes: z.array(SceneResponseSchema).nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string().nullable().optional(),
 });
@@ -106,3 +139,6 @@ export type RecentStudioListResponse = z.infer<
 export type CreateStudioRequest = z.infer<typeof CreateStudioRequestSchema>;
 export type CreateStudioResponse = z.infer<typeof CreateStudioResponseSchema>;
 export type StudioDetail = z.infer<typeof StudioDetailSchema>;
+export type SceneResponse = z.infer<typeof SceneResponseSchema>;
+export type CreateSceneRequest = z.infer<typeof CreateSceneRequestSchema>;
+export type UpdateSceneRequest = z.infer<typeof UpdateSceneRequestSchema>;

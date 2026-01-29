@@ -1,16 +1,25 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { z } from "zod";
 import { apiClient } from "@/shared/api/client";
 import {
   StudioDetailSchema,
+  SceneResponseSchema,
+  CreateSceneRequestSchema,
   type StudioDetail,
   type LayoutType,
   type Source,
+  type Scene,
 } from "@/entities/studio/model";
+
+const ApiResponseSceneSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  data: SceneResponseSchema,
+});
 
 export function useStudioMain(studioId: string) {
   const router = useRouter();
@@ -38,7 +47,16 @@ export function useStudioMain(studioId: string) {
     return sources && sources.length > 0 ? sources : [defaultVideoSource];
   }, [studio, defaultVideoSource]);
 
-  const fetchStudio = async () => {
+  const scenesForPanel: Scene[] = useMemo(() => {
+    const list = studio?.scenes ?? [];
+    return list.map((s) => ({
+      id: String(s.sceneId),
+      name: s.name,
+      isActive: s.isActive ?? false,
+    }));
+  }, [studio?.scenes]);
+
+  const fetchStudio = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await apiClient.get(
@@ -55,11 +73,18 @@ export function useStudioMain(studioId: string) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [studioId]);
 
   useEffect(() => {
     fetchStudio();
-  }, [studioId]);
+  }, [fetchStudio]);
+
+  useEffect(() => {
+    if (!studio?.scenes?.length || activeSceneId) return;
+    const first = studio.scenes[0];
+    const active = studio.scenes.find((s) => s.isActive);
+    setActiveSceneId(String((active ?? first).sceneId));
+  }, [studio?.scenes, activeSceneId]);
 
   const handleGoLive = () => {
     setIsLive(true);
@@ -70,12 +95,36 @@ export function useStudioMain(studioId: string) {
     setActiveSceneId(sceneId);
   };
 
-  const handleAddScene = () => {
-    console.log("Add Scene");
+  const handleAddScene = async () => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid)) return;
+    try {
+      await apiClient.post(
+        `/api/studios/${sid}/scenes`,
+        ApiResponseSceneSchema,
+        { name: "New Scene" } as z.infer<typeof CreateSceneRequestSchema>,
+      );
+      await fetchStudio();
+    } catch (error) {
+      console.error("씬 추가 실패:", error);
+    }
   };
 
-  const handleRemoveScene = (sceneId: string) => {
-    console.log("Remove Scene:", sceneId);
+  const handleRemoveScene = async (sceneId: string) => {
+    const sid = Number(studioId);
+    const sceneIdNum = Number(sceneId);
+    if (Number.isNaN(sid) || Number.isNaN(sceneIdNum)) return;
+    if (!confirm("이 씬을 삭제할까요?")) return;
+    try {
+      await apiClient.delete(
+        `/api/studios/${sid}/scenes/${sceneIdNum}`,
+        z.object({ success: z.boolean(), message: z.string().optional() }),
+      );
+      if (activeSceneId === sceneId) setActiveSceneId("");
+      await fetchStudio();
+    } catch (error) {
+      console.error("씬 삭제 실패:", error);
+    }
   };
 
   const handleAddSource = () => {
@@ -106,6 +155,7 @@ export function useStudioMain(studioId: string) {
     currentLayout,
     setCurrentLayout: setCurrentLayoutState,
     activeSceneId,
+    scenesForPanel,
     displaySources,
     isVideoEnabled,
     isAudioEnabled,
