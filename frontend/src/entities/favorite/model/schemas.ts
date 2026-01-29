@@ -38,7 +38,7 @@ export const AddFavoriteRequestSchema = z.object({
 // 즐겨찾기 추가 응답 스키마
 export const AddFavoriteResponseSchema = z.object({
   message: z.string().optional(),
-  favorite: FavoriteSchema.optional(),
+  favorite: FavoriteSchema.nullable().optional(),
 });
 
 // 삭제 응답 스키마는 shared/api/schemas.ts에서 import

@@ -41,7 +41,7 @@ export function FavoriteTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>ID</TableHead>
+          <TableHead>이메일</TableHead>
           <TableHead>닉네임</TableHead>
           <TableHead className="text-right">Action</TableHead>
         </TableRow>
@@ -49,7 +49,7 @@ export function FavoriteTable({
       <TableBody>
         {favorites.map((favorite) => (
           <TableRow key={favorite.id}>
-            <TableCell className="font-medium">{favorite.id}</TableCell>
+            <TableCell className="font-medium">{favorite.email}</TableCell>
             <TableCell>{favorite.nickname}</TableCell>
             <TableCell className="text-right">
               <Button

@@ -26,9 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      {" "}
-      {/* 한국어 서비스이므로 ko 유지 */}
+    <html lang="ko">{/* 한국어 서비스이므로 ko 유지 */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
