@@ -1,4 +1,3 @@
-// src/app/(main)/layout.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,6 +11,11 @@ import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { apiClient } from "@/shared/api/client";
 
+// ✨ 쇼츠 관련 Import
+import { useShortsPolling } from "@/features/shorts/useShortsPolling";
+import { ShortsResultModal } from "@/widgets/shorts/shorts-result-modal";
+import { useShortsStore } from "@/stores/useShortsStore";
+
 export default function MainLayout({
   children,
 }: {
@@ -19,10 +23,20 @@ export default function MainLayout({
 }) {
   const pathname = usePathname();
   const { isLoggedIn } = useAuthStore();
-  const { isOpen: showNotifications, close: closeNotifications } = useNotificationStore();
-  const [notifications, setNotifications] = useState<NotificationWithActions[]>([]);
+  const { isOpen: showNotifications, close: closeNotifications } =
+    useNotificationStore();
 
-  // 스튜디오 페이지인지 확인
+  // 1. 기존 API 알림 데이터
+  const [apiNotifications, setApiNotifications] = useState<
+    NotificationWithActions[]
+  >([]);
+
+  // 2. 쇼츠 스토어 데이터
+  const { notifications: shortsMsgs, openResultModal } = useShortsStore();
+
+  // 폴링 시작 (백그라운드 감지)
+  useShortsPolling();
+
   const isStudioPage = pathname?.startsWith("/studio");
 
   useEffect(() => {
@@ -33,7 +47,7 @@ export default function MainLayout({
           "/api/notifications",
           NotificationListResponseSchema,
         );
-        setNotifications(
+        setApiNotifications(
           response.notifications.map((notif) => ({
             ...notif,
             actions:
@@ -53,18 +67,36 @@ export default function MainLayout({
     fetchNotifications();
   }, [isLoggedIn]);
 
-  // 스튜디오 페이지는 전역 nav 없이 렌더링
+  // ✨ [핵심] 쇼츠 알림 메시지를 Notification 포맷으로 변환
+  const shortsNotifications: NotificationWithActions[] = shortsMsgs.map(
+    (msg, index) => ({
+      id: `shorts-${index}-${Date.now()}`, // 고유 ID
+      type: "ai_shorts", // 이 타입을 보고 버튼을 '결과 보기'로 바꿈
+      title: "AI 쇼츠 생성 완료",
+      message: msg,
+      time: "방금 전",
+      isRead: false,
+      actions: {
+        // ✨ '결과 보기' 버튼 클릭 시 실행될 함수
+        accept: () => {
+          openResultModal(); // 1. 모달 열기
+          closeNotifications(); // 2. 알림 패널 닫기
+        },
+      },
+    }),
+  );
+
+  // ✨ 두 리스트 합치기 (최신 쇼츠 알림이 위로 오게)
+  const allNotifications = [...shortsNotifications, ...apiNotifications];
+
   if (isStudioPage) {
     return <>{children}</>;
   }
 
-  // 일반 워크스페이스 페이지는 nav 포함
   return (
     <div className="flex h-screen w-full">
-      {/* 사이드바 고정 */}
       <Sidebar />
 
-      {/* 우측 컨텐츠 영역 */}
       <div className="flex-1 flex flex-col min-w-0">
         <WorkspaceTopNav />
         <main className="flex-1 overflow-auto p-8">{children}</main>
@@ -73,16 +105,23 @@ export default function MainLayout({
       {/* 알림 패널 */}
       {showNotifications && (
         <NotificationPanel
-          notifications={notifications}
+          notifications={allNotifications} // ✨ 합쳐진 리스트 전달
           onClose={closeNotifications}
           onAccept={(id) => {
-            setNotifications((prev) => prev.filter((n) => n.id !== id));
+            // 쇼츠 알림은 클릭 시 actions.accept()가 실행되므로 여기서는 추가 로직 불필요
+            // API 알림(친구 요청 등)만 목록에서 제거
+            if (!id.startsWith("shorts-")) {
+              setApiNotifications((prev) => prev.filter((n) => n.id !== id));
+            }
           }}
           onDecline={(id) => {
-            setNotifications((prev) => prev.filter((n) => n.id !== id));
+            setApiNotifications((prev) => prev.filter((n) => n.id !== id));
           }}
         />
       )}
+
+      {/* 쇼츠 결과 모달 (전역 배치) */}
+      <ShortsResultModal />
     </div>
   );
 }

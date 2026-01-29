@@ -15,12 +15,16 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { apiClient } from "@/shared/api/client";
-import type { UserSearchResult, UserSearchResponse } from "@/entities/favorite/model";
+import {
+  UserSearchResponseSchema,
+  type UserSearchResult,
+  type UserSearchResponse,
+} from "@/entities/favorite/model";
 
 interface InviteMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInvite: (user: UserSearchResult) => void;
+  onInvite: (user: UserSearchResult) => Promise<void>;
   existingFavoriteIds: string[]; // 이미 등록된 즐겨찾기 ID 목록
   maxCount: number;
   currentCount: number;
@@ -109,10 +113,11 @@ export function InviteMemberDialog({
     }
   };
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (selectedUser) {
-      onInvite(selectedUser);
-      onOpenChange(false);
+      await onInvite(selectedUser);
+      // onInvite가 성공하면 부모 컴포넌트에서 다이얼로그를 닫음
+      // 실패 시에는 다이얼로그를 열어둠
     }
   };
 

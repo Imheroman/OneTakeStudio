@@ -3,7 +3,7 @@ import { z, ZodTypeAny } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 // 2. Axios 인스턴스 생성
 const axiosInstance = axios.create({
@@ -80,6 +80,16 @@ export const apiClient = {
           }
           throw new Error("API 응답 검증 실패: 알 수 없는 오류");
         }
+      })
+      .catch((error: any) => {
+        // 네트워크 에러 처리
+        if (error.code === "ERR_NETWORK" || error.message?.includes("Network Error")) {
+          const networkError = new Error("네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.");
+          (networkError as any).isNetworkError = true;
+          throw networkError;
+        }
+        // 기존 에러는 그대로 전달
+        throw error;
       });
   },
 

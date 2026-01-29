@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, passthrough } from "msw";
 
 // MSW는 상대 경로를 가로채므로 BASE_URL은 빈 문자열로 설정
 // 실제 API 요청은 apiClient의 baseURL 설정을 따름
@@ -23,6 +23,14 @@ let favorites: Favorite[] = [
 ];
 
 const MAX_FAVORITES = 10;
+
+// [추가] 쇼츠 생성 상태 변수 (핸들러 밖에서 선언해야 상태가 유지됨)
+let shortsServerState = {
+  isGenerating: false,
+  startTime: 0,
+  completedCount: 0,
+  videoId: "",
+};
 
 // MSW 메모리 기반 상태 관리 (채널)
 interface Channel {
@@ -67,6 +75,8 @@ let channels: Channel[] = [
 ];
 
 export const handlers = [
+  http.all("/_next/*", () => passthrough()),
+  http.post("/__nextjs_original-stack-frames", () => passthrough()),
   // 주소 앞에 BASE_URL을 붙여서 MSW가 8080 포트 요청도 가로채게 만듭니다.
   http.post(`${BASE_URL}/api/auth/login`, async ({ request }) => {
     const body = (await request.json()) as any;
@@ -78,22 +88,31 @@ export const handlers = [
     if (email === "test@example.com" && password === "12345678") {
       // 서버에서 생성된 고유 ID (실제로는 UUID 등 사용)
       const userId = "user_" + Math.random().toString(36).substring(2, 11);
+      // 실제 API 응답 형식에 맞춤
       return HttpResponse.json(
         {
-          user: { 
-            id: userId, 
-            email: email,
-            name: "홍길동" 
+          success: true,
+          message: "로그인 성공",
+          data: {
+            accessToken: "fake-jwt-token-one-take",
+            refreshToken: "fake-refresh-token-one-take",
+            user: {
+              userId: userId,
+              email: email,
+              nickname: "테스트 사용자",
+              profileImageUrl: null,
+            },
           },
-          accessToken: "fake-jwt-token-one-take",
-          message: "로그인 성공!",
         },
         { status: 200 },
       );
     }
 
     return HttpResponse.json(
-      { message: "이메일 또는 비밀번호가 일치하지 않습니다." },
+      { 
+        success: false,
+        message: "이메일 또는 비밀번호가 일치하지 않습니다." 
+      },
       { status: 401 },
     );
   }),
@@ -197,7 +216,10 @@ export const handlers = [
     const url = new URL(request.url);
     const type = url.searchParams.get("type");
 
-    console.log("[MSW] 비디오 라이브러리 목록 요청", type ? `(type: ${type})` : "");
+    console.log(
+      "[MSW] 비디오 라이브러리 목록 요청",
+      type ? `(type: ${type})` : "",
+    );
 
     const allVideos = [
       {
@@ -491,7 +513,7 @@ export const handlers = [
     const requestUrl = new URL(request.url);
     const origin = requestUrl.origin;
     const redirectUri = `${origin}/channels/oauth/callback`;
-    
+
     const oauthBaseUrls: Record<string, string> = {
       youtube: "https://accounts.google.com/o/oauth2/v2/auth",
       twitch: "https://id.twitch.tv/oauth2/authorize",
@@ -516,7 +538,9 @@ export const handlers = [
       `access_type=offline`; // refresh token 받기 위해
 
     console.log(`[MSW] OAuth URL 반환: ${platform}`);
-    console.log(`[MSW] 참고: 실제 프로덕션에서는 백엔드가 Client Secret을 사용하여 OAuth URL을 생성합니다.`);
+    console.log(
+      `[MSW] 참고: 실제 프로덕션에서는 백엔드가 Client Secret을 사용하여 OAuth URL을 생성합니다.`,
+    );
 
     return HttpResponse.json(
       {
@@ -561,6 +585,7 @@ export const handlers = [
   // 스튜디오 생성 (백엔드 ApiResponse<StudioDetailResponse> 형식)
   http.post(`${BASE_URL}/api/studios`, async ({ request }) => {
     const body = (await request.json()) as any;
+
     const { name, template } = body;
 
     console.log(`[MSW] 스튜디오 생성 요청:`, body);
@@ -625,6 +650,71 @@ export const handlers = [
       success: true,
       message: "스튜디오 상세 조회 성공",
       data: studioDetailResponse,
+    });
+  }),
+  // --- 쇼츠 생성 및 상태 폴링 핸들러 ---
+  // 1. 쇼츠 생성 요청 (POST)
+  http.post(`${BASE_URL}/api/v1/shorts/generate`, async ({ request }) => {
+    const body = (await request.json()) as any;
+    const { videoId, bgColor, useSubtitles, language } = body;
+
+    console.log(`[MSW] 쇼츠 생성 요청 시작: Video(${videoId})`, {
+      bgColor,
+      useSubtitles,
+      language,
+    });
+
+    // 상태 변수 업데이트 (시작 시간 기록)
+    shortsServerState = {
+      isGenerating: true,
+      startTime: Date.now(),
+      completedCount: 0,
+      videoId: videoId,
+    };
+
+    return HttpResponse.json(
+      { message: "쇼츠 생성이 시작되었습니다." },
+      { status: 200 },
+    );
+  }),
+
+  // 2. 쇼츠 생성 상태 조회 (Polling용 GET)
+  http.get(`${BASE_URL}/api/v1/shorts/status`, async () => {
+    // 생성 중이 아니면 idle 반환
+    if (!shortsServerState.isGenerating) {
+      return HttpResponse.json({ status: "idle", completedCount: 0 });
+    }
+
+    const elapsed = Date.now() - shortsServerState.startTime;
+
+    // 시간 경과에 따른 상태 변화 시뮬레이션
+    // 3초, 6초, 9초마다 하나씩 완료됨
+    let currentCount = 0;
+    let currentStatus = "processing";
+
+    if (elapsed > 9000) {
+      currentCount = 3;
+      currentStatus = "completed";
+      // 3개가 다 만들어지면 생성 상태 종료 (선택사항)
+      // shortsServerState.isGenerating = false;
+    } else if (elapsed > 6000) {
+      currentCount = 2;
+    } else if (elapsed > 3000) {
+      currentCount = 1;
+    }
+
+    // 상태가 변경되었을 때만 로그 출력 (도배 방지)
+    if (currentCount > shortsServerState.completedCount) {
+      console.log(
+        `[MSW] 쇼츠 생성 진행중: ${currentCount}개 완료 (Video: ${shortsServerState.videoId})`,
+      );
+      shortsServerState.completedCount = currentCount;
+    }
+
+    return HttpResponse.json({
+      status: currentStatus,
+      completedCount: currentCount,
+      videoId: shortsServerState.videoId,
     });
   }),
 ];

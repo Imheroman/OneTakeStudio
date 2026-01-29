@@ -31,8 +31,19 @@ export const VideoListResponseSchema = z.object({
   total: z.number(),
 });
 
+// 쇼츠 생성 상태 스키마
+export const ShortsStatusSchema = z.enum(["idle", "processing", "completed"]);
+
+// 쇼츠 상태 응답 스키마
+export const ShortsStatusResponseSchema = z.object({
+  status: ShortsStatusSchema,
+  completedCount: z.number(),
+});
+
 // 타입 추론
 export type VideoStatus = z.infer<typeof VideoStatusSchema>;
 export type VideoType = z.infer<typeof VideoTypeSchema>;
 export type Video = z.infer<typeof VideoSchema>;
 export type VideoListResponse = z.infer<typeof VideoListResponseSchema>;
+export type ShortsStatus = z.infer<typeof ShortsStatusSchema>;
+export type ShortsStatusResponse = z.infer<typeof ShortsStatusResponseSchema>;

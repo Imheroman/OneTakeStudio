@@ -7,8 +7,9 @@
 
 프론트엔드는 **API Gateway (포트 60000)**만 바라봅니다. API Gateway가 내부적으로 다음 서비스로 라우팅합니다:
 
-- **Core Service** (포트 8080): 인증, 사용자, 스튜디오, 워크스페이스, 알림, 채널(destinations), 쇼츠
+- **Core Service** (포트 8080): 인증, 사용자, 스튜디오, 워크스페이스, 알림, 채널(destinations)
 - **Media Service**: 미디어 스트리밍, 녹화, 송출
+- **Video Service** (미구현): 쇼츠 API 예정. 현재 백엔드에 ShortsService 없음 → MSW 전용
 - **Eureka Server** (포트 8761): 서비스 디스커버리
 
 ### API Gateway 라우팅 규칙
@@ -20,7 +21,7 @@ http://localhost:60000/api/studios/**        → Core Service
 http://localhost:60000/api/workspace/**      → Core Service
 http://localhost:60000/api/notifications/**  → Core Service
 http://localhost:60000/api/destinations/**   → Core Service (채널)
-http://localhost:60000/api/v1/shorts/**      → Core Service
+http://localhost:60000/api/v1/shorts/**      → (미구현) video-service 추가 시 라우팅 예정
 http://localhost:60000/api/v1/media/**       → Media Service
 http://localhost:60000/api/streams/**        → Media Service
 http://localhost:60000/api/recordings/**     → Media Service
