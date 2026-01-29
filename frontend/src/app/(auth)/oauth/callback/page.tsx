@@ -92,9 +92,15 @@ function OAuthCallbackContent() {
           setStatus("success");
           setMessage("로그인 성공! 워크스페이스로 이동합니다.");
 
-          // 잠시 후 리다이렉트
+          const userId = user?.userId;
+          if (!userId) {
+            setStatus("error");
+            setMessage("사용자 정보를 불러올 수 없습니다.");
+            return;
+          }
+          // 잠시 후 리다이렉트 (userId 확정 후에만 이동)
           setTimeout(() => {
-            router.push(`/workspace/${user.userId}`);
+            router.push(`/workspace/${userId}`);
           }, 1000);
         }
       } catch (error: any) {

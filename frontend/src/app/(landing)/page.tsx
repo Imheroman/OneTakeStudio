@@ -13,9 +13,9 @@ export default function LandingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // 로그인된 유저는 본인의 워크스페이스로 자동 리다이렉트
+    // 로그인된 유저는 본인의 워크스페이스로 자동 리다이렉트 (userId 확정 후에만 이동)
     if (!hasHydrated) return;
-    if (isLoggedIn && user) {
+    if (isLoggedIn && user?.userId) {
       router.replace(`/workspace/${user.userId}`);
     }
   }, [hasHydrated, isLoggedIn, user, router]);

@@ -94,7 +94,9 @@ export function LoginForm() {
         };
 
         login(userData, accessToken);
-        router.push(`/workspace/${user.userId}`);
+        if (user?.userId) {
+          router.push(`/workspace/${user.userId}`);
+        }
       }
     } catch (error: any) {
       console.error("로그인 에러:", error);
