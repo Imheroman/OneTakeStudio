@@ -113,10 +113,10 @@ export function useCanvasPreview({
       canvas.height,
     );
 
-    // 각 소스 렌더링
+    // 각 소스 렌더링 (DOM/캔버스 동기화: 엘리먼트 미등록 시 스킵)
     arrangedSources.forEach((arranged) => {
       const sourceData = sourceElementsRef.current.get(arranged.source.id);
-      if (!sourceData) return;
+      if (!sourceData || sourceData.element == null) return;
 
       const renderContext: SourceRenderContext = {
         source: {
@@ -139,7 +139,7 @@ export function useCanvasPreview({
     animationFrameRef.current = requestAnimationFrame(render);
   }, [layout, sources, isVideoEnabled, isAudioEnabled]);
 
-  // Canvas 크기 조정 감지
+  // Canvas 크기 조정 감지. sources.length 포함 → 소스 추가로 캔버스가 처음 마운트될 때 크기 갱신(스테이지 소스 미출력 버그 방지)
   useEffect(() => {
     updateCanvasSize();
 
@@ -147,19 +147,25 @@ export function useCanvasPreview({
       updateCanvasSize();
     });
 
-    if (canvasRef.current?.parentElement) {
-      resizeObserver.observe(canvasRef.current.parentElement);
+    const el = canvasRef.current?.parentElement;
+    if (el) {
+      resizeObserver.observe(el);
     }
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, [updateCanvasSize]);
+  }, [updateCanvasSize, sources.length]);
 
-  // 렌더링 루프 시작/중지
+  // 렌더링 루프 시작/중지. 소스가 있는데 크기가 0이면 한 프레임 뒤에 크기 재측정(캔버스 첫 마운트 시 레이아웃 지연 대응)
   useEffect(() => {
     if (canvasSize.width > 0 && canvasSize.height > 0) {
       animationFrameRef.current = requestAnimationFrame(render);
+    } else if (sources.length > 0 && canvasRef.current?.parentElement) {
+      const raf = requestAnimationFrame(() => {
+        updateCanvasSize();
+      });
+      return () => cancelAnimationFrame(raf);
     }
 
     return () => {
@@ -167,7 +173,7 @@ export function useCanvasPreview({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [render, canvasSize]);
+  }, [render, canvasSize, sources.length, updateCanvasSize]);
 
   const getCaptureStream = useCallback((frameRate = 30): MediaStream | null => {
     if (!canvasRef.current) return null;

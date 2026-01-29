@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { StudioHeader } from "@/widgets/studio/studio-header";
 import { PreviewArea } from "@/widgets/studio/preview-area";
+import { StagingArea } from "@/widgets/studio/staging-area";
 import { LayoutControls } from "@/widgets/studio/layout-controls";
 import { ScenesPanel } from "@/widgets/studio/scenes-panel";
 import { SourcesPanel } from "@/widgets/studio/sources-panel";
@@ -10,7 +11,7 @@ import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
 import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
 import { useStudioMain } from "@/features/studio/studio-main";
-import { useAudioLevel } from "@/hooks/studio";
+import { useAudioLevel, useSourceStreams } from "@/hooks/studio";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
 
 interface StudioMainProps {
@@ -27,7 +28,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
     setCurrentLayout,
     activeSceneId,
     scenesForPanel,
+    sources,
     displaySources,
+    onStageSourceIds,
     canAddSource,
     isEditMode,
     setIsEditMode,
@@ -41,6 +44,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleAddSource,
     handleAddSourceConfirm,
     handleSourceToggle,
+    handleAddToStage,
+    handleRemoveFromStage,
+    handleReorderSources,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
@@ -55,6 +61,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
   } = useStudioMain(studioId, { getPreviewStreamRef });
 
   const audioLevel = useAudioLevel(isAudioEnabled);
+  /** 백스테이지 전체 소스에 스트림 생성 → 백스테이지에 추가 시 바로 미리보기 노출. Add to stage 시 PreviewArea에만 추가 표시 */
+  const { getStream: getSourceStream, streamIds: availableStreamIds } =
+    useSourceStreams(sources, { isVideoEnabled, isAudioEnabled });
 
   if (isLoading) {
     return (
@@ -89,10 +98,27 @@ export function StudioMain({ studioId }: StudioMainProps) {
               className="h-full"
               layout={currentLayout}
               sources={displaySources}
+              availableStreamIds={availableStreamIds}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
               isEditMode={isEditMode}
+              getSourceStream={getSourceStream}
               getPreviewStreamRef={getPreviewStreamRef}
+            />
+          </div>
+
+          <div className="shrink-0">
+            <StagingArea
+              sources={sources}
+              onStageSourceIds={onStageSourceIds}
+              canAddSource={canAddSource}
+              isEditMode={isEditMode}
+              getSourceStream={getSourceStream}
+              onReorder={handleReorderSources}
+              onAddSource={handleAddSource}
+              onSourceToggle={handleSourceToggle}
+              onAddToStage={handleAddToStage}
+              onRemoveFromStage={handleRemoveFromStage}
             />
           </div>
 
@@ -116,12 +142,12 @@ export function StudioMain({ studioId }: StudioMainProps) {
             </div>
 
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
-              <SourcesPanel
-                sources={displaySources}
-                canAddSource={canAddSource}
-                onAddSource={handleAddSource}
-                onSourceToggle={handleSourceToggle}
-              />
+            <SourcesPanel
+              sources={sources}
+              canAddSource={canAddSource}
+              onAddSource={handleAddSource}
+              onSourceToggle={handleSourceToggle}
+            />
             </div>
 
             <AddSourceDialog

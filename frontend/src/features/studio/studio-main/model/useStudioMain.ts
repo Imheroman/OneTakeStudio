@@ -49,6 +49,8 @@ export function useStudioMain(
   const [isLive, setIsLive] = useState(false);
 
   const [sources, setSources] = useState<Source[]>([]);
+  /** "Add to stage"로 PreviewArea에 올린 소스 ID. 백스테이지 소스는 여기 포함 시에만 메인 프리뷰에 표시 */
+  const [onStageSourceIds, setOnStageSourceIds] = useState<string[]>([]);
   const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
   /** 편집 모드: true = OBS처럼 드래그/수정 가능, false = 라이브 모드(잠금, ON/OFF·프리셋만) */
   const [isEditMode, setIsEditMode] = useState(true);
@@ -58,7 +60,11 @@ export function useStudioMain(
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
-  const displaySources = sources;
+  /** PreviewArea(메인 프리뷰)에 표시할 소스만. 백스테이지에 추가 후 Add to stage 한 것만 포함 */
+  const displaySources = useMemo(
+    () => sources.filter((s) => onStageSourceIds.includes(s.id)),
+    [sources, onStageSourceIds],
+  );
   /** 씬이 선택된 경우에만 소스 추가 가능 (씬 우선 플로우) */
   const canAddSource = !!activeSceneId;
 
@@ -111,13 +117,16 @@ export function useStudioMain(
     if (!activeScene) {
       prevSceneIdRef.current = "";
       setSources([]);
+      setOnStageSourceIds([]);
       return;
     }
     const sceneId = activeSceneId ?? "";
     if (prevSceneIdRef.current !== sceneId) {
       prevSceneIdRef.current = sceneId;
       const elements = activeScene.layout?.elements;
-      setSources(layoutElementsToSources(Array.isArray(elements) ? elements : []));
+      const nextSources = layoutElementsToSources(Array.isArray(elements) ? elements : []);
+      setSources(nextSources);
+      setOnStageSourceIds(nextSources.map((s) => s.id));
     }
   }, [activeSceneId, activeScene, layoutElementsToSources]);
 
@@ -231,9 +240,18 @@ export function useStudioMain(
         { id, type, name, isVisible: true, deviceId: resolvedDeviceId },
       ]);
       setShowAddSourceDialog(false);
+      // 새 소스는 백스테이지에 추가됨 → 백스테이지 영역에 미리보기 노출. Add to stage 시 PreviewArea에 추가
     },
     [],
   );
+
+  const handleAddToStage = useCallback((sourceId: string) => {
+    setOnStageSourceIds((prev) => (prev.includes(sourceId) ? prev : [...prev, sourceId]));
+  }, []);
+
+  const handleRemoveFromStage = useCallback((sourceId: string) => {
+    setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
+  }, []);
 
   const handleSourceToggle = useCallback((sourceId: string) => {
     setSources((prev) =>
@@ -241,6 +259,11 @@ export function useStudioMain(
         s.id === sourceId ? { ...s, isVisible: !s.isVisible } : s,
       ),
     );
+  }, []);
+
+  /** 백스테이지에서 드래그로 소스 순서 변경 */
+  const handleReorderSources = useCallback((newOrder: Source[]) => {
+    setSources(newOrder);
   }, []);
 
   const handleSaveSceneLayout = useCallback(async () => {
@@ -369,7 +392,9 @@ export function useStudioMain(
     setCurrentLayout: setCurrentLayoutState,
     activeSceneId,
     scenesForPanel,
+    sources,
     displaySources,
+    onStageSourceIds,
     canAddSource,
     isEditMode,
     setIsEditMode,
@@ -383,6 +408,9 @@ export function useStudioMain(
     handleAddSource,
     handleAddSourceConfirm,
     handleSourceToggle,
+    handleAddToStage,
+    handleRemoveFromStage,
+    handleReorderSources,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
