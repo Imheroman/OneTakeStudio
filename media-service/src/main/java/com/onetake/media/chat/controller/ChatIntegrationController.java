@@ -18,7 +18,7 @@ import java.util.Map;
  * 송출 종료 시 연동을 종료하는 용도
  */
 @RestController
-@RequestMapping("/api/v1/media/chat/integration")
+@RequestMapping("/api/media/chat/integration")
 @RequiredArgsConstructor
 public class ChatIntegrationController {
 
