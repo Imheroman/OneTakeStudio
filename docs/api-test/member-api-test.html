@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneTakeStudio - Member API 테스트</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #00d9ff;
+        }
+        .auth-section {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .auth-section h3 {
+            color: #00d9ff;
+            margin-bottom: 15px;
+        }
+        .auth-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .auth-row .form-group {
+            flex: 1;
+            min-width: 200px;
+            margin-bottom: 0;
+        }
+        .auth-row button {
+            width: auto;
+            padding: 12px 24px;
+        }
+        .section-title {
+            color: #00d9ff;
+            font-size: 20px;
+            margin: 30px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0f3460;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #0f3460;
+        }
+        .card h2 {
+            color: #00d9ff;
+            margin-bottom: 20px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 .method {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .method.get { background: #22c55e; color: #fff; }
+        .method.post { background: #3b82f6; color: #fff; }
+        .method.patch { background: #f59e0b; color: #fff; }
+        .method.delete { background: #ef4444; color: #fff; }
+        .endpoint {
+            font-size: 12px;
+            color: #aaa;
+            background: #1a1a2e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #aaa;
+            font-size: 14px;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 14px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button.primary {
+            background: #00d9ff;
+            color: #1a1a2e;
+        }
+        button.primary:hover {
+            background: #00b8d9;
+        }
+        button.secondary {
+            background: #0f3460;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #1a4a7a;
+        }
+        button.danger {
+            background: #ef4444;
+            color: #fff;
+        }
+        button.danger:hover {
+            background: #dc2626;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            word-break: break-all;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result.success {
+            background: #0f3d0f;
+            border: 1px solid #1a5c1a;
+            color: #4ade80;
+            display: block;
+        }
+        .result.error {
+            background: #3d0f0f;
+            border: 1px solid #5c1a1a;
+            color: #f87171;
+            display: block;
+        }
+        .result pre {
+            white-space: pre-wrap;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        .token-info {
+            margin-top: 15px;
+            padding: 12px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        .token-info .label {
+            color: #aaa;
+        }
+        .token-info .value {
+            color: #4ade80;
+            word-break: break-all;
+        }
+        .flow-info {
+            background: #0f3460;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .server-config {
+            background: #16213e;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            border: 1px solid #0f3460;
+        }
+        .server-config .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .server-config button {
+            width: auto;
+            padding: 12px 24px;
+        }
+        .server-status {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .server-status.connected {
+            background: #0f3d0f;
+            color: #4ade80;
+        }
+        .server-status.disconnected {
+            background: #3d0f0f;
+            color: #f87171;
+        }
+        .flow-info h3 {
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+        .flow-info ul {
+            padding-left: 20px;
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .inline-form {
+            display: flex;
+            gap: 10px;
+        }
+        .inline-form .form-group {
+            flex: 1;
+        }
+        .inline-form button {
+            width: auto;
+            padding: 12px 20px;
+            align-self: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OneTakeStudio Member API 테스트</h1>
+
+        <!-- 서버 설정 -->
+        <div class="server-config">
+            <div class="form-group">
+                <label>API Server URL</label>
+                <input type="text" id="serverUrl" value="http://localhost:8080" placeholder="http://localhost:8080">
+            </div>
+            <button class="primary" onclick="testConnection()">연결 테스트</button>
+            <span id="serverStatus" class="server-status disconnected">미연결</span>
+        </div>
+
+        <!-- 인증 섹션 -->
+        <div class="auth-section">
+            <h3>인증 설정</h3>
+            <div class="auth-row">
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="authEmail" placeholder="test@example.com">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="authPassword" placeholder="********">
+                </div>
+                <button class="primary" onclick="login()">로그인</button>
+                <button class="secondary" onclick="clearAuth()">로그아웃</button>
+            </div>
+            <div id="authResult" class="result"></div>
+            <div id="authInfo" class="token-info" style="display: none;">
+                <div><span class="label">사용자: </span><span id="authUser" class="value"></span></div>
+                <div style="margin-top: 8px;"><span class="label">토큰: </span><span id="authToken" class="value"></span></div>
+            </div>
+        </div>
+
+        <div class="flow-info">
+            <h3>테스트 흐름</h3>
+            <ul>
+                <li><strong>초대 발송:</strong> HOST/MANAGER가 스튜디오에 멤버 초대</li>
+                <li><strong>초대 확인:</strong> 초대 대상자가 받은 초대 목록 조회</li>
+                <li><strong>초대 수락/거절:</strong> 초대 대상자가 초대를 수락하거나 거절</li>
+                <li><strong>스튜디오 초대 관리:</strong> HOST/MANAGER가 보낸 초대 목록 조회 및 취소</li>
+                <li><strong>멤버 관리:</strong> 멤버 목록 조회, 역할 변경, 강퇴</li>
+                <li><strong>스튜디오 탈퇴:</strong> MANAGER/GUEST가 스튜디오 탈퇴</li>
+            </ul>
+        </div>
+
+        <!-- 받은 초대 관리 -->
+        <h2 class="section-title">받은 초대 관리</h2>
+        <div class="grid">
+            <!-- 받은 초대 목록 -->
+            <div class="card">
+                <h2>
+                    <span class="method get">GET</span>
+                    내가 받은 초대 목록
+                    <span class="endpoint">/api/invites/received</span>
+                </h2>
+                <p style="color: #aaa; font-size: 13px; margin-bottom: 16px;">
+                    현재 로그인한 사용자가 받은 대기중인 초대 목록을 조회합니다.
+                </p>
+                <button class="primary" onclick="getReceivedInvites()">조회</button>
+                <div id="receivedInvitesResult" class="result"></div>
+            </div>
+
+            <!-- 초대 수락 -->
+            <div class="card">
+                <h2>
+                    <span class="method post">POST</span>
+                    초대 수락
+                    <span class="endpoint">/api/invites/{inviteId}/accept</span>
+                </h2>
+                <div class="form-group">
+                    <label>초대 ID (inviteId)</label>
+                    <input type="text" id="acceptInviteId" placeholder="inv-xxxxxx">
+                </div>
+                <button class="primary" onclick="acceptInvite()">수락</button>
+                <div id="acceptInviteResult" class="result"></div>
+            </div>
+
+            <!-- 초대 거절 -->
+            <div class="card">
+                <h2>
+                    <span class="method post">POST</span>
+                    초대 거절
+                    <span class="endpoint">/api/invites/{inviteId}/reject</span>
+                </h2>
+                <div class="form-group">
+                    <label>초대 ID (inviteId)</label>
+                    <input type="text" id="rejectInviteId" placeholder="inv-xxxxxx">
+                </div>
+                <button class="danger" onclick="rejectInvite()">거절</button>
+                <div id="rejectInviteResult" class="result"></div>
+            </div>
+        </div>
+
+        <!-- 스튜디오 초대 관리 -->
+        <h2 class="section-title">스튜디오 초대 관리 (HOST/MANAGER)</h2>
+        <div class="grid">
+            <!-- 멤버 초대 -->
+            <div class="card">
+                <h2>
+                    <span class="method post">POST</span>
+                    멤버 초대
+                    <span class="endpoint">/api/studios/{studioId}/members/invite</span>
+                </h2>
+                <div class="form-group">
+                    <label>스튜디오 ID</label>
+                    <input type="number" id="inviteStudioId" placeholder="1">
+                </div>
+                <div class="form-group">
+                    <label>초대할 이메일</label>
+                    <input type="email" id="inviteEmail" placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label>역할</label>
+                    <select id="inviteRole">
+                        <option value="MANAGER">MANAGER</option>
+                        <option value="GUEST">GUEST</option>
+                    </select>
+                </div>
+                <button class="primary" onclick="inviteMember()">초대 발송</button>
+                <div id="inviteMemberResult" class="result"></div>
+            </div>
+
+            <!-- 스튜디오 초대 목록 -->
+            <div class="card">
+                <h2>
+                    <span class="method get">GET</span>
+                    스튜디오 초대 목록
+                    <span class="endpoint">/api/studios/{studioId}/invites</span>
+                </h2>
+                <div class="form-group">
+                    <label>스튜디오 ID</label>
+                    <input type="number" id="studioInvitesId" placeholder="1">
+                </div>
+                <button class="primary" onclick="getStudioInvites()">조회</button>
+                <div id="studioInvitesResult" class="result"></div>
+            </div>
+
+            <!-- 초대 취소 -->
+            <div class="card">
+                <h2>
+                    <span class="method delete">DELETE</span>
+                    초대 취소
+                    <span class="endpoint">/api/studios/{studioId}/invites/{inviteId}</span>
+                </h2>
+                <div class="form-group">
+                    <label>스튜디오 ID</label>
+                    <input type="number" id="cancelInviteStudioId" placeholder="1">
+                </div>
+                <div class="form-group">
+                    <label>초대 ID (inviteId)</label>
+                    <input type="text" id="cancelInviteId" placeholder="inv-xxxxxx">
+                </div>
+                <button class="danger" onclick="cancelInvite()">취소</button>
+                <div id="cancelInviteResult" class="result"></div>
+            </div>
+        </div>
+
+        <!-- 멤버 관리 -->
+        <h2 class="section-title">멤버 관리</h2>
+        <div class="grid">
+            <!-- 멤버 목록 -->
+            <div class="card">
+                <h2>
+                    <span class="method get">GET</span>
+                    멤버 목록 조회
+                    <span class="endpoint">/api/studios/{studioId}/members</span>
+                </h2>
+                <div class="form-group">
+                    <label>스튜디오 ID</label>
+                    <input type="number" id="membersStudioId" placeholder="1">
+                </div>
+                <button class="primary" onclick="getMembers()">조회</button>
+                <div id="membersResult" class="result"></div>
+            </div>
+
+            <!-- 멤버 역할 변경 -->
+            <div class="card">
+                <h2>
+                    <span class="method patch">PATCH</span>
+                    멤버 역할 변경 (HOST only)
+                    <span class="endpoint">/api/studios/{studioId}/members/{memberId}</span>
+                </h2>
+                <div class="form-group">
+                    <label>스튜디오 ID</label>
+                    <input type="number" id="updateRoleStudioId" placeholder="1">
+                </div>
+                <div class="form-group">
+                    <label>멤버 ID</label>
+                    <input type="number" id="updateRoleMemberId" placeholder="1">
+                </div>
+                <div class="form-group">
+                    <label>새 역할</label>
+                    <select id="updateRoleValue">
+                        <option value="MANAGER">MANAGER</option>
+                        <option value="GUEST">GUEST</option>
+                    </select>
+                </div>
+                <button class="primary" onclick="updateMemberRole()">역할 변경</button>
+                <div id="updateRoleResult" class="result"></div>
+            </div>
+
+            <!-- 멤버 강퇴 -->
+            <div class="card">
+                <h2>
+                    <span class="method post">POST</span>
+                    멤버 강퇴 (HOST/MANAGER)
+                    <span class="endpoint">/api/studios/{studioId}/members/{memberId}/kick</span>
+                </h2>
+                <div class="form-group">
+                    <label>스튜디오 ID</label>
+                    <input type="number" id="kickStudioId" placeholder="1">
+                </div>
+                <div class="form-group">
+                    <label>멤버 ID</label>
+                    <input type="number" id="kickMemberId" placeholder="1">
+                </div>
+                <button class="danger" onclick="kickMember()">강퇴</button>
+                <div id="kickMemberResult" class="result"></div>
+            </div>
+
+            <!-- 스튜디오 탈퇴 -->
+            <div class="card">
+                <h2>
+                    <span class="method delete">DELETE</span>
+                    스튜디오 탈퇴
+                    <span class="endpoint">/api/studios/{studioId}/members/me</span>
+                </h2>
+                <p style="color: #aaa; font-size: 13px; margin-bottom: 16px;">
+                    HOST는 탈퇴할 수 없습니다. MANAGER/GUEST만 탈퇴 가능합니다.
+                </p>
+                <div class="form-group">
+                    <label>스튜디오 ID</label>
+                    <input type="number" id="leaveStudioId" placeholder="1">
+                </div>
+                <button class="danger" onclick="leaveStudio()">탈퇴</button>
+                <div id="leaveStudioResult" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let BASE_URL = localStorage.getItem('apiServerUrl') || 'http://localhost:8080';
+        let accessToken = localStorage.getItem('accessToken') || '';
+        let currentUser = null;
+
+        // 페이지 로드 시 초기화
+        window.onload = function() {
+            document.getElementById('serverUrl').value = BASE_URL;
+            testConnection();
+
+            if (accessToken) {
+                document.getElementById('authInfo').style.display = 'block';
+                document.getElementById('authToken').textContent = accessToken.substring(0, 50) + '...';
+                const savedUser = localStorage.getItem('currentUser');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    document.getElementById('authUser').textContent = `${currentUser.nickname} (${currentUser.email})`;
+                }
+            }
+        };
+
+        async function testConnection() {
+            BASE_URL = document.getElementById('serverUrl').value.replace(/\/$/, '');
+            localStorage.setItem('apiServerUrl', BASE_URL);
+            try {
+                const response = await fetch(BASE_URL + '/actuator/health');
+                if (response.ok) {
+                    document.getElementById('serverStatus').className = 'server-status connected';
+                    document.getElementById('serverStatus').textContent = '연결됨';
+                } else {
+                    throw new Error('Server not responding');
+                }
+            } catch (e) {
+                document.getElementById('serverStatus').className = 'server-status disconnected';
+                document.getElementById('serverStatus').textContent = '연결 실패';
+            }
+        }
+
+        async function apiCall(endpoint, method, body = null, useAuth = true) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            if (useAuth && accessToken) {
+                options.headers['Authorization'] = 'Bearer ' + accessToken;
+            }
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(BASE_URL + endpoint, options);
+            const data = await response.json();
+            return { ok: response.ok, status: response.status, data };
+        }
+
+        function showResult(elementId, success, data) {
+            const el = document.getElementById(elementId);
+            el.className = 'result ' + (success ? 'success' : 'error');
+            if (typeof data === 'object') {
+                el.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } else {
+                el.textContent = data;
+            }
+        }
+
+        // 로그인
+        async function login() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+
+            if (!email || !password) {
+                showResult('authResult', false, '이메일과 비밀번호를 입력하세요.');
+                return;
+            }
+
+            try {
+                const { ok, data } = await apiCall('/api/auth/login', 'POST', { email, password }, false);
+
+                if (ok && data.data) {
+                    accessToken = data.data.accessToken;
+                    currentUser = data.data.user;
+                    localStorage.setItem('accessToken', accessToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                    document.getElementById('authInfo').style.display = 'block';
+                    document.getElementById('authUser').textContent = `${currentUser.nickname} (${currentUser.email})`;
+                    document.getElementById('authToken').textContent = accessToken.substring(0, 50) + '...';
+                    showResult('authResult', true, '로그인 성공');
+                } else {
+                    showResult('authResult', false, data);
+                }
+            } catch (e) {
+                showResult('authResult', false, e.message);
+            }
+        }
+
+        // 로그아웃
+        function clearAuth() {
+            accessToken = '';
+            currentUser = null;
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('currentUser');
+            document.getElementById('authInfo').style.display = 'none';
+            document.getElementById('authResult').className = 'result';
+            document.getElementById('authResult').style.display = 'none';
+        }
+
+        // 받은 초대 목록 조회
+        async function getReceivedInvites() {
+            if (!accessToken) {
+                showResult('receivedInvitesResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/api/invites/received', 'GET');
+                showResult('receivedInvitesResult', ok, data);
+            } catch (e) {
+                showResult('receivedInvitesResult', false, e.message);
+            }
+        }
+
+        // 초대 수락
+        async function acceptInvite() {
+            if (!accessToken) {
+                showResult('acceptInviteResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const inviteId = document.getElementById('acceptInviteId').value;
+            if (!inviteId) {
+                showResult('acceptInviteResult', false, '초대 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/invites/${inviteId}/accept`, 'POST');
+                showResult('acceptInviteResult', ok, data);
+            } catch (e) {
+                showResult('acceptInviteResult', false, e.message);
+            }
+        }
+
+        // 초대 거절
+        async function rejectInvite() {
+            if (!accessToken) {
+                showResult('rejectInviteResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const inviteId = document.getElementById('rejectInviteId').value;
+            if (!inviteId) {
+                showResult('rejectInviteResult', false, '초대 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/invites/${inviteId}/reject`, 'POST');
+                showResult('rejectInviteResult', ok, data);
+            } catch (e) {
+                showResult('rejectInviteResult', false, e.message);
+            }
+        }
+
+        // 멤버 초대
+        async function inviteMember() {
+            if (!accessToken) {
+                showResult('inviteMemberResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const studioId = document.getElementById('inviteStudioId').value;
+            const email = document.getElementById('inviteEmail').value;
+            const role = document.getElementById('inviteRole').value;
+
+            if (!studioId || !email) {
+                showResult('inviteMemberResult', false, '스튜디오 ID와 이메일을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/studios/${studioId}/members/invite`, 'POST', { email, role });
+                showResult('inviteMemberResult', ok, data);
+            } catch (e) {
+                showResult('inviteMemberResult', false, e.message);
+            }
+        }
+
+        // 스튜디오 초대 목록 조회
+        async function getStudioInvites() {
+            if (!accessToken) {
+                showResult('studioInvitesResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const studioId = document.getElementById('studioInvitesId').value;
+            if (!studioId) {
+                showResult('studioInvitesResult', false, '스튜디오 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/studios/${studioId}/invites`, 'GET');
+                showResult('studioInvitesResult', ok, data);
+            } catch (e) {
+                showResult('studioInvitesResult', false, e.message);
+            }
+        }
+
+        // 초대 취소
+        async function cancelInvite() {
+            if (!accessToken) {
+                showResult('cancelInviteResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const studioId = document.getElementById('cancelInviteStudioId').value;
+            const inviteId = document.getElementById('cancelInviteId').value;
+
+            if (!studioId || !inviteId) {
+                showResult('cancelInviteResult', false, '스튜디오 ID와 초대 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/studios/${studioId}/invites/${inviteId}`, 'DELETE');
+                showResult('cancelInviteResult', ok, data);
+            } catch (e) {
+                showResult('cancelInviteResult', false, e.message);
+            }
+        }
+
+        // 멤버 목록 조회
+        async function getMembers() {
+            if (!accessToken) {
+                showResult('membersResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const studioId = document.getElementById('membersStudioId').value;
+            if (!studioId) {
+                showResult('membersResult', false, '스튜디오 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/studios/${studioId}/members`, 'GET');
+                showResult('membersResult', ok, data);
+            } catch (e) {
+                showResult('membersResult', false, e.message);
+            }
+        }
+
+        // 멤버 역할 변경
+        async function updateMemberRole() {
+            if (!accessToken) {
+                showResult('updateRoleResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const studioId = document.getElementById('updateRoleStudioId').value;
+            const memberId = document.getElementById('updateRoleMemberId').value;
+            const role = document.getElementById('updateRoleValue').value;
+
+            if (!studioId || !memberId) {
+                showResult('updateRoleResult', false, '스튜디오 ID와 멤버 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/studios/${studioId}/members/${memberId}`, 'PATCH', { role });
+                showResult('updateRoleResult', ok, data);
+            } catch (e) {
+                showResult('updateRoleResult', false, e.message);
+            }
+        }
+
+        // 멤버 강퇴
+        async function kickMember() {
+            if (!accessToken) {
+                showResult('kickMemberResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const studioId = document.getElementById('kickStudioId').value;
+            const memberId = document.getElementById('kickMemberId').value;
+
+            if (!studioId || !memberId) {
+                showResult('kickMemberResult', false, '스튜디오 ID와 멤버 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/studios/${studioId}/members/${memberId}/kick`, 'POST');
+                showResult('kickMemberResult', ok, data);
+            } catch (e) {
+                showResult('kickMemberResult', false, e.message);
+            }
+        }
+
+        // 스튜디오 탈퇴
+        async function leaveStudio() {
+            if (!accessToken) {
+                showResult('leaveStudioResult', false, '먼저 로그인하세요.');
+                return;
+            }
+            const studioId = document.getElementById('leaveStudioId').value;
+            if (!studioId) {
+                showResult('leaveStudioResult', false, '스튜디오 ID를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/api/studios/${studioId}/members/me`, 'DELETE');
+                showResult('leaveStudioResult', ok, data);
+            } catch (e) {
+                showResult('leaveStudioResult', false, e.message);
+            }
+        }
+    </script>
+</body>
+</html>

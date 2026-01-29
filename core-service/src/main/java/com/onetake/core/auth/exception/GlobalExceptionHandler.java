@@ -156,6 +156,38 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
     }
 
+    @ExceptionHandler(InviteNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInviteNotFoundException(InviteNotFoundException e) {
+        log.warn("InviteNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(InviteExpiredException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInviteExpiredException(InviteExpiredException e) {
+        log.warn("InviteExpiredException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.GONE)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(InviteNotForUserException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInviteNotForUserException(InviteNotForUserException e) {
+        log.warn("InviteNotForUserException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(HostCannotLeaveException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHostCannotLeaveException(HostCannotLeaveException e) {
+        log.warn("HostCannotLeaveException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unexpected error", e);

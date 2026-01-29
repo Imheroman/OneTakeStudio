@@ -192,4 +192,144 @@ public class StudioMemberService {
             throw new InvalidRoleException(role);
         }
     }
+
+    public List<ReceivedInviteResponse> getReceivedInvites(String userId) {
+        log.debug("받은 초대 목록 조회: userId={}", userId);
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+
+        List<MemberInvite> invites = memberInviteRepository.findByInviteeEmailAndStatus(
+                user.getEmail(), InviteStatus.PENDING);
+
+        return invites.stream()
+                .filter(MemberInvite::isValid)
+                .map(invite -> {
+                    Studio studio = studioRepository.findById(invite.getStudioId()).orElse(null);
+                    User inviter = userRepository.findById(invite.getInviterId()).orElse(null);
+                    return ReceivedInviteResponse.from(invite, studio, inviter);
+                })
+                .filter(response -> response.getStudioId() != null)
+                .toList();
+    }
+
+    @Transactional
+    public StudioMemberResponse acceptInvite(String userId, String inviteId) {
+        log.debug("초대 수락: userId={}, inviteId={}", userId, inviteId);
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+
+        MemberInvite invite = memberInviteRepository.findByInviteId(inviteId)
+                .orElseThrow(() -> new InviteNotFoundException(inviteId));
+
+        if (!invite.getInviteeEmail().equalsIgnoreCase(user.getEmail())) {
+            throw new InviteNotForUserException();
+        }
+
+        if (invite.getStatus() != InviteStatus.PENDING) {
+            throw new InviteNotFoundException(inviteId);
+        }
+
+        if (!invite.isValid()) {
+            throw new InviteExpiredException(inviteId);
+        }
+
+        Studio studio = studioRepository.findById(invite.getStudioId())
+                .orElseThrow(() -> new StudioNotFoundException(invite.getStudioId()));
+
+        if (studioMemberRepository.existsByStudioIdAndUserId(studio.getId(), user.getId())) {
+            throw new StudioInUseException("이미 스튜디오의 멤버입니다.");
+        }
+
+        invite.accept();
+
+        StudioMember member = StudioMember.builder()
+                .studioId(studio.getId())
+                .userId(user.getId())
+                .role(invite.getRole())
+                .build();
+
+        StudioMember saved = studioMemberRepository.save(member);
+        log.info("초대 수락 완료: inviteId={}, memberId={}", inviteId, saved.getId());
+
+        return StudioMemberResponse.from(saved, user.getNickname(), user.getEmail(), user.getProfileImageUrl());
+    }
+
+    @Transactional
+    public void rejectInvite(String userId, String inviteId) {
+        log.debug("초대 거절: userId={}, inviteId={}", userId, inviteId);
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+
+        MemberInvite invite = memberInviteRepository.findByInviteId(inviteId)
+                .orElseThrow(() -> new InviteNotFoundException(inviteId));
+
+        if (!invite.getInviteeEmail().equalsIgnoreCase(user.getEmail())) {
+            throw new InviteNotForUserException();
+        }
+
+        if (invite.getStatus() != InviteStatus.PENDING) {
+            throw new InviteNotFoundException(inviteId);
+        }
+
+        invite.reject();
+        log.info("초대 거절 완료: inviteId={}", inviteId);
+    }
+
+    public List<InviteResponse> getStudioInvites(String userId, Long studioId) {
+        log.debug("스튜디오 초대 목록 조회: studioId={}", studioId);
+        Long internalUserId = getInternalUserId(userId);
+
+        Studio studio = studioRepository.findById(studioId)
+                .orElseThrow(() -> new StudioNotFoundException(studioId));
+
+        validateHostOrManagerAccess(studio.getId(), internalUserId);
+
+        return memberInviteRepository.findByStudioIdAndStatus(studio.getId(), InviteStatus.PENDING).stream()
+                .map(InviteResponse::from)
+                .toList();
+    }
+
+    @Transactional
+    public void cancelInvite(String userId, Long studioId, String inviteId) {
+        log.debug("초대 취소: studioId={}, inviteId={}", studioId, inviteId);
+        Long internalUserId = getInternalUserId(userId);
+
+        Studio studio = studioRepository.findById(studioId)
+                .orElseThrow(() -> new StudioNotFoundException(studioId));
+
+        validateHostOrManagerAccess(studio.getId(), internalUserId);
+
+        MemberInvite invite = memberInviteRepository.findByInviteId(inviteId)
+                .orElseThrow(() -> new InviteNotFoundException(inviteId));
+
+        if (!invite.getStudioId().equals(studio.getId())) {
+            throw new InviteNotFoundException(inviteId);
+        }
+
+        if (invite.getStatus() != InviteStatus.PENDING) {
+            throw new InviteNotFoundException(inviteId);
+        }
+
+        memberInviteRepository.delete(invite);
+        log.info("초대 취소 완료: inviteId={}", inviteId);
+    }
+
+    @Transactional
+    public void leaveStudio(String userId, Long studioId) {
+        log.debug("스튜디오 탈퇴: userId={}, studioId={}", userId, studioId);
+        Long internalUserId = getInternalUserId(userId);
+
+        Studio studio = studioRepository.findById(studioId)
+                .orElseThrow(() -> new StudioNotFoundException(studioId));
+
+        StudioMember member = studioMemberRepository.findByStudioIdAndUserId(studio.getId(), internalUserId)
+                .orElseThrow(StudioAccessDeniedException::new);
+
+        if (member.isHost()) {
+            throw new HostCannotLeaveException();
+        }
+
+        studioMemberRepository.delete(member);
+        log.info("스튜디오 탈퇴 완료: userId={}, studioId={}", userId, studioId);
+    }
 }
