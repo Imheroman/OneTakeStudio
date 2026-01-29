@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Edit, User } from "lucide-react";
+import { Clock, Edit, Lock, Unlock } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { IconButton } from "@/shared/common";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
@@ -13,6 +13,9 @@ interface StudioHeaderProps {
   onEdit?: () => void;
   onGoLive?: () => void;
   isLive?: boolean;
+  /** 편집 모드: true = 드래그/수정 가능, false = 라이브 모드(잠금, ON/OFF·프리셋만) */
+  isEditMode?: boolean;
+  onEditModeToggle?: () => void;
 }
 
 export function StudioHeader({
@@ -20,6 +23,8 @@ export function StudioHeader({
   onEdit,
   onGoLive,
   isLive = false,
+  isEditMode = true,
+  onEditModeToggle,
 }: StudioHeaderProps) {
   const { user } = useAuthStore();
   const [elapsedTime, setElapsedTime] = useState("00:00:00");
@@ -73,6 +78,31 @@ export function StudioHeader({
 
       {/* 오른쪽: 액션 버튼들 */}
       <div className="flex items-center gap-3">
+        {onEditModeToggle && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onEditModeToggle}
+            className={cn(
+              "text-gray-300 hover:text-white hover:bg-gray-800",
+              !isEditMode && "text-amber-400",
+            )}
+            title={isEditMode ? "라이브 모드로 전환 (잠금)" : "편집 모드로 전환"}
+          >
+            {isEditMode ? (
+              <>
+                <Lock className="h-4 w-4 mr-2" />
+                잠금
+              </>
+            ) : (
+              <>
+                <Unlock className="h-4 w-4 mr-2" />
+                편집
+              </>
+            )}
+          </Button>
+        )}
+
         {onEdit && (
           <Button
             variant="ghost"

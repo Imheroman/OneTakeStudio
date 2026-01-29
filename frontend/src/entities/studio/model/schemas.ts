@@ -25,7 +25,7 @@ export const LayoutTypeSchema = z.enum([
 export const SceneLayoutDtoSchema = z
   .object({
     type: z.string().optional(),
-    elements: z.array(z.record(z.unknown())).optional(),
+    elements: z.array(z.record(z.string(), z.unknown())).optional(),
   })
   .nullable()
   .optional();
@@ -70,12 +70,13 @@ export const SourceTypeSchema = z.enum([
   "browser",
 ]);
 
-// 소스 스키마
+// 소스 스키마 (deviceId: 저장된 선호 장치, 재방문 시 기본값으로 사용)
 export const SourceSchema = z.object({
   id: z.string(),
   type: SourceTypeSchema,
   name: z.string(),
   isVisible: z.boolean(),
+  deviceId: z.string().optional(),
 });
 
 // 스튜디오 스키마 (백엔드 API 응답 형식)

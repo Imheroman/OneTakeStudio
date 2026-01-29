@@ -28,6 +28,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
     activeSceneId,
     scenesForPanel,
     displaySources,
+    canAddSource,
+    isEditMode,
+    setIsEditMode,
     isVideoEnabled,
     isAudioEnabled,
     isLive,
@@ -38,7 +41,6 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleAddSource,
     handleAddSourceConfirm,
     handleSourceToggle,
-    handleSaveSceneLayout,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
@@ -77,6 +79,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
           studioTitle={studio.name}
           onGoLive={handleGoLive}
           isLive={isLive}
+          isEditMode={isEditMode}
+          onEditModeToggle={() => setIsEditMode((v) => !v)}
         />
 
         <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
@@ -87,6 +91,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
               sources={displaySources}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
+              isEditMode={isEditMode}
               getPreviewStreamRef={getPreviewStreamRef}
             />
           </div>
@@ -107,13 +112,13 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 onSceneSelect={handleSceneSelect}
                 onAddScene={handleAddScene}
                 onRemoveScene={handleRemoveScene}
-                onSaveLayout={activeSceneId ? handleSaveSceneLayout : undefined}
               />
             </div>
 
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
               <SourcesPanel
                 sources={displaySources}
+                canAddSource={canAddSource}
                 onAddSource={handleAddSource}
                 onSourceToggle={handleSourceToggle}
               />

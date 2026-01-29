@@ -18,6 +18,10 @@ import {
   ApiResponseRecordingSchema,
   type RecordingStartRequest,
 } from "@/entities/recording/model";
+import {
+  getPreferredVideoDeviceId,
+  getPreferredAudioDeviceId,
+} from "@/shared/lib/device-preferences";
 
 const ApiResponseSceneSchema = z.object({
   success: z.boolean(),
@@ -41,21 +45,13 @@ export function useStudioMain(
   const [currentLayout, setCurrentLayout] = useState<LayoutType>("full");
   const [activeSceneId, setActiveSceneId] = useState<string>("");
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isLive, setIsLive] = useState(false);
 
-  const defaultVideoSource: Source = useMemo(
-    () => ({
-      id: "default-webcam",
-      type: "video" as const,
-      name: "웹캠",
-      isVisible: true,
-    }),
-    [],
-  );
-
-  const [sources, setSources] = useState<Source[]>([defaultVideoSource]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
+  /** 편집 모드: true = OBS처럼 드래그/수정 가능, false = 라이브 모드(잠금, ON/OFF·프리셋만) */
+  const [isEditMode, setIsEditMode] = useState(true);
 
   const [isRecordingLocal, setIsRecordingLocal] = useState(false);
   const [isRecordingCloud, setIsRecordingCloud] = useState(false);
@@ -63,25 +59,44 @@ export function useStudioMain(
   const recordedChunksRef = useRef<Blob[]>([]);
 
   const displaySources = sources;
+  /** 씬이 선택된 경우에만 소스 추가 가능 (씬 우선 플로우) */
+  const canAddSource = !!activeSceneId;
 
   const layoutElementsToSources = useCallback(
     (elements: unknown[] | null | undefined): Source[] => {
-      if (!elements?.length) return [defaultVideoSource];
+      if (!elements?.length) return [];
+      let videoDeviceSet = false;
+      let audioDeviceSet = false;
       const list = elements
         .filter(
           (e): e is Record<string, unknown> =>
             e != null && typeof e === "object" && "id" in e && "type" in e,
         )
-        .map((e) => ({
-          id: String(e.id),
-          type: (e.type as Source["type"]) || "video",
-          name: (e.name as string) || String(e.type),
-          isVisible: e.visible !== false,
-        }));
-      const hasVideo = list.some((s) => s.type === "video");
-      return hasVideo ? list : [defaultVideoSource, ...list];
+        .map((e) => {
+          const type = (e.type as Source["type"]) || "video";
+          let deviceId: string | undefined;
+          if (type === "video") {
+            deviceId = videoDeviceSet
+              ? (e.deviceId as string | undefined)
+              : (videoDeviceSet = true, getPreferredVideoDeviceId() ?? undefined);
+          } else if (type === "audio") {
+            deviceId = audioDeviceSet
+              ? (e.deviceId as string | undefined)
+              : (audioDeviceSet = true, getPreferredAudioDeviceId() ?? undefined);
+          } else {
+            deviceId = e.deviceId as string | undefined;
+          }
+          return {
+            id: String(e.id),
+            type,
+            name: (e.name as string) || String(e.type),
+            isVisible: e.visible !== false,
+            deviceId,
+          };
+        });
+      return list;
     },
-    [defaultVideoSource],
+    [],
   );
 
   const activeScene = useMemo(() => {
@@ -90,14 +105,21 @@ export function useStudioMain(
     return id ? list.find((s) => s.sceneId === id) : null;
   }, [studio?.scenes, activeSceneId]);
 
+  // 씬 우선 플로우: 선택된 씬에만 소스 종속. 씬 없으면 sources 비움, 씬 전환 시 해당 씬 레이아웃으로 동기화.
+  const prevSceneIdRef = useRef<string>("");
   useEffect(() => {
     if (!activeScene) {
-      setSources([defaultVideoSource]);
+      prevSceneIdRef.current = "";
+      setSources([]);
       return;
     }
-    const elements = activeScene.layout?.elements;
-    setSources(layoutElementsToSources(Array.isArray(elements) ? elements : []));
-  }, [activeScene?.sceneId, activeScene?.layout?.elements, layoutElementsToSources, defaultVideoSource]);
+    const sceneId = activeSceneId ?? "";
+    if (prevSceneIdRef.current !== sceneId) {
+      prevSceneIdRef.current = sceneId;
+      const elements = activeScene.layout?.elements;
+      setSources(layoutElementsToSources(Array.isArray(elements) ? elements : []));
+    }
+  }, [activeSceneId, activeScene, layoutElementsToSources]);
 
   const scenesForPanel: Scene[] = useMemo(() => {
     const list = studio?.scenes ?? [];
@@ -131,6 +153,7 @@ export function useStudioMain(
     fetchStudio();
   }, [fetchStudio]);
 
+  // 최초 로드 시 또는 씬 목록만 바뀌었을 때 첫 씬 선택
   useEffect(() => {
     if (!studio?.scenes?.length || activeSceneId) return;
     const first = studio.scenes[0];
@@ -138,9 +161,17 @@ export function useStudioMain(
     setActiveSceneId(String((active ?? first).sceneId));
   }, [studio?.scenes, activeSceneId]);
 
+  // 씬이 2개 이상일 때: 선택된 씬이 없거나 삭제된 씬을 가리키면 남은 씬 중 첫 씬으로 복구
+  useEffect(() => {
+    if (!studio?.scenes?.length) return;
+    if (activeScene) return;
+    const first = studio.scenes[0];
+    setActiveSceneId(String(first.sceneId));
+  }, [studio?.scenes, activeScene, activeSceneId]);
+
   const handleGoLive = () => {
     setIsLive(true);
-    console.log("Go Live!");
+    setIsEditMode(false); // Go Live 시 잠금(편집 → 라이브)
   };
 
   const handleSceneSelect = (sceneId: string) => {
@@ -172,8 +203,8 @@ export function useStudioMain(
         `/api/studios/${sid}/scenes/${sceneIdNum}`,
         z.object({ success: z.boolean(), message: z.string().optional() }),
       );
-      if (activeSceneId === sceneId) setActiveSceneId("");
       await fetchStudio();
+      if (activeSceneId === sceneId) setActiveSceneId("");
     } catch (error) {
       console.error("씬 삭제 실패:", error);
     }
@@ -184,15 +215,20 @@ export function useStudioMain(
   };
 
   const handleAddSourceConfirm = useCallback(
-    (type: "video" | "audio") => {
+    (type: "video" | "audio", deviceId?: string) => {
       const id =
         type === "video"
           ? `video-${Date.now()}`
           : `audio-${Date.now()}`;
       const name = type === "video" ? "웹캠" : "마이크";
+      const resolvedDeviceId =
+        deviceId ??
+        (type === "video"
+          ? getPreferredVideoDeviceId() ?? undefined
+          : getPreferredAudioDeviceId() ?? undefined);
       setSources((prev) => [
         ...prev,
-        { id, type, name, isVisible: true },
+        { id, type, name, isVisible: true, deviceId: resolvedDeviceId },
       ]);
       setShowAddSourceDialog(false);
     },
@@ -219,6 +255,7 @@ export function useStudioMain(
           type: s.type,
           name: s.name,
           visible: s.isVisible,
+          ...(s.deviceId && { deviceId: s.deviceId }),
         })),
       };
       await apiClient.put(
@@ -333,6 +370,9 @@ export function useStudioMain(
     activeSceneId,
     scenesForPanel,
     displaySources,
+    canAddSource,
+    isEditMode,
+    setIsEditMode,
     isVideoEnabled,
     isAudioEnabled,
     isLive,
@@ -343,7 +383,6 @@ export function useStudioMain(
     handleAddSource,
     handleAddSourceConfirm,
     handleSourceToggle,
-    handleSaveSceneLayout,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,

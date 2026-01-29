@@ -6,6 +6,10 @@ import { cn } from "@/shared/lib/utils";
 import { useCanvasPreview } from "@/hooks/studio/useCanvasPreview";
 import type { LayoutType, Source } from "@/entities/studio/model";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
+import {
+  setPreferredVideoDeviceId,
+  setPreferredAudioDeviceId,
+} from "@/shared/lib/device-preferences";
 
 interface PreviewAreaProps {
   className?: string;
@@ -13,6 +17,8 @@ interface PreviewAreaProps {
   sources?: Source[];
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
+  /** 편집 모드: false면 라이브 모드(잠금). 향후 스테이징 드래그/리사이즈 비활성화에 사용 */
+  isEditMode?: boolean;
   /** 로컬 녹화 시 캔버스 스트림을 가져오는 함수를 설정합니다. */
   getPreviewStreamRef?: GetPreviewStreamRef | null;
 }
@@ -23,6 +29,7 @@ export function PreviewArea({
   sources = [],
   isVideoEnabled = true,
   isAudioEnabled = true,
+  isEditMode = true,
   getPreviewStreamRef,
 }: PreviewAreaProps) {
   const { canvasRef, registerSourceElement, unregisterSourceElement, getCaptureStream } =
@@ -52,15 +59,26 @@ export function PreviewArea({
             console.warn(`이미지 로드 실패: ${source.name}`);
           };
         } else if (source.type === "video") {
-          // 비디오 소스의 경우 웹캠 연결
+          // Just-in-Time: 소스 추가 시점에만 웹캠 권한 요청. deviceId로 이전 선택 장치 사용
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
               video: {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
+                deviceId: source.deviceId
+                  ? { ideal: source.deviceId }
+                  : undefined,
+                width: { ideal: 1920, min: 640 },
+                height: { ideal: 1080, min: 480 },
+                frameRate: { ideal: 30 },
               },
               audio: isAudioEnabled,
             });
+
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack) {
+              const settings = videoTrack.getSettings();
+              if (settings.deviceId)
+                setPreferredVideoDeviceId(settings.deviceId);
+            }
 
             streamsMap.set(source.id, stream);
 
@@ -70,7 +88,6 @@ export function PreviewArea({
             video.muted = true;
             video.playsInline = true;
 
-            // 비디오가 로드되면 등록
             video.onloadedmetadata = () => {
               video.play().catch((error) => {
                 console.error("비디오 재생 실패:", error);
@@ -80,13 +97,11 @@ export function PreviewArea({
 
             video.onerror = (error) => {
               console.error("비디오 로드 실패:", error);
-              // 스트림 정리
               stream.getTracks().forEach((track) => track.stop());
               streamsMap.delete(source.id);
             };
           } catch (error) {
             console.error("웹캠 접근 실패:", error);
-            // 권한 거부 또는 기타 오류 처리
             if (error instanceof Error) {
               if (error.name === "NotAllowedError") {
                 console.warn("웹캠 권한이 거부되었습니다.");
@@ -94,6 +109,31 @@ export function PreviewArea({
                 console.warn("웹캠을 찾을 수 없습니다.");
               }
             }
+          }
+        } else if (source.type === "audio") {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              audio: source.deviceId
+                ? { deviceId: { ideal: source.deviceId } }
+                : true,
+            });
+            const audioTrack = stream.getAudioTracks()[0];
+            if (audioTrack) {
+              const settings = audioTrack.getSettings();
+              if (settings.deviceId)
+                setPreferredAudioDeviceId(settings.deviceId);
+            }
+            streamsMap.set(source.id, stream);
+            const video = document.createElement("video");
+            video.srcObject = stream;
+            video.autoplay = true;
+            video.muted = true;
+            video.playsInline = true;
+            video.onloadedmetadata = () => {
+              registerSourceElement(source.id, video, stream);
+            };
+          } catch (error) {
+            console.error("마이크 접근 실패:", error);
           }
         }
         // text, audio, browser 타입은 렌더러에서 처리
@@ -133,6 +173,16 @@ export function PreviewArea({
         className,
       )}
     >
+      <span
+        className={cn(
+          "absolute top-2 left-2 z-10 px-2 py-1 rounded text-xs font-semibold",
+          isEditMode
+            ? "bg-amber-500/90 text-amber-950"
+            : "bg-red-600 text-white",
+        )}
+      >
+        {isEditMode ? "스테이징" : "Live"}
+      </span>
       {hasSources ? (
         <canvas
           ref={canvasRef}
