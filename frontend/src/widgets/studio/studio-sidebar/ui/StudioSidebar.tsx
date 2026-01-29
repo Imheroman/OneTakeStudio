@@ -1,50 +1,135 @@
 "use client";
 
+import { useState } from "react";
 import {
   MessageSquare,
   Image,
   Palette,
   List,
   Users,
+  Lock,
   Circle,
-  CircleDot,
+  FileText,
+  Layers,
 } from "lucide-react";
 import { IconButton } from "@/shared/common";
 import { cn } from "@/shared/lib/utils";
+import { StudioChatPanel } from "../panels/StudioChatPanel";
+import { StudioBannerPanel } from "../panels/StudioBannerPanel";
+import { StudioAssetPanel } from "../panels/StudioAssetPanel";
+import { StudioStylePanel } from "../panels/StudioStylePanel";
+import { StudioNotePanel } from "../panels/StudioNotePanel";
+import { StudioMemberPanel } from "../panels/StudioMemberPanel";
+import { StudioRecordingPanel } from "../panels/StudioRecordingPanel";
+import { StudioInviteModal } from "@/widgets/studio/studio-invite-modal";
+
+const TABS = [
+  { id: "chat", icon: MessageSquare, label: "채팅" },
+  { id: "banner", icon: Image, label: "배너" },
+  { id: "assets", icon: Layers, label: "에셋" },
+  { id: "style", icon: Palette, label: "스타일" },
+  { id: "notes", icon: FileText, label: "노트" },
+  { id: "members", icon: Users, label: "멤버" },
+  { id: "private", icon: Lock, label: "프라이빗채팅" },
+  { id: "recording", icon: Circle, label: "녹화" },
+] as const;
+
+export type StudioSidebarTabId = (typeof TABS)[number]["id"];
 
 interface StudioSidebarProps {
+  studioId: string;
   className?: string;
 }
 
-const sidebarItems = [
-  { icon: MessageSquare, label: "Chat" },
-  { icon: Image, label: "Gallery" },
-  { icon: Palette, label: "Paint" },
-  { icon: List, label: "List" },
-  { icon: Users, label: "Users" },
-];
+export function StudioSidebar({ studioId, className }: StudioSidebarProps) {
+  const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
-export function StudioSidebar({ className }: StudioSidebarProps) {
+  const handleTabClick = (id: StudioSidebarTabId) => {
+    setActiveTab((prev) => (prev === id ? null : id));
+  };
+
+  const closePanel = () => setActiveTab(null);
+
+  const studioIdNum = Number(studioId) || 0;
+
   return (
-    <aside
-      className={cn(
-        "w-16 bg-gray-900 border-l border-gray-800 flex flex-col items-center py-4 gap-3",
-        className,
-      )}
-    >
-      {sidebarItems.map((item, index) => (
-        <IconButton
-          key={index}
-          icon={<item.icon className="h-5 w-5 text-gray-400" />}
-          label={item.label}
-          className="hover:bg-gray-800"
-        />
-      ))}
+    <>
+      <aside
+        className={cn(
+          "flex bg-gray-900 border-l border-gray-800 shrink-0 flex-shrink-0",
+          activeTab ? "w-[25rem]" : "w-16",
+          className,
+        )}
+      >
+        {/* 탭 아이콘 열 */}
+        <div className="w-16 flex flex-col items-center py-4 gap-3 border-r border-gray-800 shrink-0">
+          {TABS.map((tab) => (
+            <IconButton
+              key={tab.id}
+              icon={<tab.icon className="h-5 w-5 text-gray-400" />}
+              label={tab.label}
+              className={cn(
+                "hover:bg-gray-800",
+                activeTab === tab.id && "bg-gray-800 text-white",
+              )}
+              onClick={() => handleTabClick(tab.id)}
+            />
+          ))}
+        </div>
 
-      <div className="mt-auto space-y-2">
-        <div className="h-8 w-8 rounded-full bg-gray-700 border-2 border-gray-600" />
-        <div className="h-8 w-8 rounded-full border-2 border-gray-600" />
-      </div>
-    </aside>
+        {/* 패널 영역: 넉넉한 너비로 전송 버튼 등이 잘리지 않도록 */}
+        {activeTab && (
+          <div className="w-80 min-w-80 flex flex-col p-3 min-h-0 overflow-auto bg-gray-900">
+            {activeTab === "chat" && (
+              <StudioChatPanel
+                studioId={studioIdNum}
+                onClose={closePanel}
+                filterPlatform={null}
+              />
+            )}
+            {activeTab === "banner" && (
+              <StudioBannerPanel studioId={studioIdNum} onClose={closePanel} />
+            )}
+            {activeTab === "assets" && (
+              <StudioAssetPanel studioId={studioIdNum} onClose={closePanel} />
+            )}
+            {activeTab === "style" && (
+              <StudioStylePanel studioId={studioIdNum} onClose={closePanel} />
+            )}
+            {activeTab === "notes" && (
+              <StudioNotePanel studioId={studioIdNum} onClose={closePanel} />
+            )}
+            {activeTab === "members" && (
+              <StudioMemberPanel
+                studioId={studioId}
+                onClose={closePanel}
+                onInviteClick={() => setInviteOpen(true)}
+              />
+            )}
+            {activeTab === "private" && (
+              <StudioChatPanel
+                studioId={studioIdNum}
+                onClose={closePanel}
+                filterPlatform="INTERNAL"
+              />
+            )}
+            {activeTab === "recording" && (
+              <StudioRecordingPanel
+                studioId={studioIdNum}
+                onClose={closePanel}
+              />
+            )}
+          </div>
+        )}
+      </aside>
+
+      <StudioInviteModal
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        studioId={studioId}
+        onSuccess={closePanel}
+      />
+    </>
   );
 }

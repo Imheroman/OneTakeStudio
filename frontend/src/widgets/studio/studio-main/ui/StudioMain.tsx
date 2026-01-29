@@ -209,7 +209,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
         />
       </div>
 
-      <StudioSidebar />
+      <StudioSidebar studioId={studioId} />
     </div>
   );
 }

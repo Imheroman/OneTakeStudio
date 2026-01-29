@@ -1,12 +1,14 @@
+export type {
+  RecordingResponse,
+  RecordingStatus,
+  RecordingStartRequest,
+} from "./schemas";
 export {
   RecordingStatusSchema,
   RecordingResponseSchema,
   RecordingStartRequestSchema,
   ApiResponseRecordingSchema,
   ApiResponseRecordingListSchema,
-} from "./schemas";
-export type {
-  RecordingStatus,
-  RecordingResponse,
-  RecordingStartRequest,
+  ApiResponseRecordingNullableSchema,
+  ApiResponseRecordingArraySchema,
 } from "./schemas";

@@ -1,3 +1,6 @@
+/**
+ * Recording 엔티티 zod 스키마 (백엔드 회신 기준)
+ */
 import { z } from "zod";
 
 export const RecordingStatusSchema = z.enum([
@@ -14,7 +17,7 @@ export type RecordingStatus = z.infer<typeof RecordingStatusSchema>;
 export const RecordingResponseSchema = z.object({
   recordingId: z.string(),
   studioId: z.number(),
-  userId: z.number(),
+  userId: z.number().optional(),
   status: RecordingStatusSchema,
   fileName: z.string().nullable().optional(),
   s3Url: z.string().nullable().optional(),
@@ -37,12 +40,25 @@ export type RecordingStartRequest = z.infer<typeof RecordingStartRequestSchema>;
 
 export const ApiResponseRecordingSchema = z.object({
   success: z.boolean(),
-  message: z.string().optional(),
+  message: z.string().nullable().optional(),
   data: RecordingResponseSchema,
 });
 
 export const ApiResponseRecordingListSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
+  data: z.array(RecordingResponseSchema),
+});
+
+/** active 조회 시 진행 중인 녹화가 없으면 data: null */
+export const ApiResponseRecordingNullableSchema = z.object({
+  success: z.boolean(),
+  message: z.string().nullable().optional(),
+  data: RecordingResponseSchema.nullable(),
+});
+
+export const ApiResponseRecordingArraySchema = z.object({
+  success: z.boolean(),
+  message: z.string().nullable().optional(),
   data: z.array(RecordingResponseSchema),
 });

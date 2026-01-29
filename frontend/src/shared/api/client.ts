@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { z, ZodTypeAny } from "zod";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -82,8 +83,13 @@ export const apiClient = {
       })
       .catch((error: any) => {
         // 네트워크 에러 처리
-        if (error.code === "ERR_NETWORK" || error.message?.includes("Network Error")) {
-          const networkError = new Error("네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.");
+        if (
+          error.code === "ERR_NETWORK" ||
+          error.message?.includes("Network Error")
+        ) {
+          const networkError = new Error(
+            "네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.",
+          );
           (networkError as any).isNetworkError = true;
           throw networkError;
         }
@@ -188,9 +194,43 @@ export const apiClient = {
         }
       });
   },
+
+  /**
+   * FormData 업로드 (multipart/form-data, Content-Type 자동 설정)
+   */
+  postForm: (
+    url: string,
+    formData: FormData,
+    config?: any,
+  ): Promise<unknown> => {
+    return axiosInstance
+      .post(url, formData, {
+        ...config,
+        headers: {
+          ...config?.headers,
+          "Content-Type": undefined, // 브라우저가 boundary 포함 multipart/form-data 설정
+        },
+      })
+      .then((res) => res.data);
+  },
 };
 
-// 3. 응답 인터셉터: 공통 에러 핸들링 (요청 시 토큰 주입은 app 레이어에서 등록)
+// 3. 요청 인터셉터: 토큰 + X-User-Id (백엔드 Library/Media API용)
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const { accessToken, user } = useAuthStore.getState();
+    if (accessToken && config.headers) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    if (user?.userId && config.headers) {
+      config.headers["X-User-Id"] = user.userId;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+// 4. 응답 인터셉터: 공통 에러 핸들링
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {

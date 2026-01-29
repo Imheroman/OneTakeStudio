@@ -1,23 +1,48 @@
 "use client";
 
+import { useState } from "react";
 import { VideoCard } from "@/widgets/library/video-card";
 import { VideoFilter, type FilterType } from "@/widgets/library/video-filter";
 import { useVideoLibrary } from "@/features/library/video-library";
+import { UploadVideoModal } from "@/widgets/library/upload-video-modal";
+import { Button } from "@/shared/ui/button";
+import { Upload } from "lucide-react";
 
-export function VideoLibrary() {
+interface VideoLibraryProps {
+  /** 업로드 시에만 사용(선택). 없으면 전체 영상 목록만 표시 */
+  studioId?: string;
+}
+
+export function VideoLibrary({ studioId }: VideoLibraryProps = {}) {
   const {
     videos,
     filter,
     setFilter,
     isLoading,
     handleMoreClick,
+    refetch,
   } = useVideoLibrary();
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  const handleUploadSuccess = () => {
+    setUploadModalOpen(false);
+    refetch();
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Video Library</h1>
-        <VideoFilter value={filter} onChange={setFilter} />
+        <div className="flex items-center gap-3">
+          <VideoFilter value={filter} onChange={setFilter} />
+          <Button
+            onClick={() => setUploadModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Upload File
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -44,6 +69,13 @@ export function VideoLibrary() {
           ))}
         </div>
       )}
+
+      <UploadVideoModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        studioId={studioId ?? ""}
+        onSuccess={handleUploadSuccess}
+      />
     </div>
   );
 }

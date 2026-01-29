@@ -1,27 +1,113 @@
 "use client";
 
-// Feature 컴포넌트들 (아직 없다면 3번 단계에서 생성합니다)
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { VideoPlayer } from "@/features/library/video-library/ui/video-player";
 import { VideoSidebar } from "@/features/library/video-library/ui/video-sidebar";
 import { AnalysisChart } from "@/features/library/video-library/ui/analysis-chart";
 import { VideoInfoSection } from "@/features/library/video-library/ui/video-info-section";
+import { TrimSection } from "@/features/library/video-library/ui/trim-section";
+import { DownloadVideoModal } from "@/widgets/library/download-video-modal";
+import { ShortsPlaybackModal } from "@/widgets/library/shorts-playback-modal";
+import { apiClient } from "@/shared/api/client";
+import {
+  VideoDetailApiResponseSchema,
+  CreateClipApiResponseSchema,
+  type VideoDetail,
+  type Clip,
+} from "@/entities/video/model";
 
 interface VideoDetailViewerProps {
   videoId: string;
 }
 
 export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
+  const [video, setVideo] = useState<VideoDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [playbackClip, setPlaybackClip] = useState<Clip | null>(null);
+
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await apiClient.get(
+          `/api/library/videos/${videoId}`,
+          VideoDetailApiResponseSchema,
+        );
+        setVideo(res.data);
+        const totalSec = parseDurationToSeconds(res.data.duration);
+        setTrimEnd(totalSec);
+      } catch (err) {
+        console.error("비디오 상세 조회 실패:", err);
+        setError("비디오를 불러올 수 없습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [videoId]);
+
+  const handleSaveTrim = useCallback(async () => {
+    if (!video) return;
+    try {
+      await apiClient.post("/api/library/clips", CreateClipApiResponseSchema, {
+        recordingId: video.id,
+        title: `${video.title} (편집)`,
+        startTimeSec: trimStart,
+        endTimeSec: trimEnd,
+      });
+      const res = await apiClient.get(
+        `/api/library/videos/${videoId}`,
+        VideoDetailApiResponseSchema,
+      );
+      setVideo(res.data);
+    } catch (err) {
+      console.error("클립 생성 실패:", err);
+    }
+  }, [video, videoId, trimStart, trimEnd]);
+
+  const handleClipClick = useCallback((clip: Clip) => {
+    setPlaybackClip(clip);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] items-center justify-center bg-[#F8FAFC]">
+        <p className="text-gray-500">로딩 중...</p>
+      </div>
+    );
+  }
+  if (error || !video) {
+    return (
+      <div className="flex h-[calc(100vh-64px)] flex-col items-center justify-center gap-4 bg-[#F8FAFC]">
+        <p className="text-gray-600">{error ?? "비디오를 찾을 수 없습니다."}</p>
+        <Link href="/library" className="text-blue-600 hover:underline">
+          라이브러리로 돌아가기
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    // 전체 페이지 컨테이너 (네브바 높이 제외, 스크롤 방지)
-    <div className="flex h-[calc(100vh-64px)] w-full gap-6 p-6 bg-[#F8FAFC] box-border">
-      {/* [왼쪽 영역] 플레이어 + 차트 + 정보 (스크롤 가능) */}
-      <div className="flex flex-col flex-1 gap-6 overflow-y-auto pr-2 custom-scrollbar">
-        {/* 1. 영상 플레이어 (검은색 영역) */}
+    <div className="flex h-[calc(100vh-64px)] w-full gap-6 p-6 bg-[#F8FAFC] box-border relative">
+      <div className="flex flex-col flex-1 gap-6 overflow-y-auto pr-2 custom-scrollbar min-w-0">
+        <div className="shrink-0">
+          <Link
+            href="/library"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium mb-2"
+          >
+            <span>←</span> Back
+          </Link>
+        </div>
         <section className="w-full bg-black rounded-xl overflow-hidden shadow-sm aspect-video shrink-0">
-          <VideoPlayer videoId={videoId} />
+          <VideoPlayer videoUrl={video.videoUrl ?? undefined} />
         </section>
 
-        {/* 2. 타임라인 & 분석 차트 */}
         <section className="w-full bg-white rounded-xl p-6 shadow-sm min-h-[200px] border border-gray-100">
           <h3 className="text-sm font-bold text-gray-800 mb-4">
             타임라인 - 시간별 댓글 분석
@@ -29,21 +115,51 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
           <AnalysisChart />
         </section>
 
-        {/* 3. 영상 정보 & 버튼들 (다운로드, 쇼츠 생성 등) */}
+        <section className="w-full bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <TrimSection
+            durationSec={parseDurationToSeconds(video.duration)}
+            startSec={trimStart}
+            endSec={trimEnd}
+            onStartChange={setTrimStart}
+            onEndChange={setTrimEnd}
+          />
+        </section>
+
         <section className="w-full bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
-          <VideoInfoSection videoId={videoId} />
+          <VideoInfoSection
+            video={video}
+            onDownload={() => setDownloadModalOpen(true)}
+            onSaveTrim={handleSaveTrim}
+          />
         </section>
       </div>
 
-      {/* [오른쪽 영역] 사이드바 (영상 목록, 고정 크기) */}
       <aside className="w-[360px] shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
         <div className="p-5 border-b border-gray-100 font-bold text-gray-900">
           영상 목록
         </div>
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-          <VideoSidebar videoId={videoId} />
+          <VideoSidebar video={video} onClipClick={handleClipClick} />
         </div>
       </aside>
+
+      <DownloadVideoModal
+        open={downloadModalOpen}
+        onClose={() => setDownloadModalOpen(false)}
+        video={video}
+      />
+      <ShortsPlaybackModal
+        open={!!playbackClip}
+        onClose={() => setPlaybackClip(null)}
+        clip={playbackClip ?? undefined}
+      />
     </div>
   );
 };
+
+function parseDurationToSeconds(duration: string): number {
+  const parts = duration.trim().split(":").map(Number);
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  return 0;
+}

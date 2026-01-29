@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { apiClient } from "@/shared/api/client";
 import {
-  VideoListResponseSchema,
+  VideoListDataSchema,
   type Video,
   type VideoType,
 } from "@/entities/video/model";
@@ -15,25 +15,25 @@ export function useVideoLibrary() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        setIsLoading(true);
-        const url =
-          filter !== "all"
-            ? `/api/library/videos?type=${filter}`
-            : "/api/library/videos";
-        const response = await apiClient.get(url, VideoListResponseSchema);
-        setVideos(response.videos);
-      } catch (error) {
-        console.error("비디오 목록 조회 실패:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchVideos();
+  const fetchVideos = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const url =
+        filter !== "all"
+          ? `/api/library/videos?type=${filter}`
+          : "/api/library/videos";
+      const response = await apiClient.get(url, VideoListDataSchema);
+      setVideos(response.videos);
+    } catch (error) {
+      console.error("비디오 목록 조회 실패:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [filter]);
+
+  useEffect(() => {
+    fetchVideos();
+  }, [fetchVideos]);
 
   const handleMoreClick = (video: Video) => {
     console.log("More clicked:", video);
@@ -45,5 +45,6 @@ export function useVideoLibrary() {
     setFilter,
     isLoading,
     handleMoreClick,
+    refetch: fetchVideos,
   };
 }

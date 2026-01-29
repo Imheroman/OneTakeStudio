@@ -110,8 +110,14 @@ export const RecentStudioListResponseSchema = z.object({
 // 스튜디오 생성 요청 스키마 (백엔드 CreateStudioRequest)
 // 백엔드는 name과 template만 받음
 export const CreateStudioRequestSchema = z.object({
-  name: z.string().min(1, "스튜디오 이름을 입력해주세요.").max(100, "스튜디오 이름은 100자를 초과할 수 없습니다."),
-  template: z.string().max(50, "템플릿 이름은 50자를 초과할 수 없습니다.").optional(),
+  name: z
+    .string()
+    .min(1, "스튜디오 이름을 입력해주세요.")
+    .max(100, "스튜디오 이름은 100자를 초과할 수 없습니다."),
+  template: z
+    .string()
+    .max(50, "템플릿 이름은 50자를 초과할 수 없습니다.")
+    .optional(),
 });
 
 // 스튜디오 생성 응답 스키마 (ApiResponse<StudioDetailResponse>)
@@ -120,6 +126,31 @@ export const CreateStudioResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
   data: StudioSchema,
+});
+
+// 스튜디오 멤버 응답 스키마 (백엔드 StudioMemberResponse)
+export const StudioMemberResponseSchema = z.object({
+  memberId: z.number(),
+  userId: z.number(),
+  nickname: z.string(),
+  email: z.string(),
+  profileImageUrl: z.string().nullable().optional(),
+  role: z.enum(["owner", "admin", "member"]),
+  joinedAt: z.string(),
+});
+
+export const InviteMemberRequestSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["ADMIN", "MEMBER"]),
+});
+
+export const InviteResponseSchema = z.object({
+  inviteId: z.string(),
+  studioId: z.number(),
+  email: z.string(),
+  role: z.string(),
+  status: z.string(),
+  expiresAt: z.string(),
 });
 
 // 스튜디오 상세 정보 스키마
@@ -144,3 +175,6 @@ export type StudioDetail = z.infer<typeof StudioDetailSchema>;
 export type SceneResponse = z.infer<typeof SceneResponseSchema>;
 export type CreateSceneRequest = z.infer<typeof CreateSceneRequestSchema>;
 export type UpdateSceneRequest = z.infer<typeof UpdateSceneRequestSchema>;
+export type StudioMemberResponse = z.infer<typeof StudioMemberResponseSchema>;
+export type InviteMemberRequest = z.infer<typeof InviteMemberRequestSchema>;
+export type InviteResponse = z.infer<typeof InviteResponseSchema>;

@@ -48,14 +48,16 @@ export function FavoriteTable({
       </TableHeader>
       <TableBody>
         {favorites.map((favorite) => (
-          <TableRow key={favorite.id}>
-            <TableCell className="font-medium">{favorite.id}</TableCell>
+          <TableRow key={favorite.favoriteId ?? favorite.userId}>
+            <TableCell className="font-medium">
+              {favorite.favoriteId ?? favorite.userId}
+            </TableCell>
             <TableCell>{favorite.nickname}</TableCell>
             <TableCell className="text-right">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onDelete(favorite.id)}
+                onClick={() => onDelete(favorite.favoriteId ?? favorite.userId)}
                 className="text-red-500 hover:text-red-700 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4" />

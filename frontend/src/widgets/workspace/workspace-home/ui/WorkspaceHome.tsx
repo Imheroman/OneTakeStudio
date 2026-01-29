@@ -36,7 +36,8 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
       <PageHeader
         title={
           <>
-            <span className="text-indigo-600">{userName ?? userId}</span>님, 반가워요!
+            <span className="text-indigo-600">{userName ?? userId}</span>님,
+            반가워요!
           </>
         }
         description="오늘도 당신만의 멋진 방송을 만들어보세요."
@@ -92,13 +93,19 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                    <TableCell
+                      colSpan={3}
+                      className="text-center text-gray-500 py-8"
+                    >
                       로딩 중...
                     </TableCell>
                   </TableRow>
                 ) : recentStudios.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                    <TableCell
+                      colSpan={3}
+                      className="text-center text-gray-500 py-8"
+                    >
                       최근 스튜디오가 없습니다.
                     </TableCell>
                   </TableRow>
