@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, Save } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 import type { Scene } from "@/entities/studio/model";
@@ -11,6 +11,7 @@ interface ScenesPanelProps {
   onSceneSelect: (sceneId: string) => void;
   onAddScene: () => void;
   onRemoveScene: (sceneId: string) => void;
+  onSaveLayout?: () => void;
 }
 
 export function ScenesPanel({
@@ -19,6 +20,7 @@ export function ScenesPanel({
   onSceneSelect,
   onAddScene,
   onRemoveScene,
+  onSaveLayout,
 }: ScenesPanelProps) {
   return (
     <div className="space-y-3">
@@ -63,7 +65,18 @@ export function ScenesPanel({
           </div>
         ))}
       </div>
-      <div className="flex gap-2 pt-2">
+      <div className="flex flex-col gap-2 pt-2">
+        {onSaveLayout && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSaveLayout}
+            className="w-full bg-indigo-900/30 text-indigo-300 hover:bg-indigo-800/50 border-indigo-600"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            레이아웃 저장
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

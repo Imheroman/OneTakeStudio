@@ -40,27 +40,27 @@
 
 ---
 
-## Phase 2: 소스 등록 및 씬별 반영 (커밋 2)
+## Phase 2: 소스 등록 및 씬별 반영 (커밋 2) ✅
 
 **목표**: 웹캠/마이크 등 소스 추가, ON/OFF, 선택한 씬의 layout에 소스 구성 저장.
 
-- [ ] 소스 추가: “Add Source” → 디바이스 선택(비디오/오디오) → getUserMedia로 소스 목록에 추가
-- [ ] 소스 ON/OFF: 기존 `handleSourceToggle` 유지, 프리뷰 반영
-- [ ] 씬 전환 시: 해당 씬의 `layout.elements`를 소스 목록과 매핑 (id, type, visible 등)
-- [ ] 씬 수정 시: 현재 active 씬의 layout을 현재 소스 구성으로 PUT 업데이트
+- [x] 소스 추가: “Add Source” → 디바이스 선택(비디오/오디오) → getUserMedia로 소스 목록에 추가
+- [x] 소스 ON/OFF: 기존 `handleSourceToggle` 유지, 프리뷰 반영
+- [x] 씬 전환 시: 해당 씬의 `layout.elements`를 소스 목록과 매핑 (id, type, visible 등)
+- [x] 씬 수정 시: 현재 active 씬의 layout을 현재 소스 구성으로 PUT 업데이트
 
 **커밋 메시지 제안**:  
 `feat(studio): 소스 추가(웹캠/마이크) 및 씬별 레이아웃 저장`
 
 ---
 
-## Phase 3: 오디오 레벨 시각화 (커밋 3)
+## Phase 3: 오디오 레벨 시각화 (커밋 3) ✅
 
 **목표**: 마이크 입력 레벨을 시각적으로 표시(레벨 미터).
 
-- [ ] Web Audio API: getUserMedia(audio) → AudioContext → AnalyserNode → 주기적 레벨 샘플
-- [ ] ControlBar 또는 소스 패널 옆에 작은 레벨 미터(막대/원형) 표시
-- [ ] 백엔드 없음, 프론트 전용
+- [x] Web Audio API: getUserMedia(audio) → AudioContext → AnalyserNode → 주기적 레벨 샘플
+- [x] ControlBar 마이크 버튼 옆에 세로 레벨 미터(막대) 표시
+- [x] 백엔드 없음, 프론트 전용 (useAudioLevel 훅)
 
 **커밋 메시지 제안**:  
 `feat(studio): 마이크 오디오 레벨 시각화`

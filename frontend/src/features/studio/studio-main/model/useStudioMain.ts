@@ -42,10 +42,45 @@ export function useStudioMain(studioId: string) {
     [],
   );
 
-  const displaySources = useMemo(() => {
-    const sources = (studio as { sources?: Source[] })?.sources;
-    return sources && sources.length > 0 ? sources : [defaultVideoSource];
-  }, [studio, defaultVideoSource]);
+  const [sources, setSources] = useState<Source[]>([defaultVideoSource]);
+  const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
+
+  const displaySources = sources;
+
+  const layoutElementsToSources = useCallback(
+    (elements: unknown[] | null | undefined): Source[] => {
+      if (!elements?.length) return [defaultVideoSource];
+      const list = elements
+        .filter(
+          (e): e is Record<string, unknown> =>
+            e != null && typeof e === "object" && "id" in e && "type" in e,
+        )
+        .map((e) => ({
+          id: String(e.id),
+          type: (e.type as Source["type"]) || "video",
+          name: (e.name as string) || String(e.type),
+          isVisible: e.visible !== false,
+        }));
+      const hasVideo = list.some((s) => s.type === "video");
+      return hasVideo ? list : [defaultVideoSource, ...list];
+    },
+    [defaultVideoSource],
+  );
+
+  const activeScene = useMemo(() => {
+    const list = studio?.scenes ?? [];
+    const id = activeSceneId ? Number(activeSceneId) : undefined;
+    return id ? list.find((s) => s.sceneId === id) : null;
+  }, [studio?.scenes, activeSceneId]);
+
+  useEffect(() => {
+    if (!activeScene) {
+      setSources([defaultVideoSource]);
+      return;
+    }
+    const elements = activeScene.layout?.elements;
+    setSources(layoutElementsToSources(Array.isArray(elements) ? elements : []));
+  }, [activeScene?.sceneId, activeScene?.layout?.elements, layoutElementsToSources, defaultVideoSource]);
 
   const scenesForPanel: Scene[] = useMemo(() => {
     const list = studio?.scenes ?? [];
@@ -128,12 +163,57 @@ export function useStudioMain(studioId: string) {
   };
 
   const handleAddSource = () => {
-    console.log("Add Source");
+    setShowAddSourceDialog(true);
   };
 
-  const handleSourceToggle = (sourceId: string) => {
-    console.log("Toggle Source:", sourceId);
-  };
+  const handleAddSourceConfirm = useCallback(
+    (type: "video" | "audio") => {
+      const id =
+        type === "video"
+          ? `video-${Date.now()}`
+          : `audio-${Date.now()}`;
+      const name = type === "video" ? "웹캠" : "마이크";
+      setSources((prev) => [
+        ...prev,
+        { id, type, name, isVisible: true },
+      ]);
+      setShowAddSourceDialog(false);
+    },
+    [],
+  );
+
+  const handleSourceToggle = useCallback((sourceId: string) => {
+    setSources((prev) =>
+      prev.map((s) =>
+        s.id === sourceId ? { ...s, isVisible: !s.isVisible } : s,
+      ),
+    );
+  }, []);
+
+  const handleSaveSceneLayout = useCallback(async () => {
+    const sid = Number(studioId);
+    const sceneIdNum = Number(activeSceneId);
+    if (Number.isNaN(sid) || Number.isNaN(sceneIdNum) || !activeSceneId) return;
+    try {
+      const layout = {
+        type: currentLayout,
+        elements: sources.map((s) => ({
+          id: s.id,
+          type: s.type,
+          name: s.name,
+          visible: s.isVisible,
+        })),
+      };
+      await apiClient.put(
+        `/api/studios/${sid}/scenes/${sceneIdNum}`,
+        z.object({ success: z.boolean(), message: z.string().optional(), data: SceneResponseSchema }),
+        { layout },
+      );
+      await fetchStudio();
+    } catch (error) {
+      console.error("씬 레이아웃 저장 실패:", error);
+    }
+  }, [studioId, activeSceneId, currentLayout, sources, fetchStudio]);
 
   const handleExit = () => {
     if (confirm("스튜디오를 나가시겠습니까?")) {
@@ -165,8 +245,12 @@ export function useStudioMain(studioId: string) {
     handleAddScene,
     handleRemoveScene,
     handleAddSource,
+    handleAddSourceConfirm,
     handleSourceToggle,
+    handleSaveSceneLayout,
     handleExit,
+    showAddSourceDialog,
+    setShowAddSourceDialog,
     setIsVideoEnabled: setIsVideoEnabledState,
     setIsAudioEnabled: setIsAudioEnabledState,
   };

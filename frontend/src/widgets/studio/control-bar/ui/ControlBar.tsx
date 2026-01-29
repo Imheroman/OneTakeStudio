@@ -7,6 +7,7 @@ import { cn } from "@/shared/lib/utils";
 interface ControlBarProps {
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
+  audioLevel?: number;
   onVideoToggle: () => void;
   onAudioToggle: () => void;
   onSettings: () => void;
@@ -16,6 +17,7 @@ interface ControlBarProps {
 export function ControlBar({
   isVideoEnabled,
   isAudioEnabled,
+  audioLevel = 0,
   onVideoToggle,
   onAudioToggle,
   onSettings,
@@ -37,19 +39,32 @@ export function ControlBar({
         <Camera className="h-5 w-5" />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onAudioToggle}
-        className={cn(
-          "h-12 w-12",
-          isAudioEnabled
-            ? "bg-indigo-600 text-white hover:bg-indigo-700"
-            : "bg-gray-700 text-gray-400 hover:bg-gray-600",
+      <div className="flex items-center gap-1.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onAudioToggle}
+          className={cn(
+            "h-12 w-12",
+            isAudioEnabled
+              ? "bg-indigo-600 text-white hover:bg-indigo-700"
+              : "bg-gray-700 text-gray-400 hover:bg-gray-600",
+          )}
+        >
+          <Mic className="h-5 w-5" />
+        </Button>
+        {isAudioEnabled && (
+          <div
+            className="h-10 w-2 rounded-full bg-gray-700 overflow-hidden flex flex-col justify-end"
+            title="마이크 레벨"
+          >
+            <div
+              className="w-full bg-indigo-500 transition-all duration-75 rounded-full"
+              style={{ height: `${Math.round(audioLevel * 100)}%` }}
+            />
+          </div>
         )}
-      >
-        <Mic className="h-5 w-5" />
-      </Button>
+      </div>
 
       <Button
         variant="ghost"

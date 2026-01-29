@@ -7,7 +7,9 @@ import { ScenesPanel } from "@/widgets/studio/scenes-panel";
 import { SourcesPanel } from "@/widgets/studio/sources-panel";
 import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
+import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
 import { useStudioMain } from "@/features/studio/studio-main";
+import { useAudioLevel } from "@/hooks/studio";
 
 interface StudioMainProps {
   studioId: string;
@@ -30,11 +32,17 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleAddScene,
     handleRemoveScene,
     handleAddSource,
+    handleAddSourceConfirm,
     handleSourceToggle,
+    handleSaveSceneLayout,
     handleExit,
+    showAddSourceDialog,
+    setShowAddSourceDialog,
     setIsVideoEnabled,
     setIsAudioEnabled,
   } = useStudioMain(studioId);
+
+  const audioLevel = useAudioLevel(isAudioEnabled);
 
   if (isLoading) {
     return (
@@ -88,6 +96,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 onSceneSelect={handleSceneSelect}
                 onAddScene={handleAddScene}
                 onRemoveScene={handleRemoveScene}
+                onSaveLayout={activeSceneId ? handleSaveSceneLayout : undefined}
               />
             </div>
 
@@ -98,12 +107,19 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 onSourceToggle={handleSourceToggle}
               />
             </div>
+
+            <AddSourceDialog
+              open={showAddSourceDialog}
+              onOpenChange={setShowAddSourceDialog}
+              onSelect={handleAddSourceConfirm}
+            />
           </div>
 
           <div className="shrink-0">
             <ControlBar
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
+              audioLevel={audioLevel}
               onVideoToggle={() => setIsVideoEnabled(!isVideoEnabled)}
               onAudioToggle={() => setIsAudioEnabled(!isAudioEnabled)}
               onSettings={() => console.log("Settings")}
