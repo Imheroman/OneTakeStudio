@@ -4,6 +4,10 @@ import com.onetake.common.dto.ApiResponse;
 import com.onetake.core.destination.exception.DestinationAlreadyExistsException;
 import com.onetake.core.destination.exception.DestinationException;
 import com.onetake.core.destination.exception.DestinationNotFoundException;
+import com.onetake.core.library.exception.ClipGenerationInProgressException;
+import com.onetake.core.library.exception.ClipNotFoundException;
+import com.onetake.core.library.exception.RecordingAccessDeniedException;
+import com.onetake.core.library.exception.RecordingNotFoundException;
 import com.onetake.core.studio.exception.*;
 import com.onetake.core.user.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -126,6 +130,38 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler(RecordingNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRecordingNotFoundException(RecordingNotFoundException e) {
+        log.warn("RecordingNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(RecordingAccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRecordingAccessDeniedException(RecordingAccessDeniedException e) {
+        log.warn("RecordingAccessDeniedException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(ClipGenerationInProgressException.class)
+    public ResponseEntity<ApiResponse<Void>> handleClipGenerationInProgressException(ClipGenerationInProgressException e) {
+        log.warn("ClipGenerationInProgressException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
+    @ExceptionHandler(ClipNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleClipNotFoundException(ClipNotFoundException e) {
+        log.warn("ClipNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
     }
 
     @ExceptionHandler(Exception.class)
