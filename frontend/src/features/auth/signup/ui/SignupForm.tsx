@@ -7,6 +7,10 @@ import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
+import {
+  getHttpErrorStatus,
+  getHttpErrorMessage,
+} from "@/shared/lib/error-utils";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { SimpleResponseSchema, type SignupRequest } from "@/entities/user/model";
 
@@ -114,10 +118,10 @@ export function SignupForm() {
       setIsCodeSent(true);
       setIsEmailVerified(false); // 새 코드 발송 시 인증 상태 초기화
       alert("인증 코드가 이메일로 발송되었습니다.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("인증 코드 발송 에러:", error);
       setServerError(
-        error.message || error.response?.data?.message || "인증 코드 발송에 실패했습니다."
+        getHttpErrorMessage(error, "인증 코드 발송에 실패했습니다.")
       );
     } finally {
       setIsSendingCode(false);
@@ -151,9 +155,12 @@ export function SignupForm() {
 
       setIsEmailVerified(true);
       alert("이메일 인증이 완료되었습니다.");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("이메일 인증 에러:", error);
-      const errorMessage = error.response?.data?.message || error.message || "인증 코드가 올바르지 않습니다.";
+      const errorMessage = getHttpErrorMessage(
+        error,
+        "인증 코드가 올바르지 않습니다."
+      );
       form.setError("verificationCode", { message: errorMessage });
       setServerError(errorMessage);
     } finally {
@@ -196,28 +203,34 @@ export function SignupForm() {
         alert("회원가입이 완료되었습니다. 로그인해주세요.");
         router.push("/login");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("회원가입 에러:", error);
-      
+
+      const status = getHttpErrorStatus(error);
       // 400 Bad Request 에러 상세 로깅
-      if (error.response?.status === 400) {
-        const responseData = error.response?.data;
+      if (status === 400 && error && typeof error === "object" && "response" in error) {
+        const res = (error as { response?: { data?: { message?: string } | string; headers?: unknown } })
+          .response;
+        const responseData = res?.data;
         console.error("400 Bad Request 상세:", {
-          status: error.response.status,
-          data: responseData,
+          status,
+          data: res?.data,
           requestData: signupData,
-          headers: error.response.headers,
+          headers: res?.headers,
         });
-        
+
         // 백엔드 ApiResponse 형식: { resultCode, success, message, data, errorCode }
         let errorMessage = "회원가입 요청이 올바르지 않습니다.";
-        
-        if (responseData?.message) {
-          errorMessage = responseData.message;
-        } else if (typeof responseData === 'string') {
-          errorMessage = responseData;
-        }
-        
+        const msg =
+          responseData &&
+          typeof responseData === "object" &&
+          "message" in responseData
+            ? (responseData as { message?: string }).message
+            : typeof responseData === "string"
+              ? responseData
+              : undefined;
+        if (msg) errorMessage = msg;
+
         // 일반적인 400 에러 원인 안내
         if (errorMessage.includes("인증") || errorMessage.includes("verification")) {
           errorMessage += " 이메일 인증 코드를 다시 확인해주세요.";
@@ -226,17 +239,21 @@ export function SignupForm() {
         } else if (errorMessage.includes("닉네임") || errorMessage.includes("nickname")) {
           errorMessage += " 닉네임은 2-20자이며 중복되지 않아야 합니다.";
         }
-        
+
         setServerError(errorMessage);
-      } else if (error.message?.includes("Network Error") || error.code === "ERR_NETWORK") {
+      } else if (
+        error instanceof Error &&
+        (error.message?.includes("Network Error") || (error as { code?: string }).code === "ERR_NETWORK")
+      ) {
         setServerError("네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.");
-      } else if (error.message?.includes("API 응답 검증 실패")) {
+      } else if (
+        error instanceof Error &&
+        error.message?.includes("API 응답 검증 실패")
+      ) {
         setServerError("서버 응답 형식이 올바르지 않습니다.");
       } else {
         setServerError(
-          error.message || 
-          error.response?.data?.message || 
-          "회원가입 중 문제가 발생했습니다."
+          getHttpErrorMessage(error, "회원가입 중 문제가 발생했습니다.")
         );
       }
     } finally {

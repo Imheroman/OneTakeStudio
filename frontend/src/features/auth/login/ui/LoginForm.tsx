@@ -7,6 +7,10 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
+import {
+  getHttpErrorStatus,
+  getHttpErrorMessage,
+} from "@/shared/lib/error-utils";
 import { useState } from "react";
 import { AuthResponseSchema } from "@/entities/user/model";
 
@@ -98,10 +102,10 @@ export function LoginForm() {
           router.push(`/workspace/${user.userId}`);
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("로그인 에러:", error);
-      const status = error?.response?.status;
-      
+      const status = getHttpErrorStatus(error);
+
       if (status === 503) {
         setErrorMsg(
           "서비스를 사용할 수 없습니다 (503).\n" +
@@ -121,7 +125,7 @@ export function LoginForm() {
       }
       
       setErrorMsg(
-        error.response?.data?.message || "이메일 또는 비밀번호를 확인해주세요.",
+        getHttpErrorMessage(error, "이메일 또는 비밀번호를 확인해주세요.")
       );
     } finally {
       setIsSubmitting(false);

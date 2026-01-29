@@ -12,9 +12,12 @@ export function ApiAuthProvider() {
   useEffect(() => {
     const interceptorId = axiosInstance.interceptors.request.use(
       (config) => {
-        const accessToken = useAuthStore.getState().accessToken;
+        const { accessToken, user } = useAuthStore.getState();
         if (accessToken && config.headers) {
           config.headers.Authorization = `Bearer ${accessToken}`;
+        }
+        if (user?.userId && config.headers) {
+          config.headers["X-User-Id"] = user.userId;
         }
         return config;
       },

@@ -103,10 +103,12 @@ function OAuthCallbackContent() {
             router.push(`/workspace/${userId}`);
           }, 1000);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("OAuth 콜백 처리 실패:", error);
         setStatus("error");
-        setMessage(error.message || "로그인 중 오류가 발생했습니다.");
+        setMessage(
+          error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다."
+        );
       }
     };
 

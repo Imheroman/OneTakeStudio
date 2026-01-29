@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { VideoPlayer } from "@/features/library/video-library/ui/video-player";
-import { VideoSidebar } from "@/features/library/video-library/ui/video-sidebar";
-import { AnalysisChart } from "@/features/library/video-library/ui/analysis-chart";
-import { VideoInfoSection } from "@/features/library/video-library/ui/video-info-section";
-import { TrimSection } from "@/features/library/video-library/ui/trim-section";
+import {
+  VideoPlayer,
+  VideoSidebar,
+  AnalysisChart,
+  VideoInfoSection,
+  TrimSection,
+} from "@/features/library/video-library";
 import { DownloadVideoModal } from "@/widgets/library/download-video-modal";
 import { ShortsPlaybackModal } from "@/widgets/library/shorts-playback-modal";
 import { apiClient } from "@/shared/api/client";

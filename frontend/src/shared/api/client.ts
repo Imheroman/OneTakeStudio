@@ -1,6 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { z, ZodTypeAny } from "zod";
-import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -215,21 +214,7 @@ export const apiClient = {
   },
 };
 
-// 3. 요청 인터셉터: 토큰 + X-User-Id (백엔드 Library/Media API용)
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const { accessToken, user } = useAuthStore.getState();
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    if (user?.userId && config.headers) {
-      config.headers["X-User-Id"] = user.userId;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
-
+// 3. 요청 인터셉터는 app 레이어(ApiAuthProvider)에서 등록 (FSD: shared는 stores 미참조)
 // 4. 응답 인터셉터: 공통 에러 핸들링
 axiosInstance.interceptors.response.use(
   (response) => response,

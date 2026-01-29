@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
+import { getHttpErrorMessage } from "@/shared/lib/error-utils";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 function ChannelsOAuthCallbackContent() {
@@ -55,11 +56,11 @@ function ChannelsOAuthCallbackContent() {
         setTimeout(() => {
           router.push("/channels");
         }, 2000);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("OAuth 콜백 처리 실패:", error);
         setStatus("error");
         setMessage(
-          error.response?.data?.message || "채널 연결 중 오류가 발생했습니다.",
+          getHttpErrorMessage(error, "채널 연결 중 오류가 발생했습니다.")
         );
       }
     };
