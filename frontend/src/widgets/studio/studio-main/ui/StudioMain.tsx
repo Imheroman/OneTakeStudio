@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { ChevronUp, ChevronDown } from "lucide-react";
+import { Button } from "@/shared/ui/button";
 import { StudioHeader } from "@/widgets/studio/studio-header";
 import { PreviewArea } from "@/widgets/studio/preview-area";
 import { StagingArea } from "@/widgets/studio/staging-area";
@@ -19,6 +21,7 @@ interface StudioMainProps {
 
 export function StudioMain({ studioId }: StudioMainProps) {
   const getPreviewStreamRef = useRef<(() => MediaStream | null) | null>(null);
+  const [toolbarExpanded, setToolbarExpanded] = useState(true);
 
   const {
     studio,
@@ -47,6 +50,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleRemoveFromStage,
     handleReorderSources,
     handleBringSourceToFront,
+    handleSaveSceneLayout,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
@@ -86,7 +90,25 @@ export function StudioMain({ studioId }: StudioMainProps) {
 
   return (
     <div className="flex h-screen bg-gray-900 overflow-hidden">
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* 왼쪽 사이드바: 씬 */}
+      <aside className="shrink-0 w-56 border-r border-gray-700 bg-gray-800/95 flex flex-col overflow-hidden">
+        <div className="p-3 border-b border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-300">Scenes</h3>
+        </div>
+        <div className="flex-1 overflow-auto p-3">
+          <ScenesPanel
+            scenes={scenesForPanel}
+            activeSceneId={activeSceneId}
+            onSceneSelect={handleSceneSelect}
+            onAddScene={handleAddScene}
+            onRemoveScene={handleRemoveScene}
+            onSaveScene={handleSaveSceneLayout}
+            isEditMode={isEditMode}
+          />
+        </div>
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <StudioHeader
           studioTitle={studio.name}
           onGoLive={handleGoLive}
@@ -95,7 +117,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
           onEditModeToggle={() => setIsEditMode((v) => !v)}
         />
 
-        <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+        {/* 콘텐츠: 전체 높이 사용, 하단 툴바에 밀리지 않음 */}
+        <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden min-h-0">
           <div className="flex-1 min-h-0">
             <PreviewArea
               className="h-full"
@@ -136,45 +159,54 @@ export function StudioMain({ studioId }: StudioMainProps) {
               savedLayoutsCount={3}
             />
           </div>
+        </div>
 
-          <div className="shrink-0 min-h-0">
-            <div className="bg-gray-800 rounded-lg border border-gray-700 p-4 overflow-auto">
-              <ScenesPanel
-                scenes={scenesForPanel}
-                activeSceneId={activeSceneId}
-                onSceneSelect={handleSceneSelect}
-                onAddScene={handleAddScene}
-                onRemoveScene={handleRemoveScene}
+        {/* 하단 툴바: 콘텐츠 위에 겹침(오버레이) */}
+        <div className="absolute bottom-0 left-0 right-0 z-10 border-t border-gray-700 bg-gray-800/95 shadow-[0_-4px_12px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center justify-center py-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setToolbarExpanded((v) => !v)}
+              className="h-8 w-8 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded"
+              title={toolbarExpanded ? "툴바 접기 (↓)" : "툴바 펼치기 (↑)"}
+              aria-label={toolbarExpanded ? "툴바 접기" : "툴바 펼치기"}
+            >
+              {toolbarExpanded ? (
+                <ChevronDown className="h-5 w-5" />
+              ) : (
+                <ChevronUp className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
+          {toolbarExpanded && (
+            <div className="px-4 pb-2">
+              <ControlBar
+                resolution={previewResolution}
+                onResolutionChange={setPreviewResolution}
+                isVideoEnabled={isVideoEnabled}
+                isAudioEnabled={isAudioEnabled}
+                audioLevel={audioLevel}
+                onVideoToggle={() => setIsVideoEnabled(!isVideoEnabled)}
+                onAudioToggle={() => setIsAudioEnabled(!isAudioEnabled)}
+                onSettings={() => console.log("Settings")}
+                onExit={handleExit}
+                isRecordingLocal={isRecordingLocal}
+                isRecordingCloud={isRecordingCloud}
+                onStartLocalRecording={handleStartLocalRecording}
+                onStopLocalRecording={handleStopLocalRecording}
+                onStartCloudRecording={handleStartCloudRecording}
+                onStopCloudRecording={handleStopCloudRecording}
               />
             </div>
-
-            <AddSourceDialog
-              open={showAddSourceDialog}
-              onOpenChange={setShowAddSourceDialog}
-              onSelect={handleAddSourceConfirm}
-            />
-          </div>
-
-          <div className="shrink-0">
-            <ControlBar
-              resolution={previewResolution}
-              onResolutionChange={setPreviewResolution}
-              isVideoEnabled={isVideoEnabled}
-              isAudioEnabled={isAudioEnabled}
-              audioLevel={audioLevel}
-              onVideoToggle={() => setIsVideoEnabled(!isVideoEnabled)}
-              onAudioToggle={() => setIsAudioEnabled(!isAudioEnabled)}
-              onSettings={() => console.log("Settings")}
-              onExit={handleExit}
-              isRecordingLocal={isRecordingLocal}
-              isRecordingCloud={isRecordingCloud}
-              onStartLocalRecording={handleStartLocalRecording}
-              onStopLocalRecording={handleStopLocalRecording}
-              onStartCloudRecording={handleStartCloudRecording}
-              onStopCloudRecording={handleStopCloudRecording}
-            />
-          </div>
+          )}
         </div>
+
+        <AddSourceDialog
+          open={showAddSourceDialog}
+          onOpenChange={setShowAddSourceDialog}
+          onSelect={handleAddSourceConfirm}
+        />
       </div>
 
       <StudioSidebar />

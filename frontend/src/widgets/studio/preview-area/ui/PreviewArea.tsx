@@ -20,6 +20,43 @@ const RESOLUTION_SIZE: Record<PreviewResolution, { width: number; height: number
   "1080p": { width: 1920, height: 1080 },
 };
 
+const SNAP_GRID = 8;
+const SNAP_THRESHOLD = 8;
+
+function snapToGrid(value: number, grid: number): number {
+  return Math.round(value / grid) * grid;
+}
+
+function snapPosition(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  stageWidth: number,
+  stageHeight: number,
+): { x: number; y: number } {
+  let nx = x;
+  let ny = y;
+  if (Math.abs(x) <= SNAP_THRESHOLD) nx = 0;
+  else if (Math.abs(x + width - stageWidth) <= SNAP_THRESHOLD) nx = stageWidth - width;
+  else if (Math.abs(x + width / 2 - stageWidth / 2) <= SNAP_THRESHOLD) nx = stageWidth / 2 - width / 2;
+  else nx = snapToGrid(x, SNAP_GRID);
+
+  if (Math.abs(y) <= SNAP_THRESHOLD) ny = 0;
+  else if (Math.abs(y + height - stageHeight) <= SNAP_THRESHOLD) ny = stageHeight - height;
+  else if (Math.abs(y + height / 2 - stageHeight / 2) <= SNAP_THRESHOLD) ny = stageHeight / 2 - height / 2;
+  else ny = snapToGrid(y, SNAP_GRID);
+
+  return { x: nx, y: ny };
+}
+
+function snapSize(width: number, height: number): { width: number; height: number } {
+  return {
+    width: Math.max(1, snapToGrid(width, SNAP_GRID)),
+    height: Math.max(1, snapToGrid(height, SNAP_GRID)),
+  };
+}
+
 interface PreviewAreaProps {
   className?: string;
   layout?: LayoutType;
@@ -410,26 +447,42 @@ export function PreviewArea({
                     draggable={isEditMode}
                     onDragEnd={(e) => {
                       const node = e.target;
-                      setSourceTransform?.(source.id, {
-                        x: node.x(),
-                        y: node.y(),
-                      });
+                      const tx = node.x();
+                      const ty = node.y();
+                      const snapped = snapPosition(
+                        tx,
+                        ty,
+                        transform.width,
+                        transform.height,
+                        stageWidth,
+                        stageHeight,
+                      );
+                      setSourceTransform?.(source.id, { x: snapped.x, y: snapped.y });
                     }}
                     onTransformEnd={(e) => {
                       const node = e.target as Konva.Group;
                       const rect = node.getClientRect();
+                      const snappedPos = snapPosition(
+                        rect.x,
+                        rect.y,
+                        rect.width,
+                        rect.height,
+                        stageWidth,
+                        stageHeight,
+                      );
+                      const snappedSize = snapSize(rect.width, rect.height);
                       setSourceTransform?.(source.id, {
-                        x: rect.x,
-                        y: rect.y,
-                        width: Math.max(1, rect.width),
-                        height: Math.max(1, rect.height),
+                        x: snappedPos.x,
+                        y: snappedPos.y,
+                        width: snappedSize.width,
+                        height: snappedSize.height,
                       });
                       node.scaleX(1);
                       node.scaleY(1);
-                      node.position({ x: rect.x, y: rect.y });
+                      node.position({ x: snappedPos.x, y: snappedPos.y });
                       node.getChildren().forEach((child) => {
-                        child.width(rect.width);
-                        child.height(rect.height);
+                        child.width(snappedSize.width);
+                        child.height(snappedSize.height);
                       });
                     }}
                   >

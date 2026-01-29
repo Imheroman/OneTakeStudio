@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, Save } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 import type { Scene } from "@/entities/studio/model";
@@ -11,6 +11,9 @@ interface ScenesPanelProps {
   onSceneSelect: (sceneId: string) => void;
   onAddScene: () => void;
   onRemoveScene: (sceneId: string) => void;
+  /** 편집 모드일 때만 표시. Live 시 씬 저장 비활성화(전환만 허용). */
+  onSaveScene?: () => void;
+  isEditMode?: boolean;
 }
 
 export function ScenesPanel({
@@ -19,6 +22,8 @@ export function ScenesPanel({
   onSceneSelect,
   onAddScene,
   onRemoveScene,
+  onSaveScene,
+  isEditMode = true,
 }: ScenesPanelProps) {
   return (
     <div className="space-y-3">
@@ -64,6 +69,17 @@ export function ScenesPanel({
         ))}
       </div>
       <div className="flex flex-col gap-2 pt-2">
+        {isEditMode && onSaveScene && activeSceneId && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSaveScene}
+            className="flex-1 bg-indigo-900/40 text-indigo-200 hover:bg-indigo-800/60 border-indigo-600"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            씬 저장
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

@@ -22,6 +22,7 @@ import {
   getPreferredVideoDeviceId,
   getPreferredAudioDeviceId,
 } from "@/shared/lib/device-preferences";
+import { useAdaptivePerformance } from "@/hooks/studio";
 
 const ApiResponseSceneSchema = z.object({
   success: z.boolean(),
@@ -64,6 +65,13 @@ export function useStudioMain(
   const [previewResolution, setPreviewResolution] = useState<"720p" | "1080p">("720p");
   /** 소스별 위치·크기·zIndex (Konva 드래그/리사이즈/레이어 반영). 없으면 레이아웃 기본값 사용. */
   const [sourceTransforms, setSourceTransforms] = useState<Record<string, SourceTransform>>({});
+
+  /** 프레임 드롭 시 해상도 자동 하향(적응형 성능) */
+  useAdaptivePerformance({
+    onDegraded: () =>
+      setPreviewResolution((prev) => (prev === "1080p" ? "720p" : prev)),
+    enabled: !!studio,
+  });
   const [isRecordingLocal, setIsRecordingLocal] = useState(false);
   const [isRecordingCloud, setIsRecordingCloud] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -132,16 +140,35 @@ export function useStudioMain(
       prevSceneIdRef.current = "";
       setSources([]);
       setOnStageSourceIds([]);
+      setSourceTransforms({});
       return;
     }
     const sceneId = activeSceneId ?? "";
     if (prevSceneIdRef.current !== sceneId) {
       prevSceneIdRef.current = sceneId;
       const elements = activeScene.layout?.elements;
-      const nextSources = layoutElementsToSources(Array.isArray(elements) ? elements : []);
+      const rawElements = Array.isArray(elements) ? elements : [];
+      const nextSources = layoutElementsToSources(rawElements);
+      const nextTransforms: Record<string, SourceTransform> = {};
+      rawElements.forEach((e, i) => {
+        if (e == null || typeof e !== "object" || !("id" in e)) return;
+        const id = String((e as Record<string, unknown>).id);
+        const t = (e as Record<string, unknown>).transform;
+        const defaultZ = rawElements.length - 1 - i;
+        if (t != null && typeof t === "object" && "x" in t) {
+          const tt = t as Record<string, unknown>;
+          nextTransforms[id] = {
+            x: Number(tt.x) || 0,
+            y: Number(tt.y) || 0,
+            width: Number(tt.width) || 0,
+            height: Number(tt.height) || 0,
+            zIndex: Number(tt.zIndex) ?? defaultZ,
+          };
+        }
+      });
       setSources(nextSources);
       setOnStageSourceIds(nextSources.map((s) => s.id));
-      setSourceTransforms({});
+      setSourceTransforms(nextTransforms);
     }
   }, [activeSceneId, activeScene, layoutElementsToSources]);
 
@@ -216,10 +243,10 @@ export function useStudioMain(
       displaySources.forEach((s, i) => {
         const z = displaySources.length - 1 - i;
         const current = prev[s.id];
-        next[s.id] = {
-          ...(current ?? { x: 0, y: 0, width: 0, height: 0, zIndex: 0 }),
-          zIndex: z,
-        };
+        if (current != null) {
+          next[s.id] = { ...current, zIndex: z };
+        }
+        // 저장된 transform이 없는 소스는 next에 넣지 않음 → PreviewArea getTransform이 arranged 기본값 사용
       });
       return next;
     });
@@ -370,13 +397,27 @@ export function useStudioMain(
     try {
       const layout = {
         type: currentLayout,
-        elements: sources.map((s) => ({
-          id: s.id,
-          type: s.type,
-          name: s.name,
-          visible: s.isVisible,
-          ...(s.deviceId && { deviceId: s.deviceId }),
-        })),
+        elements: displaySources.map((s) => {
+          const t = sourceTransforms[s.id];
+          return {
+            id: s.id,
+            type: s.type,
+            name: s.name,
+            visible: s.isVisible,
+            ...(s.deviceId && { deviceId: s.deviceId }),
+            ...(t &&
+              t.width > 0 &&
+              t.height > 0 && {
+                transform: {
+                  x: t.x,
+                  y: t.y,
+                  width: t.width,
+                  height: t.height,
+                  zIndex: t.zIndex,
+                },
+              }),
+          };
+        }),
       };
       await apiClient.put(
         `/api/studios/${sid}/scenes/${sceneIdNum}`,
@@ -387,7 +428,7 @@ export function useStudioMain(
     } catch (error) {
       console.error("씬 레이아웃 저장 실패:", error);
     }
-  }, [studioId, activeSceneId, currentLayout, sources, fetchStudio]);
+  }, [studioId, activeSceneId, currentLayout, displaySources, sourceTransforms, fetchStudio]);
 
   const handleExit = () => {
     if (confirm("스튜디오를 나가시겠습니까?")) {
@@ -509,6 +550,7 @@ export function useStudioMain(
     handleRemoveFromStage,
     handleReorderSources,
     handleBringSourceToFront,
+    handleSaveSceneLayout,
     handleExit,
     showAddSourceDialog,
     setShowAddSourceDialog,
