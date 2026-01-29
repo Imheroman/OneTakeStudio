@@ -7,7 +7,8 @@ import { Camera } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { LayoutType, Source } from "@/entities/studio/model";
 import type { GetPreviewStreamRef, SourceTransform } from "@/features/studio/studio-main";
-import { arrangeSourcesInLayout } from "@/shared/lib/canvas";
+import { arrangeSourcesInLayout, computeSourceFitRect } from "@/shared/lib/canvas";
+import type { SourceFitMode } from "@/shared/lib/canvas";
 import {
   setPreferredVideoDeviceId,
   setPreferredAudioDeviceId,
@@ -73,27 +74,46 @@ interface PreviewAreaProps {
   onBringSourceToFront?: (sourceId: string) => void;
 }
 
-/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기 */
+/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. 항상 프레임 안에만 표시(contain 우선). */
 function VideoSourceNode({
   sourceId,
   video,
-  x,
-  y,
-  width,
-  height,
+  boxWidth,
+  boxHeight,
+  fit,
   layerRef,
   isVisible,
 }: {
   sourceId: string;
   video: HTMLVideoElement;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  boxWidth: number;
+  boxHeight: number;
+  fit: SourceFitMode;
   layerRef: React.RefObject<Konva.Layer | null>;
   isVisible: boolean;
 }) {
   const imageRef = useRef<Konva.Image>(null);
+  const [sourceSize, setSourceSize] = useState({ w: video.videoWidth || 0, h: video.videoHeight || 0 });
+
+  useEffect(() => {
+    if (!video) return;
+    const sync = () => {
+      const w = video.videoWidth || 0;
+      const h = video.videoHeight || 0;
+      if (w > 0 && h > 0) setSourceSize({ w, h });
+    };
+    sync();
+    video.addEventListener("loadedmetadata", sync);
+    video.addEventListener("loadeddata", sync);
+    return () => {
+      video.removeEventListener("loadedmetadata", sync);
+      video.removeEventListener("loadeddata", sync);
+    };
+  }, [video]);
+
+  const sourceW = sourceSize.w || boxWidth;
+  const sourceH = sourceSize.h || boxHeight;
+  const rect = computeSourceFitRect(fit, boxWidth, boxHeight, sourceW, sourceH);
 
   useLayoutEffect(() => {
     if (!video || !layerRef.current || !isVisible) return;
@@ -116,11 +136,42 @@ function VideoSourceNode({
     <Image
       ref={imageRef}
       image={video}
-      x={x}
-      y={y}
-      width={width}
-      height={height}
+      x={rect.drawX}
+      y={rect.drawY}
+      width={rect.drawWidth}
+      height={rect.drawHeight}
+      crop={rect.crop}
       listening={true}
+    />
+  );
+}
+
+/** 이미지 소스: contain/cover로 Letterboxing·Pillarboxing 적용 */
+function ImageSourceNode({
+  image,
+  boxWidth,
+  boxHeight,
+  fit,
+  listening,
+}: {
+  image: HTMLImageElement;
+  boxWidth: number;
+  boxHeight: number;
+  fit: SourceFitMode;
+  listening: boolean;
+}) {
+  const sourceW = image.naturalWidth || boxWidth;
+  const sourceH = image.naturalHeight || boxHeight;
+  const rect = computeSourceFitRect(fit, boxWidth, boxHeight, sourceW, sourceH);
+  return (
+    <Image
+      image={image}
+      x={rect.drawX}
+      y={rect.drawY}
+      width={rect.drawWidth}
+      height={rect.drawHeight}
+      crop={rect.crop}
+      listening={listening}
     />
   );
 }
@@ -147,10 +198,47 @@ export function PreviewArea({
   const trRef = useRef<Konva.Transformer>(null);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [effectivePixelRatio, setEffectivePixelRatio] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sourceElements, setSourceElements] = useState<
     Map<string, HTMLVideoElement | HTMLImageElement>
   >(new Map());
+
+  /** 줌/리사이즈 시 스트림야드처럼: 잠깐 어긋나 보였다가 짧은 딜레이 후 프레임 재조정 */
+  const VIEWPORT_DEBOUNCE_MS = 120;
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const applyViewportUpdate = () => {
+      const dpr = window.devicePixelRatio ?? 1;
+      const zoom = window.visualViewport?.scale ?? 1;
+      setEffectivePixelRatio(Math.min(Math.max(dpr * zoom, 1), 5));
+      const el = containerRef.current;
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+      }
+    };
+
+    const scheduleUpdate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        timeoutId = null;
+        applyViewportUpdate();
+      }, VIEWPORT_DEBOUNCE_MS);
+    };
+
+    applyViewportUpdate();
+    window.visualViewport.addEventListener("resize", scheduleUpdate);
+    window.visualViewport.addEventListener("scroll", scheduleUpdate);
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.visualViewport?.removeEventListener("resize", scheduleUpdate);
+      window.visualViewport?.removeEventListener("scroll", scheduleUpdate);
+    };
+  }, []);
 
   const { width: stageWidth, height: stageHeight } = RESOLUTION_SIZE[resolution];
   const scale =
@@ -397,12 +485,15 @@ export function PreviewArea({
             height: stageHeight,
             transform: `scale(${scale})`,
             transformOrigin: "0 0",
+            willChange: "transform",
           }}
         >
           <Stage
+            key={`preview-${effectivePixelRatio}-${containerSize.width}-${containerSize.height}`}
             ref={stageRef}
             width={stageWidth}
             height={stageHeight}
+            pixelRatio={effectivePixelRatio}
             onClick={(e) => {
               const stage = e.target.getStage();
               const layer = layerRef.current;
@@ -444,6 +535,7 @@ export function PreviewArea({
                     }}
                     x={transform.x}
                     y={transform.y}
+                    clip={{ x: 0, y: 0, width: transform.width, height: transform.height }}
                     draggable={isEditMode}
                     onDragEnd={(e) => {
                       const node = e.target;
@@ -491,10 +583,9 @@ export function PreviewArea({
                         <VideoSourceNode
                           sourceId={source.id}
                           video={el}
-                          x={0}
-                          y={0}
-                          width={transform.width}
-                          height={transform.height}
+                          boxWidth={transform.width}
+                          boxHeight={transform.height}
+                          fit="contain"
                           layerRef={layerRef}
                           isVisible={source.isVisible}
                         />
@@ -509,10 +600,11 @@ export function PreviewArea({
                       )
                     ) : source.type === "image" ? (
                       el && el instanceof HTMLImageElement ? (
-                        <Image
+                        <ImageSourceNode
                           image={el}
-                          width={transform.width}
-                          height={transform.height}
+                          boxWidth={transform.width}
+                          boxHeight={transform.height}
+                          fit="contain"
                           listening={true}
                         />
                       ) : (

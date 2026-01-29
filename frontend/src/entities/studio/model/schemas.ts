@@ -71,6 +71,9 @@ export const SourceTypeSchema = z.enum([
   "browser",
 ]);
 
+/** 소스 박스 정책: contain=비율 유지·여백(Letterboxing/Pillarboxing), cover=채우기·넘치는 부분 자름 */
+export const SourceFitSchema = z.enum(["contain", "cover"]);
+
 // 소스 스키마 (deviceId: 저장된 선호 장치, 재방문 시 기본값으로 사용)
 export const SourceSchema = z.object({
   id: z.string(),
@@ -78,6 +81,8 @@ export const SourceSchema = z.object({
   name: z.string(),
   isVisible: z.boolean(),
   deviceId: z.string().optional(),
+  /** 박스 정책. 미설정 시 "contain" */
+  fit: SourceFitSchema.optional(),
 });
 
 // 스튜디오 스키마 (백엔드 API 응답 형식)
@@ -163,6 +168,7 @@ export type Platform = z.infer<typeof PlatformSchema>;
 export type LayoutType = z.infer<typeof LayoutTypeSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
 export type SourceType = z.infer<typeof SourceTypeSchema>;
+export type SourceFit = z.infer<typeof SourceFitSchema>;
 export type Source = z.infer<typeof SourceSchema>;
 export type Studio = z.infer<typeof StudioSchema>;
 export type RecentStudio = z.infer<typeof RecentStudioSchema>;

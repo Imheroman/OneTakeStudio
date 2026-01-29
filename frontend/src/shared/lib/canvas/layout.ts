@@ -1,127 +1,76 @@
 /**
  * 레이아웃 계산 유틸리티
- * 다양한 레이아웃 타입에 따른 그리드 계산
+ * 동적 그리드: 16:9 고정, 인원 수별 세분화 템플릿, 여백(Gutter)·정렬 일관
  */
 
 import type { LayoutType, LayoutGrid } from "./types";
 
+/** 셀 간 여백(px). 브랜딩 일관성·정렬 통일용 */
+export const GRID_GUTTER = 8;
+
 /**
- * 레이아웃 타입에 따른 그리드 정보 반환
+ * 레이아웃 타입에 따른 그리드 정보 반환 (gutter 적용)
  */
 export function getLayoutGrid(
   layout: LayoutType,
   canvasWidth: number,
   canvasHeight: number,
 ): LayoutGrid {
+  const g = GRID_GUTTER;
+
   switch (layout) {
     case "full":
       return {
         rows: 1,
         cols: 1,
         cells: [
-          {
-            x: 0,
-            y: 0,
-            width: canvasWidth,
-            height: canvasHeight,
-          },
+          { x: 0, y: 0, width: canvasWidth, height: canvasHeight },
         ],
       };
 
-    case "split":
+    case "split": {
+      const cellW = (canvasWidth - g) / 2;
       return {
         rows: 1,
         cols: 2,
         cells: [
-          {
-            x: 0,
-            y: 0,
-            width: canvasWidth / 2,
-            height: canvasHeight,
-          },
-          {
-            x: canvasWidth / 2,
-            y: 0,
-            width: canvasWidth / 2,
-            height: canvasHeight,
-          },
+          { x: 0, y: 0, width: cellW, height: canvasHeight },
+          { x: cellW + g, y: 0, width: cellW, height: canvasHeight },
         ],
       };
+    }
 
-    case "three-grid":
+    case "three-grid": {
+      const cellW = (canvasWidth - g) / 2;
+      const cellH = (canvasHeight - g) / 2;
       return {
         rows: 2,
         cols: 2,
         cells: [
-          // 큰 셀 (왼쪽 상단, 2x2)
-          {
-            x: 0,
-            y: 0,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
-          // 오른쪽 상단
-          {
-            x: canvasWidth / 2,
-            y: 0,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
-          // 왼쪽 하단
-          {
-            x: 0,
-            y: canvasHeight / 2,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
-          // 오른쪽 하단
-          {
-            x: canvasWidth / 2,
-            y: canvasHeight / 2,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
+          { x: 0, y: 0, width: cellW, height: cellH },
+          { x: cellW + g, y: 0, width: cellW, height: cellH },
+          { x: 0, y: cellH + g, width: cellW, height: cellH },
+          { x: cellW + g, y: cellH + g, width: cellW, height: cellH },
         ],
       };
+    }
 
-    case "four-grid":
+    case "four-grid": {
+      const cellW = (canvasWidth - g) / 2;
+      const cellH = (canvasHeight - g) / 2;
       return {
         rows: 2,
         cols: 2,
         cells: [
-          // 상단 왼쪽
-          {
-            x: 0,
-            y: 0,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
-          // 상단 오른쪽
-          {
-            x: canvasWidth / 2,
-            y: 0,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
-          // 하단 왼쪽
-          {
-            x: 0,
-            y: canvasHeight / 2,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
-          // 하단 오른쪽
-          {
-            x: canvasWidth / 2,
-            y: canvasHeight / 2,
-            width: canvasWidth / 2,
-            height: canvasHeight / 2,
-          },
+          { x: 0, y: 0, width: cellW, height: cellH },
+          { x: cellW + g, y: 0, width: cellW, height: cellH },
+          { x: 0, y: cellH + g, width: cellW, height: cellH },
+          { x: cellW + g, y: cellH + g, width: cellW, height: cellH },
         ],
       };
+    }
 
     case "custom":
-      // 커스텀 레이아웃은 기본적으로 full과 동일
       return getLayoutGrid("full", canvasWidth, canvasHeight);
 
     default:
