@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-server
-  namespace: core              # media → core
+  namespace: core
   labels:
     app: api-server
 spec:
@@ -15,11 +15,14 @@ spec:
       labels:
         app: api-server
     spec:
+      # [중요] setup-secrets 단계 혹은 서버에서 수동으로 만든 Secret 이름과 일치해야 함
       imagePullSecrets:
         - name: ecr-secret
       containers:
         - name: api-server
-          image: hanrykim/core-api:latest
+          # [수정] sed 명령어가 이 줄을 덮어쓰겠지만, 명시적으로 ECR 주소를 적어두는 것이 관리상 좋습니다.
+          # (나중에 sed 없이 이 파일만 보고도 어디 이미지인지 알 수 있음)
+          image: 325899475975.dkr.ecr.ap-northeast-2.amazonaws.com/core-server:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -39,7 +42,9 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: DB_PORT
-            - name: DB_ONETAKESTUDIO_NAME
+            # [확인 필요] Spring Boot 설정파일(application.yml)에서 이 변수명을 쓰는지 확인하세요.
+            # 보통은 DB_URL이나 DB_NAME을 씁니다. 만약 앱에서 DB_NAME을 기대한다면 아래 name도 DB_NAME으로 바꾸세요.
+            - name: DB_NAME
               valueFrom:
                 secretKeyRef:
                   name: db-secret
