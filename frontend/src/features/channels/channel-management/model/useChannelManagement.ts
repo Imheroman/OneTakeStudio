@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
 import {
-  ChannelListResponseSchema,
+  ApiResponseDestinationListSchema,
   ConnectChannelResponseSchema,
   DeleteResponseSchema,
+  mapDestinationListToChannels,
   type Channel,
   type PlatformType,
 } from "@/entities/channel/model";
@@ -22,9 +23,9 @@ export function useChannelManagement() {
       setIsLoading(true);
       const response = await apiClient.get(
         "/api/destinations",
-        ChannelListResponseSchema,
+        ApiResponseDestinationListSchema,
       );
-      setChannels(response.channels);
+      setChannels(mapDestinationListToChannels(response.data ?? []));
     } catch (error) {
       console.error("채널 목록 조회 실패:", error);
     } finally {

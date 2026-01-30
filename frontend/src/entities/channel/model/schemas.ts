@@ -55,6 +55,48 @@ export const OAuthCallbackResponseSchema = z.object({
   redirectUrl: z.string().url().optional(),
 });
 
+// --- 백엔드 Core GET /api/destinations 응답 (ApiResponse<DestinationResponse[]>) ---
+export const BackendDestinationResponseSchema = z.object({
+  id: z.number(),
+  destinationId: z.string(),
+  platform: z.string(),
+  channelId: z.string().optional(),
+  channelName: z.string().optional(),
+  rtmpUrl: z.string().optional().nullable(),
+  streamKey: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  createdAt: z.string().optional(),
+});
+
+export const ApiResponseDestinationListSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  data: z.array(BackendDestinationResponseSchema),
+});
+
+const PLATFORM_KEYS = ["youtube", "twitch", "facebook", "custom_rtmp"] as const;
+
+/** 백엔드 data[] → 프론트 Channel[] 매핑 (DELETE 시 destinationId 사용) */
+export function mapDestinationListToChannels(
+  data: z.infer<typeof BackendDestinationResponseSchema>[],
+): z.infer<typeof ChannelSchema>[] {
+  return (data ?? [])
+    .filter((d) => d.isActive !== false)
+    .map((d) => {
+      const raw = (d.platform ?? "").toLowerCase();
+      const platform = PLATFORM_KEYS.includes(raw as (typeof PLATFORM_KEYS)[number])
+        ? (raw as z.infer<typeof PlatformTypeSchema>)
+        : "custom_rtmp";
+      return {
+        id: d.destinationId,
+        platform,
+        accountName: d.channelName ?? d.channelId ?? "-",
+        status: "connected" as const,
+        connectedAt: d.createdAt,
+      };
+    });
+}
+
 // 타입 추론
 export type PlatformType = z.infer<typeof PlatformTypeSchema>;
 export type ChannelStatus = z.infer<typeof ChannelStatusSchema>;

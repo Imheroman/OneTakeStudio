@@ -49,6 +49,11 @@ livekit:
   egress:
     output-path: /recordings/
 
+# Core Service (송출 채널 정보 조회)
+core:
+  service:
+    url: http://localhost:8080
+
 # Recording Storage
 # Docker Egress는 /recordings에 저장 → 로컬 ./recordings 폴더와 볼륨 연결됨
 recording:

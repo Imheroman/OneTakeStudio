@@ -14,14 +14,16 @@ import com.onetake.media.publish.repository.PublishSessionRepository;
 import com.onetake.media.stream.entity.SessionStatus;
 import com.onetake.media.stream.entity.StreamSession;
 import com.onetake.media.stream.repository.StreamSessionRepository;
+import com.onetake.media.publish.integration.CoreDestinationClient;
+import com.onetake.media.publish.integration.dto.CoreDestinationDto;
 import com.onetake.media.stream.service.LiveKitEgressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -33,6 +35,7 @@ public class PublishService {
     private final PublishDestinationRepository publishDestinationRepository;
     private final StreamSessionRepository streamSessionRepository;
     private final LiveKitEgressService liveKitEgressService;
+    private final CoreDestinationClient coreDestinationClient;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -47,7 +50,7 @@ public class PublishService {
                 .findByStudioIdAndStatus(request.getStudioId(), SessionStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
 
-        // Destination 정보 조회 (TODO: Destination Service 연동)
+        // Destination 정보 조회 (core-service 연동, YouTube만 송출)
         List<RtmpDestination> rtmpDestinations = fetchRtmpDestinations(request.getDestinationIds());
 
         // 송출 세션 생성
@@ -126,19 +129,36 @@ public class PublishService {
         );
     }
 
+    /**
+     * core-service에서 연동 채널 정보 조회 후 YouTube만 RTMP 송출 대상으로 사용.
+     * RTMP URL/Stream Key가 없거나 platform이 youtube가 아니면 제외.
+     */
     private List<RtmpDestination> fetchRtmpDestinations(List<Long> destinationIds) {
-        // TODO: Destination Service를 통해 실제 RTMP URL/Stream Key 조회
-        // 현재는 시뮬레이션 데이터 반환
-        List<RtmpDestination> destinations = new ArrayList<>();
-        for (Long destinationId : destinationIds) {
-            destinations.add(new RtmpDestination(
-                    destinationId,
-                    "youtube", // platform
-                    "rtmp://a.rtmp.youtube.com/live2/", // rtmpUrl
-                    "dummy-stream-key-" + destinationId // streamKey
-            ));
+        List<CoreDestinationDto> fromCore = coreDestinationClient.getDestinationsByIds(destinationIds);
+
+        List<RtmpDestination> destinations = fromCore.stream()
+                .filter(d -> "youtube".equalsIgnoreCase(d.getPlatform()))
+                .filter(d -> d.getRtmpUrl() != null && !d.getRtmpUrl().isBlank()
+                        && d.getStreamKey() != null && !d.getStreamKey().isBlank())
+                .map(d -> new RtmpDestination(
+                        d.getId(),
+                        d.getPlatform(),
+                        normalizeRtmpUrl(d.getRtmpUrl()),
+                        d.getStreamKey()
+                ))
+                .collect(Collectors.toList());
+
+        if (destinations.isEmpty()) {
+            throw new BusinessException(ErrorCode.PUBLISH_DESTINATION_INVALID);
         }
+
         return destinations;
+    }
+
+    /** YouTube RTMP URL 끝이 /가 아니면 / 붙여서 streamKey와 결합 시 일관성 유지 */
+    private static String normalizeRtmpUrl(String rtmpUrl) {
+        if (rtmpUrl == null || rtmpUrl.isBlank()) return rtmpUrl;
+        return rtmpUrl.endsWith("/") ? rtmpUrl : rtmpUrl + "/";
     }
 
     private List<PublishStatusResponse.DestinationStatus> buildDestinationStatuses(PublishSession publishSession) {

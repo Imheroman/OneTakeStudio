@@ -21,6 +21,9 @@ export {
   ConnectChannelRequestSchema,
   ConnectChannelResponseSchema,
   OAuthCallbackResponseSchema,
+  ApiResponseDestinationListSchema,
+  BackendDestinationResponseSchema,
+  mapDestinationListToChannels,
 } from "./schemas";
 
 // 공통 스키마 re-export
