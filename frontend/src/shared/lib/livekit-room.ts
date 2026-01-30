@@ -2,7 +2,7 @@
  * LiveKit 룸 연결 및 스트림 퍼블리시 유틸
  * Go Live 시 프리뷰 스트림을 LiveKit 룸에 퍼블리시하여 백엔드 이그레스가 사용할 수 있게 합니다.
  */
-import { Room } from "livekit-client";
+import { Room, Track } from "livekit-client";
 
 /** 백엔드가 반환하는 livekitUrl이 http(s)일 수 있으므로 WebSocket URL로 변환 */
 function toWebSocketUrl(url: string): string {
@@ -32,12 +32,12 @@ export async function connectAndPublish(
 
   for (const track of videoTracks) {
     if (track.enabled) {
-      await room.localParticipant.publishTrack(track, { name: "preview-video", source: "camera" });
+      await room.localParticipant.publishTrack(track, { name: "preview-video", source: Track.Source.Camera });
     }
   }
   for (const track of audioTracks) {
     if (track.enabled) {
-      await room.localParticipant.publishTrack(track, { name: "preview-audio", source: "microphone" });
+      await room.localParticipant.publishTrack(track, { name: "preview-audio", source: Track.Source.Microphone });
     }
   }
 
