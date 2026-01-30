@@ -20,5 +20,11 @@ public interface ConnectedDestinationRepository extends JpaRepository<ConnectedD
 
     boolean existsByUserIdAndPlatformAndChannelId(Long userId, String platform, String channelId);
 
+    /** 활성 채널만 대상으로 중복 여부 판단 (연결 해제 후 재등록 허용용) */
+    boolean existsByUserIdAndPlatformAndChannelIdAndIsActiveTrue(Long userId, String platform, String channelId);
+
+    /** 이미 등록된 활성 채널 조회 (409 대신 200으로 기존 데이터 반환용) */
+    Optional<ConnectedDestination> findOneByUserIdAndPlatformAndChannelIdAndIsActiveTrue(Long userId, String platform, String channelId);
+
     List<ConnectedDestination> findByIdInAndIsActiveTrue(List<Long> ids);
 }

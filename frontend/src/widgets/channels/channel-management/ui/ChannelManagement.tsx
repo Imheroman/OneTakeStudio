@@ -12,7 +12,7 @@ export function ChannelManagement() {
     isLoading,
     isDialogOpen,
     setIsDialogOpen,
-    handleSelectPlatform,
+    handleCreateDestination,
     handleDisconnect,
   } = useChannelManagement();
 
@@ -57,7 +57,7 @@ export function ChannelManagement() {
       <AddChannelDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onSelectPlatform={handleSelectPlatform}
+        onCreateDestination={handleCreateDestination}
       />
     </div>
   );

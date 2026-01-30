@@ -10,6 +10,7 @@ export type {
   PlatformInfo,
   ConnectChannelRequest,
   ConnectChannelResponse,
+  CreateDestinationRequest,
   OAuthCallbackResponse,
 } from "./schemas";
 
@@ -20,10 +21,13 @@ export {
   PlatformInfoSchema,
   ConnectChannelRequestSchema,
   ConnectChannelResponseSchema,
+  CreateDestinationRequestSchema,
+  ApiResponseDestinationSchema,
   OAuthCallbackResponseSchema,
   ApiResponseDestinationListSchema,
   BackendDestinationResponseSchema,
   mapDestinationListToChannels,
+  safeMapRawDestinationsToChannels,
 } from "./schemas";
 
 // 공통 스키마 re-export

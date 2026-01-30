@@ -1,5 +1,6 @@
 package com.onetake.core.destination.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.onetake.core.destination.entity.ConnectedDestination;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +19,8 @@ public class DestinationResponse {
     private String rtmpUrl;
     private String streamKey;
     private Boolean isActive;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
     public static DestinationResponse from(ConnectedDestination entity) {

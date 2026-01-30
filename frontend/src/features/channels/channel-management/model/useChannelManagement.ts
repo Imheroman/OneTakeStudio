@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { apiClient } from "@/shared/api/client";
+import { apiClient, axiosInstance } from "@/shared/api/client";
 import {
   ApiResponseDestinationListSchema,
-  ConnectChannelResponseSchema,
+  ApiResponseDestinationSchema,
+  CreateDestinationRequestSchema,
   DeleteResponseSchema,
   mapDestinationListToChannels,
+  safeMapRawDestinationsToChannels,
   type Channel,
-  type PlatformType,
+  type CreateDestinationRequest,
 } from "@/entities/channel/model";
 
 export function useChannelManagement() {
@@ -28,6 +30,14 @@ export function useChannelManagement() {
       setChannels(mapDestinationListToChannels(response.data ?? []));
     } catch (error) {
       console.error("채널 목록 조회 실패:", error);
+      // 스키마 검증 실패 시 raw GET으로 목록만 갱신 (DB·표기 일치)
+      try {
+        const res = await axiosInstance.get<{ data?: unknown }>("/api/destinations");
+        const raw = res?.data?.data;
+        setChannels(safeMapRawDestinationsToChannels(raw));
+      } catch (fallbackError) {
+        console.error("채널 목록 raw 조회 실패:", fallbackError);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -40,20 +50,31 @@ export function useChannelManagement() {
     }
   }, [searchParams]);
 
-  const handleSelectPlatform = async (platform: PlatformType) => {
+  /** 수동 등록: Core POST /api/destinations */
+  const handleCreateDestination = async (payload: CreateDestinationRequest) => {
     try {
-      const response = await apiClient.post(
-        "/api/channels/connect",
-        ConnectChannelResponseSchema,
-        { platform },
+      await apiClient.post(
+        "/api/destinations",
+        ApiResponseDestinationSchema,
+        payload,
       );
-      window.location.href = response.authUrl;
+      await fetchChannels();
+      setIsDialogOpen(false);
     } catch (error: unknown) {
-      console.error("채널 연결 시작 실패:", error);
-      const err = error as { response?: { data?: { message?: string } } };
-      alert(
-        err.response?.data?.message || "채널 연결에 실패했습니다.",
-      );
+      console.error("채널 등록 실패:", error);
+      const err = error as {
+        response?: { status?: number; data?: { message?: string } };
+        message?: string;
+      };
+      const message = err.response?.data?.message ?? err.message ?? "채널 등록에 실패했습니다.";
+      // 409: 이미 등록된 채널 → 목록 재조회 후 DB와 표기 일치
+      if (err.response?.status === 409) {
+        await fetchChannels();
+        setIsDialogOpen(false);
+        alert(`${message}\n목록을 새로고침했습니다.`);
+      } else {
+        alert(message);
+      }
     }
   };
 
@@ -79,7 +100,7 @@ export function useChannelManagement() {
     isDialogOpen,
     setIsDialogOpen,
     fetchChannels,
-    handleSelectPlatform,
+    handleCreateDestination,
     handleDisconnect,
   };
 }

@@ -4,7 +4,6 @@ import com.onetake.core.destination.dto.CreateDestinationRequest;
 import com.onetake.core.destination.dto.DestinationResponse;
 import com.onetake.core.destination.dto.UpdateDestinationRequest;
 import com.onetake.core.destination.entity.ConnectedDestination;
-import com.onetake.core.destination.exception.DestinationAlreadyExistsException;
 import com.onetake.core.destination.exception.DestinationNotFoundException;
 import com.onetake.core.destination.repository.ConnectedDestinationRepository;
 import com.onetake.core.user.entity.User;
@@ -42,28 +41,61 @@ public class DestinationService {
         log.debug("사용자 {}의 연동 채널 목록 조회", userId);
         Long internalUserId = getInternalUserId(userId);
 
-        return destinationRepository.findByUserIdAndIsActiveTrue(internalUserId).stream()
+        var list = destinationRepository.findByUserIdAndIsActiveTrue(internalUserId).stream()
                 .map(DestinationResponse::from)
                 .toList();
+        log.debug("연동 채널 목록 조회 결과: userId={}, internalUserId={}, count={}", userId, internalUserId, list.size());
+        return list;
+    }
+
+    /** platform/channelId 정규화: DB·조회 일치 (대소문자/공백 차이 방지) */
+    private static String normalizePlatform(String platform) {
+        return platform == null ? "" : platform.trim().toLowerCase();
+    }
+
+    private static String normalizeChannelId(String channelId) {
+        return channelId == null ? "" : channelId.trim();
     }
 
     /**
-     * W13: 신규 송출 채널 등록
+     * W13: 신규 송출 채널 등록 (연결 해제한 채널은 재활성화)
      */
     @Transactional
     public DestinationResponse createDestination(String userId, CreateDestinationRequest request) {
-        log.debug("사용자 {}의 신규 채널 등록: {} - {}", userId, request.getPlatform(), request.getChannelId());
+        String platform = normalizePlatform(request.getPlatform());
+        String channelId = normalizeChannelId(request.getChannelId());
+        log.debug("사용자 {}의 신규 채널 등록: {} - {}", userId, platform, channelId);
         Long internalUserId = getInternalUserId(userId);
 
-        if (destinationRepository.existsByUserIdAndPlatformAndChannelId(
-                internalUserId, request.getPlatform(), request.getChannelId())) {
-            throw new DestinationAlreadyExistsException(request.getPlatform(), request.getChannelId());
+        // 이미 등록된 활성 채널이면 409 대신 200 + 기존 데이터 반환 (목록 갱신·표기 일치)
+        var alreadyActive = destinationRepository.findOneByUserIdAndPlatformAndChannelIdAndIsActiveTrue(
+                internalUserId, platform, channelId);
+        if (alreadyActive.isPresent()) {
+            log.info("이미 등록된 채널 반환: userId={}, platform={}, channelId={}", userId, platform, channelId);
+            return DestinationResponse.from(alreadyActive.get());
+        }
+
+        // 연결 해제 후 재등록: 기존 비활성 행이 있으면 재활성화 후 업데이트
+        var existing = destinationRepository.findByUserIdAndPlatformAndChannelId(
+                internalUserId, platform, channelId);
+        if (existing.isPresent()) {
+            ConnectedDestination dest = existing.get();
+            dest.activate();
+            if (request.getChannelName() != null) dest.updateChannelInfo(dest.getChannelId(), request.getChannelName());
+            if (request.getRtmpUrl() != null || request.getStreamKey() != null) {
+                dest.updateStreamInfo(
+                        request.getRtmpUrl() != null ? request.getRtmpUrl() : dest.getRtmpUrl(),
+                        request.getStreamKey() != null ? request.getStreamKey() : dest.getStreamKey());
+            }
+            destinationRepository.save(dest);
+            log.info("채널 재활성화 완료: destinationId={}", dest.getDestinationId());
+            return DestinationResponse.from(dest);
         }
 
         ConnectedDestination destination = ConnectedDestination.builder()
                 .userId(internalUserId)
-                .platform(request.getPlatform())
-                .channelId(request.getChannelId())
+                .platform(platform)
+                .channelId(channelId)
                 .channelName(request.getChannelName())
                 .rtmpUrl(request.getRtmpUrl())
                 .streamKey(request.getStreamKey())
