@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
@@ -17,30 +17,31 @@ export function WorkspaceTopNav() {
   const router = useRouter();
   const { user, logout, isLoggedIn } = useAuthStore();
 
-  // 알림 패널 여는 함수 (Zustand)
-  const openNotifications = useNotificationStore((state) => state.open);
+  // 알림 패널 상태 (Zustand)
+  const { isOpen: isNotificationOpen, open: openNotifications } = useNotificationStore();
 
   // 쇼츠 알림 상태 (배지 개수 계산용)
   const { notifications: shortsNotifications } = useShortsStore();
 
   const [notificationCount, setNotificationCount] = useState(0);
 
-  useEffect(() => {
-    const fetchNotificationCount = async () => {
-      if (!isLoggedIn) return;
-      try {
-        const response = await apiClient.get(
-          "/api/notifications",
-          NotificationListResponseSchema,
-        );
-        setNotificationCount(response.notifications.length);
-      } catch (error) {
-        console.error("알림 개수 조회 실패:", error);
-      }
-    };
-
-    fetchNotificationCount();
+  const fetchNotificationCount = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      const response = await apiClient.get(
+        "/api/notifications",
+        NotificationListResponseSchema,
+      );
+      setNotificationCount(response.notifications.length);
+    } catch (error) {
+      console.error("알림 개수 조회 실패:", error);
+    }
   }, [isLoggedIn]);
+
+  // 초기 로드 및 알림 패널이 닫힐 때 카운트 새로고침
+  useEffect(() => {
+    fetchNotificationCount();
+  }, [fetchNotificationCount, isNotificationOpen]);
 
   // 배지: API 알림 + 쇼츠 알림 합산
   const totalCount = notificationCount + shortsNotifications.length;

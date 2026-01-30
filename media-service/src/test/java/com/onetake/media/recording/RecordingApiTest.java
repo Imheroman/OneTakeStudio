@@ -62,7 +62,7 @@ class RecordingApiTest {
                 .build();
 
         // when & then
-        mockMvc.perform(post("/api/v1/media/record/start")
+        mockMvc.perform(post("/api/media/record/start")
                         .header("X-User-Id", testUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -82,13 +82,13 @@ class RecordingApiTest {
                 .outputFormat("mp4")
                 .build();
 
-        mockMvc.perform(post("/api/v1/media/record/start")
+        mockMvc.perform(post("/api/media/record/start")
                 .header("X-User-Id", testUserId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(startRequest)));
 
         // when & then - 일시정지
-        mockMvc.perform(post("/api/v1/media/record/{studioId}/pause", testStudioId))
+        mockMvc.perform(post("/api/media/record/{studioId}/pause", testStudioId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -103,15 +103,15 @@ class RecordingApiTest {
                 .studioId(testStudioId)
                 .build();
 
-        mockMvc.perform(post("/api/v1/media/record/start")
+        mockMvc.perform(post("/api/media/record/start")
                 .header("X-User-Id", testUserId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(startRequest)));
 
-        mockMvc.perform(post("/api/v1/media/record/{studioId}/pause", testStudioId));
+        mockMvc.perform(post("/api/media/record/{studioId}/pause", testStudioId));
 
         // when & then - 재개
-        mockMvc.perform(post("/api/v1/media/record/{studioId}/resume", testStudioId))
+        mockMvc.perform(post("/api/media/record/{studioId}/resume", testStudioId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -126,13 +126,13 @@ class RecordingApiTest {
                 .studioId(testStudioId)
                 .build();
 
-        mockMvc.perform(post("/api/v1/media/record/start")
+        mockMvc.perform(post("/api/media/record/start")
                 .header("X-User-Id", testUserId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(startRequest)));
 
         // when & then - 중지
-        mockMvc.perform(post("/api/v1/media/record/{studioId}/stop", testStudioId))
+        mockMvc.perform(post("/api/media/record/{studioId}/stop", testStudioId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))

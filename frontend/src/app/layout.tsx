@@ -27,7 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko"><body
+    <html lang="ko">
+      <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ApiAuthProvider />

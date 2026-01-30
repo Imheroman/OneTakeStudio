@@ -2,6 +2,7 @@ package com.onetake.media.stream.service;
 
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
+import com.onetake.media.settings.service.MediaSettingsService;
 import com.onetake.media.stream.dto.IceServerResponse;
 import com.onetake.media.stream.dto.StreamSessionResponse;
 import com.onetake.media.stream.dto.StreamTokenRequest;
@@ -25,6 +26,7 @@ public class StreamService {
 
     private final StreamSessionRepository streamSessionRepository;
     private final LiveKitService liveKitService;
+    private final MediaSettingsService mediaSettingsService;
 
     @Value("${livekit.turn.urls:}")
     private List<String> turnUrls;
@@ -61,9 +63,12 @@ public class StreamService {
                 .metadata(request.getMetadata())
                 .build();
 
-        streamSessionRepository.save(session);
+        StreamSession savedSession = streamSessionRepository.save(session);
 
-        log.info("Stream session created: studioId={}, userId={}, roomName={}",
+        // 미디어 상태 자동 초기화 (사용자 기본 설정 적용)
+        mediaSettingsService.initializeSessionState(userId, request.getStudioId(), savedSession.getId());
+
+        log.info("Stream session created with media state: studioId={}, userId={}, roomName={}",
                 request.getStudioId(), userId, roomName);
 
         return tokenResponse;
@@ -83,13 +88,17 @@ public class StreamService {
 
     @Transactional
     public void leaveStream(Long studioId, Long userId) {
-        streamSessionRepository.findByStudioIdAndStatus(studioId, SessionStatus.ACTIVE)
-                .filter(session -> session.getUserId().equals(userId))
+        // CONNECTING 또는 ACTIVE 상태인 세션 모두 처리
+        streamSessionRepository.findByStudioIdAndUserIdAndStatusIn(
+                studioId, userId, List.of(SessionStatus.CONNECTING, SessionStatus.ACTIVE))
                 .ifPresent(session -> {
                     session.disconnect();
                     liveKitService.removeParticipant(session.getRoomName(), session.getParticipantIdentity());
                     log.info("User {} left stream for studio {}", userId, studioId);
                 });
+
+        // 미디어 상태 자동 종료 (세션 유무와 무관하게 실행)
+        mediaSettingsService.terminateSessionState(studioId, userId);
     }
 
     @Transactional

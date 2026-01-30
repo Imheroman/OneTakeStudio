@@ -28,12 +28,13 @@
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
-│       Media Service (PostgreSQL)             │
+│       Media Service (MySQL - media_db)       │
 │  - stream_sessions (WebRTC 세션)            │
 │  - publish_sessions (송출 세션)              │
 │  - publish_destinations (송출 채널 상태)     │
-│  - recordings (녹화본)                       │
+│  - recording_sessions (녹화 세션)            │
 │  - recording_events (녹화 이벤트)            │
+│  - screen_share_sessions (화면 공유)         │
 │  - clips (클립/쇼츠)                         │
 │  - markers (마커)                            │
 │  - banners (배너)                            │

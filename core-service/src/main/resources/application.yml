@@ -20,6 +20,11 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
   mail:
     host: smtp.naver.com
     port: 587

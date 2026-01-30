@@ -17,6 +17,8 @@ public interface StreamSessionRepository extends JpaRepository<StreamSession, Lo
 
     Optional<StreamSession> findByStudioIdAndStatus(Long studioId, SessionStatus status);
 
+    Optional<StreamSession> findByStudioIdAndUserIdAndStatusIn(Long studioId, Long userId, List<SessionStatus> statuses);
+
     List<StreamSession> findByStudioId(Long studioId);
 
     List<StreamSession> findByUserIdAndStatus(Long userId, SessionStatus status);

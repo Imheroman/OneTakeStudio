@@ -1,27 +1,5 @@
-version: '3.8'
-
 services:
-  # PostgreSQL (Media Service용)
-  postgres:
-    image: postgres:16-alpine
-    container_name: onetakestudio-postgres
-    environment:
-      POSTGRES_DB: media_db
-      POSTGRES_USER: media_user
-      POSTGRES_PASSWORD: media_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - onetakestudio-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U media_user -d media_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # MySQL (Core Service용)
+  # MySQL (Core Service + Media Service 통합)
   mysql:
     image: mysql:8.0
     container_name: onetakestudio-mysql
@@ -34,6 +12,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - onetakestudio-network
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
@@ -74,7 +53,6 @@ services:
       - onetakestudio-network
 
 volumes:
-  postgres_data:
   mysql_data:
   redis_data:
 

@@ -1,6 +1,6 @@
 ---
 name: onetake-streaming-project
-description: OneTakeStudio MSA 개발 프로젝트 통합 가이드. Spring Boot 3.5.9, Java 21, React, Next.js, LiveKit WebRTC 기반. 이메일/비밀번호/닉네임 회원가입 + 이메일 인증. MSA 2-서비스 구조 (Core-MySQL, Media-PostgreSQL). 라이브 스트리밍, WebRTC, 녹화, AI 쇼츠, 멀티 플랫폼 송출, 실시간 채팅. 내부 BIGINT + 외부 UUID 설계. LiveKit Egress 연동. Spring Cloud Gateway, Eureka, RabbitMQ, Redis, k3s 환경. 6인 팀 개발.
+description: OneTakeStudio MSA 개발 프로젝트 통합 가이드. Spring Boot 3.5.9, Java 21, React, Next.js, LiveKit WebRTC 기반. 이메일/비밀번호/닉네임 회원가입 + 이메일 인증. MSA 2-서비스 구조 (Core-MySQL, Media-MySQL 통합). 라이브 스트리밍, WebRTC, 녹화, AI 쇼츠, 멀티 플랫폼 송출, 실시간 채팅. 내부 BIGINT + 외부 UUID 설계. LiveKit Egress 연동. Spring Cloud Gateway, Eureka, Redis, k3s 환경. 6인 팀 개발.
 ---
 
 # OneTakeStudio MSA 개발 프로젝트 (최종 통합 가이드)
@@ -17,22 +17,23 @@ description: OneTakeStudio MSA 개발 프로젝트 통합 가이드. Spring Boot
 ```
 onetakestudio-backend/
 ├── pom.xml                          ← 루트 POM (모듈 정의)
-├── docker-compose.yml               ← MySQL, PostgreSQL, Redis, LiveKit, MinIO
+├── docker-compose.yml               ← MySQL (통합), Redis, LiveKit
 ├── common/                          ← 공통 라이브러리 (JAR, 서버 아님)
 │   └── src/main/java/com/onetake/common/
 │       ├── dto/ApiResponse.java
 │       └── jwt/JwtUtil.java
-├── core-service/                    ← Core Service (MySQL, port: 0 랜덤)
+├── core-service/                    ← Core Service (MySQL core_db, port: 8080)
 │   └── src/main/java/com/onetake/core/
 │       ├── CoreServiceApplication.java
-│       ├── config/                  ← SecurityConfig, JwtConfig, AsyncConfig, RestTemplateConfig
-│       ├── security/                ← CustomUserDetails, CurrentUser, JwtAuthenticationFilter
+│       ├── config/                  ← JwtConfig, AsyncConfig, RestTemplateConfig, RedisConfig
+│       ├── security/                ← CustomUserDetails, CurrentUser, JwtAuthenticationFilter, TokenBlacklistService
 │       ├── auth/                    ← 인증 (controller, service, dto, entity, exception, repository, scheduler)
 │       ├── user/                    ← 사용자 (controller, service, dto, entity, exception, repository)
-│       ├── studio/                  ← 스튜디오 (entity, repository) ★ CRUD는 팀원 담당
+│       ├── studio/                  ← 스튜디오 (controller, service, dto, entity, exception, repository) ★ 전체 구현됨
 │       ├── destination/             ← 송출 채널 (controller, service, dto, entity, exception, repository)
-│       └── workspace/               ← 워크스페이스 대시보드 (controller, service, dto)
-├── media-service/                   ← Media Service (PostgreSQL, port: 8081)
+│       ├── workspace/               ← 워크스페이스 대시보드 (controller, service, dto)
+│       └── notification/            ← 알림 (controller, dto)
+├── media-service/                   ← Media Service (MySQL media_db, port: 8082)
 │   └── src/main/java/com/onetake/media/
 │       ├── MediaServiceApplication.java
 │       ├── global/                  ← 공통 (config, exception, common)
@@ -42,16 +43,16 @@ onetakestudio-backend/
 │       └── screenshare/             ← 화면 공유
 ├── eureka-server/                   ← Eureka Service Discovery (port: 8761)
 │   └── src/main/java/com/onetake/eureka/EurekaServerApplication.java
-└── api-gateway/                     ← API Gateway (port: 8080)
+└── api-gateway/                     ← API Gateway (port: 60000)
     └── src/main/java/com/onetake/gateway/ApiGatewayApplication.java
 ```
 
 ### 실행 순서
-1. Docker Compose (`docker-compose up -d`) → MySQL, PostgreSQL, Redis, LiveKit
+1. Docker Compose (`docker-compose up -d`) → MySQL (통합), Redis, LiveKit
 2. Eureka Server (port 8761)
-3. Core Service (port 0 → 랜덤, Eureka 등록)
-4. Media Service (port 8081)
-5. API Gateway (port 8080) → 클라이언트 진입점
+3. Core Service (port 8080, Eureka 등록)
+4. Media Service (port 8082)
+5. API Gateway (port 60000) → 클라이언트 진입점
 
 ### 프론트엔드 (FE/dev 브랜치)
 - 경로: 같은 레포의 `FE/dev` 브랜치 → `frontend/` 폴더
@@ -99,14 +100,13 @@ onetakestudio-backend/
 - **Language**: Java **21** (Oracle JDK)
 - **ORM**: Spring Data JPA
 - **MSA**:
-  - Spring Cloud Gateway (API Gateway)
-  - Spring Cloud Netflix Eureka (Service Discovery)
-  - Spring Cloud Config (중앙 설정)
-  - RabbitMQ (Message Queue)
+  - Spring Cloud Gateway (API Gateway, port: 60000)
+  - Spring Cloud Netflix Eureka (Service Discovery, port: 8761)
+  - Redis Streams (메시지 브로커)
 - **WebRTC**: **LiveKit** (SFU Server)
 - **Database**:
-  - Core Service: **MySQL 8.0**
-  - Media Service: **PostgreSQL 15**
+  - Core Service: **MySQL 8.0** (core_db, port: 3306)
+  - Media Service: **MySQL 8.0** (media_db, port: 3306) ← PostgreSQL에서 통합 마이그레이션됨
 - **Cache**: Redis 7
 - **Auth**: JWT, Spring Security
 
@@ -132,7 +132,7 @@ onetakestudio-backend/
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   Spring Cloud Gateway                       │
-│                    (API Gateway / Port: 8000)                │
+│                    (API Gateway / Port: 60000)               │
 └─────────────────────────────────────────────────────────────┘
                             │
                             ├─── Service Discovery
@@ -143,21 +143,22 @@ onetakestudio-backend/
         ▼                   ▼                   ▼
 ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
 │  Core Service    │ │  Media Service   │ │   AI Service     │
-│  (Port: 8080)    │ │  (Port: 8081)    │ │  (Port: 8000)    │
+│  (Port: 8080)    │ │  (Port: 8082)    │ │  (Port: 8000)    │
 │                  │ │                  │ │                  │
 │  - Auth          │ │  - Stream        │ │  - AI Shorts     │
 │  - User          │ │  - Recording     │ │  - STT/자막      │
 │  - Studio        │ │  - Publish       │ │  - 영상 분석     │
 │  - Destination   │ │  - ScreenShare   │ │                  │
 │  - Workspace     │ │                  │ │  Python/FastAPI  │
-│                  │ │  + LiveKit       │ │                  │
-│  MySQL           │ │  PostgreSQL      │ │                  │
+│  - Notification  │ │  + LiveKit       │ │                  │
+│                  │ │                  │ │                  │
+│  MySQL (core_db) │ │  MySQL (media_db)│ │                  │
 └──────────────────┘ └──────────────────┘ └──────────────────┘
         │                   │                   │
         └───────────────────┼───────────────────┘
                             │
                     ┌───────────────┐
-                    │   RabbitMQ    │
+                    │ Redis Streams │
                     │ (Message Bus) │
                     └───────────────┘
                             │
@@ -230,7 +231,7 @@ publish_sessions.egress_id VARCHAR(100)
 | `studio_destination_map` | 스튜디오-채널 매핑 |
 | `refresh_tokens` | JWT Refresh Token |
 
-### Media Service (PostgreSQL - media_db)
+### Media Service (MySQL - media_db)
 
 | 테이블 | 설명 |
 |--------|------|
@@ -238,8 +239,9 @@ publish_sessions.egress_id VARCHAR(100)
 | `publish_sessions` | 송출 세션 (egress_id 포함) ⭐ |
 | `publish_destinations` | 실시간 RTMP 상태 ⭐ |
 | `publish_events` | 송출 이벤트 로그 |
-| `recordings` | 녹화본 (egress_id 포함) |
+| `recording_sessions` | 녹화 세션 (egress_id 포함) |
 | `recording_events` | 녹화 이벤트 로그 |
+| `screen_share_sessions` | 화면 공유 세션 |
 | `clips` | 클립/쇼츠 |
 | `markers` | 마커/북마크 |
 | `banners` | 배너 |
@@ -295,15 +297,15 @@ publish_sessions.egress_id VARCHAR(100)
 **common 모듈 구조** (라이브러리, 서버 아님):
 ```
 common/                      ← JAR 라이브러리 (실행 X)
-├── JwtUtil.java             ← JWT 생성/검증
-├── TokenBlacklistService.java ← Redis 블랙리스트 체크
-├── JwtAuthenticationFilter.java ← 공통 인증 필터
-└── ApiResponse.java         ← 공통 응답 DTO
+├── dto/ApiResponse.java     ← 공통 응답 DTO
+└── jwt/JwtUtil.java         ← JWT 생성/검증
 
-Core Service (서버)           Media Service (서버)
-├── common 의존               ├── common 의존
-├── Redis 연결                ├── Redis 연결
-└── 로그아웃 API              └── X-User-Id 헤더 사용
+Core Service (서버)                      Media Service (서버)
+├── common 의존                          ├── global/common/ApiResponse.java (자체 구현)
+├── security/TokenBlacklistService.java  ├── Redis 연결 (Streams)
+├── security/JwtAuthenticationFilter.java├── 자체 SecurityConfig
+├── Redis 연결                           └── X-User-Id 헤더 사용
+└── 로그아웃 API
 ```
 
 **Redis 블랙리스트 저장 형식**:
@@ -481,6 +483,24 @@ public void stopRecording(String egressId) {
 
 **전체 API**: `references/api-specifications.md`
 
+### API Gateway 라우팅 규칙 (port 60000)
+```yaml
+# Core Service 라우트
+- /api/auth/**         → core-service:8080
+- /api/users/**        → core-service:8080
+- /api/studios/**      → core-service:8080
+- /api/workspace/**    → core-service:8080
+- /api/notifications/**→ core-service:8080
+- /api/destinations/** → core-service:8080
+- /api/dashboard       → core-service:8080
+
+# Media Service 라우트
+- /api/v1/media/**     → media-service:8082
+- /api/streams/**      → media-service:8082 (RewritePath → /api/v1/media/stream/)
+- /api/recordings/**   → media-service:8082 (RewritePath → /api/v1/media/record/)
+- /api/publish/**      → media-service:8082 (RewritePath → /api/v1/media/publish/)
+```
+
 ---
 
 ## 🚀 개발 시작하기
@@ -499,44 +519,38 @@ docker-compose logs -f
 ```
 
 **서비스 접속**:
-- MySQL: `localhost:3306` (core_user/core_password)
-- PostgreSQL: `localhost:5432` (media_user/media_password)
-- RabbitMQ UI: `http://localhost:15672` (admin/admin123)
+- MySQL: `localhost:3306`
+  - core_db: core_user/core_password
+  - media_db: media_user/media_password
 - Redis: `localhost:6379`
 - LiveKit: `ws://localhost:7880`
-- MinIO Console: `http://localhost:9001` (minioadmin/minioadmin123)
 
 ### 2. 데이터베이스 초기화
 
 ```bash
-# MySQL (Core Service)
-mysql -h localhost -P 3306 -u core_user -pcore_password core_db < docker/mysql/init/schema.sql
-
-# PostgreSQL (Media Service)
-psql -h localhost -p 5432 -U media_user -d media_db -f docker/postgres/init/schema.sql
+# MySQL (docker-compose로 자동 초기화)
+# init.sql이 docker-entrypoint-initdb.d에 마운트되어 자동 실행됨
+# 수동 초기화 필요 시:
+mysql -h localhost -P 3306 -u root -proot_password < docker/mysql/init.sql
 ```
 
 ### 3. 백엔드 실행
 
 ```bash
-# Eureka Server
+# 1. Eureka Server (port 8761)
 cd eureka-server
 ./mvnw spring-boot:run
 
-# Config Server
-cd config-server
-./mvnw spring-boot:run
-
-# Gateway
-cd gateway-service
-./mvnw spring-boot:run
-
-# Core Service
+# 2. Core Service (port 8080)
 cd core-service
 ./mvnw spring-boot:run
 
-# Media Service
+# 3. Media Service (port 8082)
 cd media-service
+./mvnw spring-boot:run
+
+# 4. API Gateway (port 60000)
+cd api-gateway
 ./mvnw spring-boot:run
 ```
 
@@ -731,20 +745,24 @@ public interface CoreServiceClient {
 }
 ```
 
-### 2. RabbitMQ 이벤트 발행
+### 2. Redis Streams 이벤트 발행
 ```java
-// Core Service
-rabbitTemplate.convertAndSend(
-    "studio.exchange",
-    "studio.created",
-    new StudioCreatedEvent(studioId, type)
-);
-
-// Media Service
-@RabbitListener(queues = "media.studio.queue")
-public void handleStudioCreated(StudioCreatedEvent event) {
-    // WebRTC Room 초기화
+// Media Service - RedisStreamConfig.java
+@Configuration
+public class RedisStreamConfig {
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+        return template;
+    }
 }
+
+// 이벤트 발행 예시
+stringRedisTemplate.opsForStream()
+    .add("stream:studio-events", Map.of("event", "STUDIO_CREATED", "studioId", studioId));
 ```
 
 ### 3. egress_id는 반드시 저장!
@@ -772,22 +790,22 @@ curl http://localhost:7880
 docker logs onetake-livekit
 ```
 
-### RabbitMQ 메시지 안 감
+### Redis 연결 실패
 ```bash
-# RabbitMQ UI 접속
-http://localhost:15672
+# Redis 상태 확인
+redis-cli ping
 
-# Queue 확인
-# Bindings 확인
+# Redis Streams 확인
+redis-cli XLEN stream:studio-events
 ```
 
 ### DB 연결 실패
 ```bash
-# MySQL 접속 확인
+# MySQL 접속 확인 (Core)
 mysql -h localhost -P 3306 -u core_user -pcore_password core_db
 
-# PostgreSQL 접속 확인
-psql -h localhost -p 5432 -U media_user -d media_db
+# MySQL 접속 확인 (Media)
+mysql -h localhost -P 3306 -u media_user -pmedia_password media_db
 ```
 
 ---

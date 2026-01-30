@@ -29,7 +29,17 @@
       "Bash(git pull:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(taskkill:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIyZjdlNTBhZi03NzRjLTQ5YmYtODJjYS0wN2ViNzAyZTg1ZDkiLCJlbWFpbCI6InVuaW1va3cxQGdtYWlsLmNvbSIsIm5pY2tuYW1lIjoi7J2A7YOc7ZiEIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2OTU3ODI1NiwiZXhwIjoxNzY5NTgxODU2fQ.N5esvcvfyXP3czEiPIXuhELOyeT7CJISJL5ykvbHtB5rIwIucRzdnr-mKdMsI_XVnICIOotnxcr3k6PsRVAL4w\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIyZjdlNTBhZi03NzRjLTQ5YmYtODJjYS0wN2ViNzAyZTg1ZDkiLCJlbWFpbCI6InVuaW1va3cxQGdtYWlsLmNvbSIsIm5pY2tuYW1lIjoi7J2A7YOc7ZiEIiwidHlwZSI6ImFjY2VzcyIsImlhdCI6MTc2OTU3ODQwNCwiZXhwIjoxNzY5NTgyMDA0fQ.HghEEyWv5gj4V3xejH6Rzbt9g0QKHr7nVpKF6XhDhWaqbK4Cn3Ta1PNBXlmmJSKV5wObkggDnNVPhrhi79V5hw\")",
+      "Bash(docker exec:*)",
+      "Bash(docker exec onetakestudio-livekit sh -c \"cat /livekit.yaml\")",
+      "Bash(docker logs:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd.exe /c \"mvnw.cmd clean package -DskipTests\")",
+      "Bash(sh mvnw:*)",
+      "Bash(mvn:*)"
     ]
   }
 }
