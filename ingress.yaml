@@ -1,0 +1,20 @@
+# LiveKit Ingress 설정
+api_key: devkey
+api_secret: secret
+ws_url: ws://livekit:7880
+
+# Redis 연결
+redis:
+  address: redis:6379
+
+# RTMP 설정
+rtmp:
+  port: 1935
+
+# WHIP 설정 (WebRTC HTTP Ingress)
+whip:
+  port: 8088
+
+# 로깅
+logging:
+  level: info

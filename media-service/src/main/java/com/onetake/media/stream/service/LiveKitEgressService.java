@@ -19,14 +19,8 @@ public class LiveKitEgressService {
 
     private final EgressServiceClient egressServiceClient;
 
-    @Value("${livekit.egress.output-path:recordings/}")
+    @Value("${livekit.egress.output-path:/data/recordings/}")
     private String outputPath;
-
-    @Value("${livekit.egress.s3-bucket:#{null}}")
-    private String s3Bucket;
-
-    @Value("${livekit.egress.s3-region:#{null}}")
-    private String s3Region;
 
     /**
      * Room Composite 녹화 시작
@@ -163,9 +157,6 @@ public class LiveKitEgressService {
     }
 
     private String buildFilePath(String fileName) {
-        if (s3Bucket != null && !s3Bucket.isEmpty()) {
-            return String.format("s3://%s/%s%s", s3Bucket, outputPath, fileName);
-        }
         return outputPath + fileName;
     }
 }

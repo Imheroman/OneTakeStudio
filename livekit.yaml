@@ -9,3 +9,13 @@ rtc:
 
 keys:
   devkey: secret
+
+# Redis (Egress 통신용)
+redis:
+  address: redis:6379
+
+# Webhook 설정 (녹화 완료 알림)
+webhook:
+  urls:
+    - http://host.docker.internal:8082/api/media/webhook/livekit
+  api_key: devkey

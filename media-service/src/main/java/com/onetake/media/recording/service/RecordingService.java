@@ -122,11 +122,11 @@ public class RecordingService {
     }
 
     @Transactional
-    public void completeRecording(Long recordingId, String s3Key, String s3Url, Long fileSize, Long durationSeconds) {
+    public void completeRecording(Long recordingId, String filePath, String fileUrl, Long fileSize, Long durationSeconds) {
         RecordingSession recordingSession = recordingSessionRepository.findById(recordingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
 
-        recordingSession.complete(s3Key, s3Url, fileSize, durationSeconds);
+        recordingSession.complete(filePath, fileUrl, fileSize, durationSeconds);
         recordingSessionRepository.save(recordingSession);
 
         // Core 서비스에 이벤트 발행 (Redis Streams 사용)
@@ -134,8 +134,8 @@ public class RecordingService {
                 .recordingId(recordingId)
                 .studioId(recordingSession.getStudioId())
                 .userId(recordingSession.getUserId())
-                .s3Key(s3Key)
-                .s3Url(s3Url)
+                .filePath(filePath)
+                .fileUrl(fileUrl)
                 .fileSize(fileSize)
                 .durationSeconds(durationSeconds)
                 .stoppedAt(LocalDateTime.now())
@@ -147,6 +147,14 @@ public class RecordingService {
     }
 
     /**
+     * egressId로 녹화 세션 조회
+     */
+    public RecordingSession findByEgressId(String egressId) {
+        return recordingSessionRepository.findByEgressId(egressId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
+    }
+
+    /**
      * Redis Streams를 통해 녹화 완료 이벤트 발행
      */
     private void publishRecordingStoppedEvent(RecordingStoppedEvent event) {
@@ -155,8 +163,8 @@ public class RecordingService {
         message.put("recordingId", String.valueOf(event.getRecordingId()));
         message.put("studioId", String.valueOf(event.getStudioId()));
         message.put("userId", String.valueOf(event.getUserId()));
-        message.put("s3Key", event.getS3Key());
-        message.put("s3Url", event.getS3Url());
+        message.put("filePath", event.getFilePath());
+        message.put("fileUrl", event.getFileUrl());
         message.put("fileSize", String.valueOf(event.getFileSize()));
         message.put("durationSeconds", String.valueOf(event.getDurationSeconds()));
         message.put("stoppedAt", event.getStoppedAt().toString());
