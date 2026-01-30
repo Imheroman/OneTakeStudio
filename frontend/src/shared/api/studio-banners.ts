@@ -1,6 +1,7 @@
 /**
- * 스튜디오 배너 API (백엔드 구현 시 연동)
- * 예상 경로: GET/POST/DELETE /api/studios/{studioId}/banners
+ * 스튜디오 배너 API (현재 미사용)
+ * 배너는 로컬 전용: 캔버스에 합성 후 녹화/라이브 시 한 스트림으로 전송.
+ * 백엔드 배너 CRUD가 필요해지면 예상 경로: GET/POST/DELETE /api/studios/{studioId}/banners
  */
 import { z } from "zod";
 import { apiClient } from "./client";

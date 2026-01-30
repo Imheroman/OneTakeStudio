@@ -15,9 +15,9 @@ interface StagingSourceTileProps {
   isDragging?: boolean;
   stream?: MediaStream | null;
   /** @dnd-kit 드래그 핸들에 붙일 listeners (순서 변경용) */
-  dragHandleListeners?: Record<string, unknown>;
+  dragHandleListeners?: object;
   /** @dnd-kit 드래그 핸들에 붙일 attributes */
-  dragHandleAttributes?: Record<string, unknown>;
+  dragHandleAttributes?: object;
   onToggle: (sourceId: string) => void;
   onAddToStage: (sourceId: string) => void;
   onRemoveFromStage: (sourceId: string) => void;

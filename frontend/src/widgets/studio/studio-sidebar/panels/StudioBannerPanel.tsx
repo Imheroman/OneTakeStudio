@@ -1,17 +1,54 @@
 "use client";
 
-import { useState } from "react";
+/**
+ * 배너는 로컬 전용. 캔버스(미리보기)에 합성되어 표시되며,
+ * 녹화/라이브 시에는 이 캔버스 출력을 한 스트림으로 서버에 보내는 방식.
+ * 서버에 배너 CRUD API 없음.
+ */
+import { useState, useEffect } from "react";
 import { Image, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { cn } from "@/shared/lib/utils";
 
+const STORAGE_KEY_PREFIX = "studio-banners-";
+
 export interface BannerItem {
   id: string;
   text: string;
   timerSeconds?: number;
   isTicker?: boolean;
+}
+
+function loadBannersFromStorage(studioId: number): BannerItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(`${STORAGE_KEY_PREFIX}${studioId}`);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (b): b is BannerItem =>
+        b != null &&
+        typeof b === "object" &&
+        typeof (b as BannerItem).id === "string" &&
+        typeof (b as BannerItem).text === "string",
+    );
+  } catch {
+    return [];
+  }
+}
+
+function saveBannersToStorage(studioId: number, banners: BannerItem[]) {
+  try {
+    sessionStorage.setItem(
+      `${STORAGE_KEY_PREFIX}${studioId}`,
+      JSON.stringify(banners),
+    );
+  } catch {
+    /* ignore */
+  }
 }
 
 interface StudioBannerPanelProps {
@@ -28,26 +65,30 @@ export function StudioBannerPanel({
   onSelectBanner,
   selectedBannerId = null,
 }: StudioBannerPanelProps) {
-  const [banners, setBanners] = useState<BannerItem[]>([
-    {
-      id: "1",
-      text: "배너 예시입니다. 클릭하면 화면에 표시됩니다.",
-      isTicker: true,
-    },
-  ]);
+  const [banners, setBanners] = useState<BannerItem[]>(() =>
+    loadBannersFromStorage(studioId),
+  );
   const [inputText, setInputText] = useState("");
   const [timerSec, setTimerSec] = useState("");
   const [isTicker, setIsTicker] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  useEffect(() => {
+    setBanners(loadBannersFromStorage(studioId));
+  }, [studioId]);
+
+  useEffect(() => {
+    saveBannersToStorage(studioId, banners);
+  }, [studioId, banners]);
+
   const handleAdd = () => {
     const text = inputText.trim();
     if (!text) return;
     const newBanner: BannerItem = {
-      id: String(Date.now()),
+      id: `local-${Date.now()}`,
       text,
       timerSeconds: timerSec ? parseInt(timerSec, 10) : undefined,
-      isTicker: isTicker,
+      isTicker,
     };
     setBanners((prev) => [...prev, newBanner]);
     setInputText("");
@@ -88,37 +129,41 @@ export function StudioBannerPanel({
         )}
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
-        {banners.map((b) => (
-          <div
-            key={b.id}
-            className={cn(
-              "flex items-center justify-between gap-2 p-2 rounded border cursor-pointer",
-              effectiveSelectedId === b.id
-                ? "border-indigo-500 bg-indigo-900/20"
-                : "border-gray-600 bg-gray-700/50 hover:bg-gray-700",
-            )}
-          >
-            <button
-              type="button"
-              className="flex-1 text-left text-sm text-gray-200 truncate"
-              onClick={() => handleSelect(b)}
+        {banners.length === 0 ? (
+          <p className="text-sm text-gray-500">배너를 추가하면 미리보기에 표시됩니다.</p>
+        ) : (
+          banners.map((b) => (
+            <div
+              key={b.id}
+              className={cn(
+                "flex items-center justify-between gap-2 p-2 rounded border cursor-pointer",
+                effectiveSelectedId === b.id
+                  ? "border-indigo-500 bg-indigo-900/20"
+                  : "border-gray-600 bg-gray-700/50 hover:bg-gray-700",
+              )}
             >
-              {b.text}
-            </button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="text-gray-400 hover:text-red-400 shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(b.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
+              <button
+                type="button"
+                className="flex-1 text-left text-sm text-gray-200 truncate"
+                onClick={() => handleSelect(b)}
+              >
+                {b.text}
+              </button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="text-gray-400 hover:text-red-400 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(b.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))
+        )}
       </div>
       <div className="p-3 border-t border-gray-700 space-y-2">
         <Input

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ImageIcon, Layers, Video, Trash2 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import {
+  getStudioAssets,
+  deleteStudioAsset,
+} from "@/shared/api/studio-assets";
 
 export type AssetType = "logo" | "overlay" | "video";
 
@@ -14,11 +18,23 @@ export interface AssetItem {
   fileUrl?: string;
 }
 
-const ASSET_TYPE_LABEL: Record<AssetType, string> = {
-  logo: "로고",
-  overlay: "오버레이",
-  video: "비디오 클립",
-};
+function mapAssetResponseToItem(a: {
+  id: string | number;
+  type: string;
+  name: string;
+  fileUrl?: string | null;
+}): AssetItem {
+  const type =
+    a.type === "logo" || a.type === "overlay" || a.type === "video"
+      ? a.type
+      : "overlay";
+  return {
+    id: String(a.id),
+    type,
+    name: a.name,
+    fileUrl: a.fileUrl ?? undefined,
+  };
+}
 
 interface StudioAssetPanelProps {
   studioId: number;
@@ -28,14 +44,6 @@ interface StudioAssetPanelProps {
   selectedAssetId?: string | null;
 }
 
-const MOCK_OVERLAYS = [
-  { id: "o1", type: "overlay" as const, name: "Like and Subscribe" },
-  { id: "o2", type: "overlay" as const, name: "Welcome" },
-  { id: "o3", type: "overlay" as const, name: "Q&A" },
-  { id: "o4", type: "overlay" as const, name: "Achievement" },
-  { id: "o5", type: "overlay" as const, name: "Breaking News" },
-];
-
 export function StudioAssetPanel({
   studioId,
   onClose,
@@ -43,9 +51,28 @@ export function StudioAssetPanel({
   selectedAssetId = null,
 }: StudioAssetPanelProps) {
   const [logos, setLogos] = useState<AssetItem[]>([]);
-  const [overlays] = useState<AssetItem[]>(MOCK_OVERLAYS);
+  const [overlays, setOverlays] = useState<AssetItem[]>([]);
   const [videos, setVideos] = useState<AssetItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const fetchAssets = useCallback(async () => {
+    if (!studioId) return;
+    setLoading(true);
+    try {
+      const list = await getStudioAssets(studioId);
+      const items = list.map(mapAssetResponseToItem);
+      setLogos(items.filter((a) => a.type === "logo"));
+      setOverlays(items.filter((a) => a.type === "overlay"));
+      setVideos(items.filter((a) => a.type === "video"));
+    } finally {
+      setLoading(false);
+    }
+  }, [studioId]);
+
+  useEffect(() => {
+    fetchAssets();
+  }, [fetchAssets]);
 
   const handleSelect = (asset: AssetItem) => {
     const next = selectedId === asset.id ? null : asset.id;
@@ -55,8 +82,11 @@ export function StudioAssetPanel({
 
   const effectiveSelectedId = selectedAssetId ?? selectedId;
 
-  const handleDelete = (id: string, type: AssetType) => {
+  const handleDelete = async (id: string, type: AssetType) => {
+    await deleteStudioAsset(studioId, id);
     if (type === "logo") setLogos((prev) => prev.filter((a) => a.id !== id));
+    if (type === "overlay")
+      setOverlays((prev) => prev.filter((a) => a.id !== id));
     if (type === "video") setVideos((prev) => prev.filter((a) => a.id !== id));
     if (selectedId === id) {
       setSelectedId(null);
@@ -144,10 +174,20 @@ export function StudioAssetPanel({
         )}
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-4 min-h-0">
-        {section("Logo", ImageIcon, logos, (id) => handleDelete(id, "logo"))}
-        {section("Overlay", Layers, overlays)}
-        {section("Video clips", Video, videos, (id) =>
-          handleDelete(id, "video"),
+        {loading ? (
+          <p className="text-sm text-gray-500">로딩 중...</p>
+        ) : (
+          <>
+            {section("Logo", ImageIcon, logos, (id) =>
+              handleDelete(id, "logo"),
+            )}
+            {section("Overlay", Layers, overlays, (id) =>
+              handleDelete(id, "overlay"),
+            )}
+            {section("Video clips", Video, videos, (id) =>
+              handleDelete(id, "video"),
+            )}
+          </>
         )}
       </div>
     </div>
