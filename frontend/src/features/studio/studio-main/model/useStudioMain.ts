@@ -9,6 +9,7 @@ import {
   StudioDetailSchema,
   SceneResponseSchema,
   CreateSceneRequestSchema,
+  UpdateSceneRequestSchema,
   type StudioDetail,
   type LayoutType,
   type Source,
@@ -243,10 +244,17 @@ export function useStudioMain(
       displaySources.forEach((s, i) => {
         const z = displaySources.length - 1 - i;
         const current = prev[s.id];
-        if (current != null) {
+        if (current != null && current.width > 0 && current.height > 0) {
           next[s.id] = { ...current, zIndex: z };
+        } else {
+          next[s.id] = {
+            x: current?.x ?? 0,
+            y: current?.y ?? 0,
+            width: current?.width ?? 0,
+            height: current?.height ?? 0,
+            zIndex: z,
+          };
         }
-        // 저장된 transform이 없는 소스는 next에 넣지 않음 → PreviewArea getTransform이 arranged 기본값 사용
       });
       return next;
     });
@@ -289,6 +297,22 @@ export function useStudioMain(
       await fetchStudio();
     } catch (error) {
       console.error("씬 삭제 실패:", error);
+    }
+  };
+
+  const handleUpdateScene = async (sceneId: string, payload: { name?: string }) => {
+    const sid = Number(studioId);
+    const sceneIdNum = Number(sceneId);
+    if (Number.isNaN(sid) || Number.isNaN(sceneIdNum)) return;
+    try {
+      await apiClient.put(
+        `/api/studios/${sid}/scenes/${sceneIdNum}`,
+        ApiResponseSceneSchema,
+        payload as z.infer<typeof UpdateSceneRequestSchema>,
+      );
+      await fetchStudio();
+    } catch (error) {
+      console.error("씬 수정 실패:", error);
     }
   };
 
@@ -388,6 +412,17 @@ export function useStudioMain(
 
   const handleReorderSources = useCallback((newOrder: Source[]) => {
     setSources(newOrder);
+  }, []);
+
+  /** 백스테이지에서 소스 완전 제거(목록·스테이지에서 삭제) */
+  const handleRemoveSource = useCallback((sourceId: string) => {
+    setSources((prev) => prev.filter((s) => s.id !== sourceId));
+    setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
+    setSourceTransforms((prev) => {
+      const next = { ...prev };
+      delete next[sourceId];
+      return next;
+    });
   }, []);
 
   const handleSaveSceneLayout = useCallback(async () => {
@@ -543,12 +578,14 @@ export function useStudioMain(
     handleSceneSelect,
     handleAddScene,
     handleRemoveScene,
+    handleUpdateScene,
     handleAddSource,
     handleAddSourceConfirm,
     handleSourceToggle,
     handleAddToStage,
     handleRemoveFromStage,
     handleReorderSources,
+    handleRemoveSource,
     handleBringSourceToFront,
     handleSaveSceneLayout,
     handleExit,
