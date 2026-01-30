@@ -70,9 +70,10 @@ public class MediaSettingsService {
 
     @Transactional
     public SessionMediaStateResponse initializeSessionState(Long userId, Long studioId, Long streamSessionId) {
-        // 기존 활성 상태가 있으면 비활성화
+        // 유니크 제약 (studio_id, user_id, is_active): (1,1,false) 행은 하나만 허용되므로
+        // 기존 활성 행을 is_active=false로 바꾸면 이미 있는 false 행과 충돌함. 따라서 기존 활성 행은 삭제.
         sessionMediaStateRepository.findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
-                .ifPresent(SessionMediaState::deactivate);
+                .ifPresent(sessionMediaStateRepository::delete);
 
         // 사용자 설정 가져오기
         UserMediaSettings userSettings = userMediaSettingsRepository.findByUserId(userId)
@@ -173,9 +174,8 @@ public class MediaSettingsService {
     public void terminateSessionState(Long studioId, Long userId) {
         sessionMediaStateRepository.findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
                 .ifPresent(state -> {
-                    state.deactivate();
-                    sessionMediaStateRepository.save(state);
-                    log.info("Session media state terminated: studioId={}, userId={}", studioId, userId);
+                    sessionMediaStateRepository.delete(state);
+                    log.info("Session media state terminated (deleted): studioId={}, userId={}", studioId, userId);
                 });
     }
 }

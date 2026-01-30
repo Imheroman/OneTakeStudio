@@ -21,13 +21,21 @@ spring:
               filters:
                 - StripPrefix=0
 
-            # Media Service Routes
+            # Media Service - Publish (Media는 /api/media/publish 사용 → /api/v1/media/publish 요청을 재작성)
+            - id: media-service-publish-v1
+              uri: lb://media-service
+              predicates:
+                - Path=/api/v1/media/publish/**
+              filters:
+                - RewritePath=/api/v1/media/publish(?<segment>.*),/api/media/publish${segment}
+
+            # Media Service Routes (Media 서비스는 /api/media 사용 → /api/v1/media 요청을 재작성)
             - id: media-service
               uri: lb://media-service
               predicates:
                 - Path=/api/v1/media/**
               filters:
-                - StripPrefix=0
+                - RewritePath=/api/v1/media(?<segment>.*),/api/media${segment}
 
             # Media Service - Stream Routes
             - id: media-service-stream
@@ -44,14 +52,6 @@ spring:
                 - Path=/api/recordings/**
               filters:
                 - RewritePath=/api/recordings/(?<segment>.*), /api/v1/media/record/${segment}
-
-            # Media Service - Publish Routes
-            - id: media-service-publish
-              uri: lb://media-service
-              predicates:
-                - Path=/api/publish/**
-              filters:
-                - RewritePath=/api/publish/(?<segment>.*), /api/v1/media/publish/${segment}
 
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE

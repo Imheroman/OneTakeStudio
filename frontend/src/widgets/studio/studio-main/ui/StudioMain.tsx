@@ -11,6 +11,7 @@ import { ScenesPanel } from "@/widgets/studio/scenes-panel";
 import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
 import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
+import { GoLiveConfirmModal } from "@/widgets/studio/go-live-confirm-modal";
 import { useStudioMain } from "@/features/studio/studio-main";
 import { useAudioLevel, useSourceStreams } from "@/hooks/studio";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
@@ -54,6 +55,16 @@ export function StudioMain({ studioId }: StudioMainProps) {
     isAudioEnabled,
     isLive,
     handleGoLive,
+    isGoLiveLoading,
+    goLiveError,
+    showGoLiveModal,
+    setShowGoLiveModal,
+    goLiveModalDestinations,
+    handleGoLiveConfirm,
+    handleGoLiveModalClose,
+    handleStopPublish,
+    isStopLiveLoading,
+    connectedDestinations,
     handleSceneSelect,
     handleAddScene,
     handleRemoveScene,
@@ -105,6 +116,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   }
 
   return (
+    <>
     <div className="flex h-screen bg-gray-900 overflow-hidden">
       {/* 왼쪽 사이드바: 씬 */}
       <aside className="shrink-0 w-56 border-r border-gray-700 bg-gray-800/95 flex flex-col overflow-hidden">
@@ -129,7 +141,12 @@ export function StudioMain({ studioId }: StudioMainProps) {
         <StudioHeader
           studioTitle={studio.name}
           onGoLive={handleGoLive}
+          onStopLive={handleStopPublish}
           isLive={isLive}
+          isGoLiveLoading={isGoLiveLoading}
+          isStopLiveLoading={isStopLiveLoading}
+          goLiveError={goLiveError}
+          connectedDestinations={connectedDestinations}
           isEditMode={isEditMode}
           onEditModeToggle={() => setIsEditMode((v) => !v)}
         />
@@ -232,6 +249,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
 
       <StudioSidebar
         studioId={studioId}
+        connectedDestinations={connectedDestinations}
         activeBanner={activeBanner}
         onSelectBanner={setActiveBanner}
         activeAsset={activeAsset}
@@ -239,6 +257,19 @@ export function StudioMain({ studioId }: StudioMainProps) {
         styleState={styleState}
         onStyleChange={setStyleState}
       />
+
+      <GoLiveConfirmModal
+        open={showGoLiveModal}
+        onOpenChange={(open) => {
+          setShowGoLiveModal(open);
+          if (!open) handleGoLiveModalClose();
+        }}
+        destinations={goLiveModalDestinations}
+        onConfirm={handleGoLiveConfirm}
+        isSubmitting={isGoLiveLoading}
+        error={goLiveError}
+      />
     </div>
+    </>
   );
 }

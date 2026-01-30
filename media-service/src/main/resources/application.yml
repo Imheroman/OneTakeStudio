@@ -45,7 +45,8 @@ livekit:
   host: http://localhost:7880
   api:
     key: devkey
-    secret: secret
+    # LiveKit 서버와 동일 (최소 32자)
+    secret: devkey-secret-for-livekit-min-32-chars
   egress:
     output-path: /recordings/
 

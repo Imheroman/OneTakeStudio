@@ -19,11 +19,19 @@ import {
   ApiResponseRecordingSchema,
   type RecordingStartRequest,
 } from "@/entities/recording/model";
+import { ApiResponseDestinationListSchema } from "@/entities/channel/model";
+import { startPublish, stopPublish } from "@/shared/api/studio-publish";
+import { joinStream, leaveStream } from "@/shared/api/studio-stream";
+import {
+  connectAndPublish,
+  disconnectRoom,
+} from "@/shared/lib/livekit-room";
 import {
   getPreferredVideoDeviceId,
   getPreferredAudioDeviceId,
 } from "@/shared/lib/device-preferences";
 import { useAdaptivePerformance } from "@/hooks/studio";
+import type { Room } from "livekit-client";
 
 const ApiResponseSceneSchema = z.object({
   success: z.boolean(),
@@ -57,6 +65,17 @@ export function useStudioMain(
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isLive, setIsLive] = useState(false);
+  const [isGoLiveLoading, setIsGoLiveLoading] = useState(false);
+  const [isStopLiveLoading, setIsStopLiveLoading] = useState(false);
+  const [goLiveError, setGoLiveError] = useState<string | null>(null);
+  const [showGoLiveModal, setShowGoLiveModal] = useState(false);
+  const [goLiveModalDestinations, setGoLiveModalDestinations] = useState<
+    { id: number; platform: string; channelName?: string | null }[]
+  >([]);
+  /** 스튜디오 내 연동 채널 표기용 (StreamYard 스타일) */
+  const [connectedDestinations, setConnectedDestinations] = useState<
+    { id: number; platform: string; channelName?: string | null }[]
+  >([]);
 
   const [sources, setSources] = useState<Source[]>([]);
   const [onStageSourceIds, setOnStageSourceIds] = useState<string[]>([]);
@@ -77,6 +96,8 @@ export function useStudioMain(
   const [isRecordingCloud, setIsRecordingCloud] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  /** Go Live 시 LiveKit 룸 연결 저장 (퇴장/언마운트 시 disconnect용) */
+  const liveKitRoomRef = useRef<Room | null>(null);
 
   const displaySources = useMemo(
     () => sources.filter((s) => onStageSourceIds.includes(s.id)),
@@ -205,6 +226,31 @@ export function useStudioMain(
     fetchStudio();
   }, [fetchStudio]);
 
+  const fetchDestinations = useCallback(async () => {
+    try {
+      const listRes = await apiClient.get(
+        "/api/destinations",
+        ApiResponseDestinationListSchema,
+      );
+      const destinations = listRes.data ?? [];
+      const active = destinations.filter((d) => d.isActive !== false);
+      setConnectedDestinations(
+        active.map((d) => ({
+          id: d.id,
+          platform: d.platform ?? "",
+          channelName: d.channelName ?? d.channelId ?? null,
+        })),
+      );
+    } catch {
+      setConnectedDestinations([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!studio) return;
+    fetchDestinations();
+  }, [studio, fetchDestinations]);
+
   useEffect(() => {
     if (!studio?.scenes?.length || activeSceneId) return;
     const first = studio.scenes[0];
@@ -260,10 +306,152 @@ export function useStudioMain(
     });
   }, [displaySourceOrderKey, displaySources]);
 
-  const handleGoLive = () => {
-    setIsLive(true);
-    setIsEditMode(false);
-  };
+  useEffect(() => {
+    return () => {
+      const room = liveKitRoomRef.current;
+      const sid = Number(studioId);
+      if (room) {
+        disconnectRoom(room).catch((e) => console.warn("LiveKit 퇴장 실패:", e));
+        liveKitRoomRef.current = null;
+        if (!Number.isNaN(sid)) leaveStream(sid).catch((e) => console.warn("leaveStream 실패:", e));
+      }
+    };
+  }, [studioId]);
+
+  /** StreamYard 스타일: Go Live 클릭 시 채널 선택 모달 오픈 */
+  const handleGoLive = useCallback(async () => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid)) return;
+    setGoLiveError(null);
+    try {
+      const listRes = await apiClient.get(
+        "/api/destinations",
+        ApiResponseDestinationListSchema,
+      );
+      const destinations = listRes.data ?? [];
+      const active = destinations.filter((d) => d.isActive !== false);
+      if (active.length === 0) {
+        setGoLiveError("연동된 채널이 없습니다. 채널 관리에서 채널을 추가해 주세요.");
+        return;
+      }
+      setGoLiveModalDestinations(
+        active.map((d) => ({
+          id: d.id,
+          platform: d.platform ?? "",
+          channelName: d.channelName ?? d.channelId ?? null,
+        })),
+      );
+      setShowGoLiveModal(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : (err as { response?: { data?: { message?: string } } })?.response
+              ?.data?.message ?? "채널 목록을 불러오지 못했습니다.";
+      setGoLiveError(message);
+      console.error("채널 목록 조회 실패:", err);
+    }
+  }, [studioId]);
+
+  /** 모달에서 선택한 채널로 송출 시작: 스트림 연결 → LiveKit 퍼블리시 → 웹훅 ACTIVE 대기 → startPublish */
+  const handleGoLiveConfirm = useCallback(
+    async (selectedIds: number[]) => {
+      const sid = Number(studioId);
+      if (Number.isNaN(sid) || selectedIds.length === 0) return;
+      setGoLiveError(null);
+      setIsGoLiveLoading(true);
+      const getPreviewStreamRef = options?.getPreviewStreamRef;
+      let room: Room | null = null;
+      try {
+        const stream = getPreviewStreamRef?.current?.() ?? null;
+        if (!stream || (stream.getVideoTracks().length === 0 && stream.getAudioTracks().length === 0)) {
+          setGoLiveError(
+            "프리뷰 스트림을 사용할 수 없습니다. 카메라 또는 화면을 스테이지에 추가해 주세요.",
+          );
+          return;
+        }
+        const tokenResponse = await joinStream({
+          studioId: sid,
+          participantName: user?.nickname ?? "host",
+        });
+        room = await connectAndPublish(
+          tokenResponse.livekitUrl,
+          tokenResponse.token,
+          stream,
+        );
+        liveKitRoomRef.current = room;
+        await new Promise((r) => setTimeout(r, 1500));
+        await startPublish({ studioId: sid, destinationIds: selectedIds });
+        setIsLive(true);
+        setIsEditMode(false);
+        setShowGoLiveModal(false);
+      } catch (err: unknown) {
+        if (room) {
+          try {
+            await disconnectRoom(room);
+            liveKitRoomRef.current = null;
+            await leaveStream(sid);
+          } catch (e) {
+            console.warn("스트림 퇴장 정리 실패:", e);
+          }
+        }
+        const axiosErr = err as {
+          response?: { data?: { code?: string; message?: string } };
+          message?: string;
+        };
+        const code = axiosErr.response?.data?.code;
+        const serverMessage =
+          axiosErr.response?.data?.message ??
+          (err instanceof Error ? err.message : "");
+        const errStr = String(serverMessage).toLowerCase();
+        const isLiveKitUnreachable =
+          errStr.includes("signal connection") ||
+          errStr.includes("failed to fetch") ||
+          errStr.includes("connection refused") ||
+          errStr.includes("connectionerror") ||
+          errStr.includes("could not establish");
+        const message = isLiveKitUnreachable
+          ? "LiveKit 서버에 연결할 수 없습니다. Go Live를 사용하려면 LiveKit 서버가 실행 중이어야 합니다. (예: docker-compose up livekit)"
+          : code === "S001" ||
+              (serverMessage && serverMessage.includes("스트림 세션"))
+            ? "스트림 연결 후 송출을 시도해 주세요. (잠시 후 다시 시도하거나, 프리뷰에 카메라/화면이 있는지 확인해 주세요.)"
+            : serverMessage || "송출 시작에 실패했습니다.";
+        setGoLiveError(message);
+        console.error("Go Live 실패:", err);
+      } finally {
+        setIsGoLiveLoading(false);
+      }
+    },
+    [studioId, user?.nickname, options?.getPreviewStreamRef],
+  );
+
+  const handleGoLiveModalClose = useCallback(() => {
+    setShowGoLiveModal(false);
+    setGoLiveError(null);
+  }, []);
+
+  /** 송출 중지(방송 종료) */
+  const handleStopPublish = useCallback(async () => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid)) return;
+    setGoLiveError(null);
+    setIsStopLiveLoading(true);
+    try {
+      await stopPublish(sid);
+      setIsLive(false);
+      setIsEditMode(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : (err as { response?: { data?: { message?: string } } })?.response
+              ?.data?.message ?? "송출 중지에 실패했습니다.";
+      setGoLiveError(message);
+      console.error("방송 종료 실패:", err);
+    } finally {
+      setIsStopLiveLoading(false);
+    }
+  }, [studioId]);
 
   const handleSceneSelect = (sceneId: string) => {
     setActiveSceneId(sceneId);
@@ -465,15 +653,25 @@ export function useStudioMain(
     }
   }, [studioId, activeSceneId, currentLayout, displaySources, sourceTransforms, fetchStudio]);
 
-  const handleExit = () => {
-    if (confirm("스튜디오를 나가시겠습니까?")) {
-      if (user?.userId) {
-        router.push(`/workspace/${user.userId}`);
-      } else {
-        router.back();
+  const handleExit = useCallback(async () => {
+    if (!confirm("스튜디오를 나가시겠습니까?")) return;
+    const sid = Number(studioId);
+    const room = liveKitRoomRef.current;
+    if (room) {
+      try {
+        await disconnectRoom(room);
+        liveKitRoomRef.current = null;
+        if (!Number.isNaN(sid)) await leaveStream(sid);
+      } catch (e) {
+        console.warn("스트림 퇴장 정리 실패:", e);
       }
     }
-  };
+    if (user?.userId) {
+      router.push(`/workspace/${user.userId}`);
+    } else {
+      router.back();
+    }
+  }, [studioId, user?.userId, router]);
 
   const getPreviewStreamRef = options?.getPreviewStreamRef;
 
@@ -575,6 +773,16 @@ export function useStudioMain(
     isAudioEnabled,
     isLive,
     handleGoLive,
+    isGoLiveLoading,
+    goLiveError,
+    showGoLiveModal,
+    setShowGoLiveModal,
+    goLiveModalDestinations,
+    handleGoLiveConfirm,
+    handleGoLiveModalClose,
+    handleStopPublish,
+    isStopLiveLoading,
+    connectedDestinations,
     handleSceneSelect,
     handleAddScene,
     handleRemoveScene,
