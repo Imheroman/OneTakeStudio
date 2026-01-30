@@ -1,8 +1,10 @@
 package com.onetake.media.stream.controller;
 
+import com.onetake.media.publish.service.PublishService;
 import com.onetake.media.recording.entity.RecordingSession;
 import com.onetake.media.recording.service.LocalStorageService;
 import com.onetake.media.recording.service.RecordingService;
+import com.onetake.media.stream.service.LiveKitService;
 import com.onetake.media.stream.service.StreamService;
 import io.livekit.server.WebhookReceiver;
 import livekit.LivekitWebhook;
@@ -26,6 +28,8 @@ public class LiveKitWebhookController {
     private final RecordingService recordingService;
     private final LocalStorageService localStorageService;
     private final StreamService streamService;
+    private final PublishService publishService;
+    private final LiveKitService liveKitService;
     private final WebhookReceiver webhookReceiver;
 
     @Value("${recording.storage.base-url:http://localhost:8082/api/recordings/files}")
@@ -50,11 +54,17 @@ public class LiveKitWebhookController {
                 case "participant_joined":
                     handleParticipantJoined(event);
                     break;
+                case "participant_left":
+                    handleParticipantLeft(event);
+                    break;
                 case "egress_started":
                     handleEgressStarted(event);
                     break;
                 case "egress_ended":
                     handleEgressEnded(event);
+                    break;
+                case "room_finished":
+                    handleRoomFinished(event);
                     break;
                 default:
                     log.debug("Unhandled webhook event: {}", event.getEvent());
@@ -94,7 +104,43 @@ public class LiveKitWebhookController {
     }
 
     /**
-     * Egress 종료 이벤트 처리 - 녹화 완료 처리
+     * 참가자 퇴장 시 처리
+     * Room에 참가자가 없으면 송출 종료
+     */
+    private void handleParticipantLeft(LivekitWebhook.WebhookEvent event) {
+        if (event.getRoom() == null) {
+            return;
+        }
+
+        String roomName = event.getRoom().getName();
+        int numParticipants = event.getRoom().getNumParticipants();
+
+        log.info("Participant left: room={}, remainingParticipants={}", roomName, numParticipants);
+
+        // Room에 참가자가 없으면 송출 종료
+        if (numParticipants == 0) {
+            log.info("Room is empty, stopping publish: room={}", roomName);
+            publishService.handleRoomEmpty(roomName);
+        }
+    }
+
+    /**
+     * Room 종료 시 처리
+     */
+    private void handleRoomFinished(LivekitWebhook.WebhookEvent event) {
+        if (event.getRoom() == null) {
+            return;
+        }
+
+        String roomName = event.getRoom().getName();
+        log.info("Room finished: room={}", roomName);
+
+        // 해당 Room의 송출 세션 종료
+        publishService.handleRoomEmpty(roomName);
+    }
+
+    /**
+     * Egress 종료 이벤트 처리 - 녹화/송출 완료 처리
      */
     private void handleEgressEnded(LivekitWebhook.WebhookEvent event) {
         if (!event.hasEgressInfo()) {
@@ -103,11 +149,27 @@ public class LiveKitWebhookController {
 
         LivekitEgress.EgressInfo egressInfo = event.getEgressInfo();
         String egressId = egressInfo.getEgressId();
+        LivekitEgress.EgressStatus status = egressInfo.getStatus();
 
-        log.info("Egress ended: egressId={}, status={}", egressId, egressInfo.getStatus());
+        log.info("Egress ended: egressId={}, status={}", egressId, status);
 
+        // 에러 메시지 추출
+        String errorMessage = null;
+        if (status == LivekitEgress.EgressStatus.EGRESS_FAILED ||
+            status == LivekitEgress.EgressStatus.EGRESS_ABORTED) {
+            errorMessage = egressInfo.getError();
+            log.warn("Egress failed/aborted: egressId={}, error={}", egressId, errorMessage);
+        }
+
+        // 1. Publish 세션 처리 (RTMP 송출)
         try {
-            // 녹화 세션 조회
+            publishService.handleEgressEnded(egressId, errorMessage);
+        } catch (Exception e) {
+            log.debug("No publish session for egressId: {}", egressId);
+        }
+
+        // 2. Recording 세션 처리 (녹화)
+        try {
             RecordingSession recordingSession = recordingService.findByEgressId(egressId);
 
             // 파일 정보 추출
@@ -154,7 +216,7 @@ public class LiveKitWebhookController {
                     egressId, fileName, fileSize, durationSeconds);
 
         } catch (Exception e) {
-            log.error("Failed to process egress ended event: egressId={}", egressId, e);
+            log.debug("No recording session for egressId: {}", egressId);
         }
     }
 

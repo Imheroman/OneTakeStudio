@@ -20,6 +20,7 @@ public enum ErrorCode {
     STREAM_ALREADY_ACTIVE(HttpStatus.CONFLICT, "S002", "이미 활성화된 스트림이 있습니다"),
     STREAM_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S003", "스트림 연결에 실패했습니다"),
     LIVEKIT_TOKEN_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S004", "LiveKit 토큰 생성에 실패했습니다"),
+    LIVEKIT_ROOM_NOT_FOUND(HttpStatus.BAD_REQUEST, "S005", "LiveKit room이 존재하지 않습니다. 스튜디오에 먼저 입장해주세요"),
 
     // Recording
     RECORDING_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "녹화를 찾을 수 없습니다"),

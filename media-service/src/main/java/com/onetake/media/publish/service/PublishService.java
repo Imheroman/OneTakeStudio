@@ -6,6 +6,7 @@ import com.onetake.media.global.exception.ErrorCode;
 import com.onetake.media.publish.dto.PublishResponse;
 import com.onetake.media.publish.dto.PublishStartRequest;
 import com.onetake.media.publish.dto.PublishStatusResponse;
+import com.onetake.media.publish.event.PublishEventPublisher;
 import com.onetake.media.publish.entity.PublishDestination;
 import com.onetake.media.publish.entity.PublishSession;
 import com.onetake.media.publish.entity.PublishStatus;
@@ -16,13 +17,20 @@ import com.onetake.media.stream.entity.StreamSession;
 import com.onetake.media.stream.repository.StreamSessionRepository;
 import com.onetake.media.publish.integration.CoreDestinationClient;
 import com.onetake.media.publish.integration.dto.CoreDestinationDto;
+import com.onetake.media.settings.entity.UserMediaSettings;
+import com.onetake.media.settings.entity.VideoQuality;
+import com.onetake.media.settings.repository.UserMediaSettingsRepository;
 import com.onetake.media.stream.service.LiveKitEgressService;
+import com.onetake.media.stream.service.LiveKitService;
+import livekit.LivekitModels;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,8 +42,11 @@ public class PublishService {
     private final PublishSessionRepository publishSessionRepository;
     private final PublishDestinationRepository publishDestinationRepository;
     private final StreamSessionRepository streamSessionRepository;
+    private final UserMediaSettingsRepository userMediaSettingsRepository;
     private final LiveKitEgressService liveKitEgressService;
+    private final LiveKitService liveKitService;
     private final CoreDestinationClient coreDestinationClient;
+    private final PublishEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -49,6 +60,15 @@ public class PublishService {
         StreamSession streamSession = streamSessionRepository
                 .findByStudioIdAndStatus(request.getStudioId(), SessionStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
+
+        // LiveKit room 존재 및 참가자 확인
+        String roomName = streamSession.getRoomName();
+        List<LivekitModels.ParticipantInfo> participants = liveKitService.listParticipants(roomName);
+        if (participants.isEmpty()) {
+            log.warn("No participants in LiveKit room: {}", roomName);
+            throw new BusinessException(ErrorCode.LIVEKIT_ROOM_NOT_FOUND);
+        }
+        log.info("LiveKit room verified: room={}, participants={}", roomName, participants.size());
 
         // Destination 정보 조회 (core-service 연동, YouTube만 송출)
         List<RtmpDestination> rtmpDestinations = fetchRtmpDestinations(request.getDestinationIds());
@@ -75,8 +95,13 @@ public class PublishService {
                 .map(dest -> dest.getRtmpUrl() + dest.getStreamKey())
                 .toList();
 
+        // 사용자 비디오 품질 설정 조회
+        VideoQuality videoQuality = userMediaSettingsRepository.findByUserId(userId)
+                .map(UserMediaSettings::getVideoQuality)
+                .orElse(VideoQuality.HIGH);
+
         // LiveKit Egress를 통한 RTMP 송출 시작
-        String egressId = liveKitEgressService.startRtmpStream(streamSession.getRoomName(), fullRtmpUrls);
+        String egressId = liveKitEgressService.startRtmpStream(streamSession.getRoomName(), fullRtmpUrls, videoQuality);
         publishSession.startPublishing(egressId, rtmpUrlsJson);
 
         publishSessionRepository.save(publishSession);
@@ -86,6 +111,9 @@ public class PublishService {
 
         log.info("Publishing started: studioId={}, publishSessionId={}, destinations={}",
                 request.getStudioId(), publishSession.getPublishSessionId(), request.getDestinationIds());
+
+        // 송출 시작 이벤트 발행
+        eventPublisher.publishStarted(request.getStudioId(), publishSession.getPublishSessionId());
 
         return PublishResponse.from(publishSession);
     }
@@ -109,6 +137,9 @@ public class PublishService {
 
         log.info("Publishing stopped: studioId={}, publishSessionId={}", studioId, publishSession.getPublishSessionId());
 
+        // 송출 종료 이벤트 발행
+        eventPublisher.publishStopped(studioId, publishSession.getPublishSessionId());
+
         return PublishResponse.from(publishSession);
     }
 
@@ -127,6 +158,147 @@ public class PublishService {
                 destinations,
                 publishSession.getStartedAt()
         );
+    }
+
+    /**
+     * Egress 종료 이벤트 처리 (Webhook에서 호출)
+     * YouTube에서 스트림 종료 또는 Egress 오류 발생 시 호출됨
+     */
+    @Transactional
+    public void handleEgressEnded(String egressId, String errorMessage) {
+        Optional<PublishSession> optSession = publishSessionRepository.findByEgressId(egressId);
+
+        if (optSession.isEmpty()) {
+            log.debug("No publish session found for egressId: {}", egressId);
+            return;
+        }
+
+        PublishSession publishSession = optSession.get();
+
+        // 이미 종료된 세션은 무시
+        if (publishSession.getStatus() != PublishStatus.PUBLISHING) {
+            log.debug("Publish session already stopped: egressId={}", egressId);
+            return;
+        }
+
+        // Destination 상태 업데이트
+        List<PublishDestination> destinations = publishDestinationRepository.findByPublishSessionId(publishSession.getId());
+        destinations.forEach(PublishDestination::markDisconnected);
+        publishDestinationRepository.saveAll(destinations);
+
+        // 세션 상태 업데이트
+        if (errorMessage != null && !errorMessage.isEmpty()) {
+            publishSession.fail(errorMessage);
+            log.warn("Publishing failed via webhook: studioId={}, egressId={}, error={}",
+                    publishSession.getStudioId(), egressId, errorMessage);
+            // 송출 실패 이벤트 발행
+            eventPublisher.publishFailed(publishSession.getStudioId(), publishSession.getPublishSessionId(), errorMessage);
+        } else {
+            publishSession.stopPublishing();
+            log.info("Publishing stopped via webhook: studioId={}, egressId={}",
+                    publishSession.getStudioId(), egressId);
+            // 외부에서 종료됨 이벤트 발행 (YouTube 등에서 종료)
+            eventPublisher.publishEndedExternally(publishSession.getStudioId(), publishSession.getPublishSessionId(),
+                    "스트림이 외부에서 종료되었습니다");
+        }
+
+        publishSessionRepository.save(publishSession);
+    }
+
+    /**
+     * 비정상 종료된 세션 정리 (스케줄러에서 호출)
+     * 1시간 이상 PUBLISHING 상태인 세션을 강제 종료
+     */
+    @Transactional
+    public int cleanupStaleSessions(int maxHours) {
+        LocalDateTime cutoffTime = LocalDateTime.now().minusHours(maxHours);
+
+        List<PublishSession> staleSessions = publishSessionRepository.findAll().stream()
+                .filter(s -> s.getStatus() == PublishStatus.PUBLISHING)
+                .filter(s -> s.getStartedAt() != null && s.getStartedAt().isBefore(cutoffTime))
+                .toList();
+
+        for (PublishSession session : staleSessions) {
+            try {
+                // Egress 중지 시도 (이미 종료되었을 수 있음)
+                if (session.getEgressId() != null) {
+                    try {
+                        liveKitEgressService.stopEgress(session.getEgressId());
+                    } catch (Exception e) {
+                        log.debug("Egress already stopped or not found: {}", session.getEgressId());
+                    }
+                }
+
+                // Destination 상태 업데이트
+                List<PublishDestination> destinations = publishDestinationRepository.findByPublishSessionId(session.getId());
+                destinations.forEach(PublishDestination::markDisconnected);
+                publishDestinationRepository.saveAll(destinations);
+
+                // 세션 강제 종료
+                session.fail("Session timeout - cleaned up by scheduler");
+                publishSessionRepository.save(session);
+
+                log.info("Stale publish session cleaned up: studioId={}, sessionId={}",
+                        session.getStudioId(), session.getPublishSessionId());
+
+            } catch (Exception e) {
+                log.error("Failed to cleanup stale session: {}", session.getPublishSessionId(), e);
+            }
+        }
+
+        return staleSessions.size();
+    }
+
+    /**
+     * Room 참가자가 없을 때 송출 종료 (participant_left 이벤트에서 호출)
+     */
+    @Transactional
+    public void handleRoomEmpty(String roomName) {
+        // roomName에서 studioId 추출 (studio-{id} 형식)
+        if (!roomName.startsWith("studio-")) {
+            return;
+        }
+
+        try {
+            Long studioId = Long.parseLong(roomName.substring(7));
+
+            Optional<PublishSession> optSession = publishSessionRepository
+                    .findByStudioIdAndStatus(studioId, PublishStatus.PUBLISHING);
+
+            if (optSession.isEmpty()) {
+                return;
+            }
+
+            PublishSession publishSession = optSession.get();
+
+            // Egress 중지
+            if (publishSession.getEgressId() != null) {
+                try {
+                    liveKitEgressService.stopEgress(publishSession.getEgressId());
+                } catch (Exception e) {
+                    log.debug("Egress already stopped: {}", publishSession.getEgressId());
+                }
+            }
+
+            // Destination 상태 업데이트
+            List<PublishDestination> destinations = publishDestinationRepository.findByPublishSessionId(publishSession.getId());
+            destinations.forEach(PublishDestination::markDisconnected);
+            publishDestinationRepository.saveAll(destinations);
+
+            // 세션 종료
+            publishSession.stopPublishing();
+            publishSessionRepository.save(publishSession);
+
+            log.info("Publishing stopped due to empty room: studioId={}, roomName={}",
+                    studioId, roomName);
+
+            // 외부에서 종료됨 이벤트 발행 (참가자 없음)
+            eventPublisher.publishEndedExternally(studioId, publishSession.getPublishSessionId(),
+                    "모든 참가자가 퇴장하여 스트림이 종료되었습니다");
+
+        } catch (NumberFormatException e) {
+            log.warn("Invalid room name format: {}", roomName);
+        }
     }
 
     /**

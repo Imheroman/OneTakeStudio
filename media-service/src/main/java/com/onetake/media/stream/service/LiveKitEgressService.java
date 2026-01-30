@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import retrofit2.Response;
 
+import com.onetake.media.settings.entity.VideoQuality;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -64,11 +66,25 @@ public class LiveKitEgressService {
      *
      * @param roomName LiveKit room name
      * @param rtmpUrls RTMP URL 목록 (streamKey 포함)
+     * @param videoQuality 비디오 품질 설정 (null이면 기본값 HIGH 사용)
      * @return egress ID
      */
-    public String startRtmpStream(String roomName, List<String> rtmpUrls) {
+    public String startRtmpStream(String roomName, List<String> rtmpUrls, VideoQuality videoQuality) {
         try {
-            log.info("Starting RTMP stream: room={}, destinations={}", roomName, rtmpUrls.size());
+            // 비디오 품질 설정 (null이면 HIGH 사용)
+            VideoQuality quality = videoQuality != null ? videoQuality : VideoQuality.HIGH;
+
+            log.info("Starting RTMP stream: room={}, destinations={}, quality={}",
+                    roomName, rtmpUrls.size(), quality.getLabel());
+
+            // 사용자 설정에 따른 인코딩 옵션
+            LivekitEgress.EncodingOptions encodingOptions = LivekitEgress.EncodingOptions.newBuilder()
+                    .setWidth(quality.getWidth())
+                    .setHeight(quality.getHeight())
+                    .setFramerate(30)
+                    .setVideoBitrate(quality.getBitrate() / 1000)  // bps -> kbps
+                    .setAudioBitrate(128)   // kbps
+                    .build();
 
             LivekitEgress.StreamOutput.Builder streamOutputBuilder = LivekitEgress.StreamOutput.newBuilder()
                     .setProtocol(LivekitEgress.StreamProtocol.RTMP);
@@ -78,7 +94,15 @@ public class LiveKitEgressService {
             }
 
             Response<LivekitEgress.EgressInfo> response = egressServiceClient
-                    .startRoomCompositeEgress(roomName, streamOutputBuilder.build(), "speaker")
+                    .startRoomCompositeEgress(
+                            roomName,
+                            streamOutputBuilder.build(),
+                            "speaker",
+                            null,  // preset (null = use custom options)
+                            encodingOptions,
+                            false, // audioOnly
+                            false  // videoOnly
+                    )
                     .execute();
 
             if (!response.isSuccessful() || response.body() == null) {
