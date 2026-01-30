@@ -204,33 +204,28 @@ export function PreviewArea({
     Map<string, HTMLVideoElement | HTMLImageElement>
   >(new Map());
 
-  /** 줌/리사이즈 시 스트림야드처럼: 잠깐 어긋나 보였다가 짧은 딜레이 후 프레임 재조정 */
+  /** 줌 시 DPR만 갱신. containerSize는 ResizeObserver에서만 갱신해 충돌 방지. Stage key 제거로 리마운트 없이 RAF 유지. */
   const VIEWPORT_DEBOUNCE_MS = 120;
   useEffect(() => {
     if (typeof window === "undefined" || !window.visualViewport) return;
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const applyViewportUpdate = () => {
+    const applyPixelRatio = () => {
       const dpr = window.devicePixelRatio ?? 1;
       const zoom = window.visualViewport?.scale ?? 1;
       setEffectivePixelRatio(Math.min(Math.max(dpr * zoom, 1), 5));
-      const el = containerRef.current;
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
-      }
     };
 
     const scheduleUpdate = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         timeoutId = null;
-        applyViewportUpdate();
+        applyPixelRatio();
       }, VIEWPORT_DEBOUNCE_MS);
     };
 
-    applyViewportUpdate();
+    applyPixelRatio();
     window.visualViewport.addEventListener("resize", scheduleUpdate);
     window.visualViewport.addEventListener("scroll", scheduleUpdate);
     return () => {
@@ -489,7 +484,6 @@ export function PreviewArea({
           }}
         >
           <Stage
-            key={`preview-${effectivePixelRatio}-${containerSize.width}-${containerSize.height}`}
             ref={stageRef}
             width={stageWidth}
             height={stageHeight}
