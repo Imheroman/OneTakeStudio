@@ -67,6 +67,18 @@ public class StreamSession extends BaseTimeEntity {
         this.endedAt = LocalDateTime.now();
     }
 
+    /**
+     * 같은 room_name 에 이미 행이 있을 때 재사용 (유니크 제약 회피).
+     * CONNECTING/ACTIVE/DISCONNECTED/CLOSED/FAILED 모두 새 참가자로 갱신 후 CONNECTING 으로 설정.
+     */
+    public void reuseForNewParticipant(Long userId, String participantIdentity, String metadata) {
+        this.userId = userId;
+        this.participantIdentity = participantIdentity;
+        this.metadata = metadata;
+        this.status = SessionStatus.CONNECTING;
+        this.endedAt = null;
+    }
+
     @PrePersist
     public void prePersist() {
         if (this.sessionId == null) {

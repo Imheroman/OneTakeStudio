@@ -3,6 +3,7 @@ package com.onetake.media.stream.controller;
 import com.onetake.media.recording.entity.RecordingSession;
 import com.onetake.media.recording.service.LocalStorageService;
 import com.onetake.media.recording.service.RecordingService;
+import com.onetake.media.stream.service.StreamService;
 import io.livekit.server.WebhookReceiver;
 import livekit.LivekitWebhook;
 import livekit.LivekitEgress;
@@ -24,6 +25,7 @@ public class LiveKitWebhookController {
 
     private final RecordingService recordingService;
     private final LocalStorageService localStorageService;
+    private final StreamService streamService;
     private final WebhookReceiver webhookReceiver;
 
     @Value("${recording.storage.base-url:http://localhost:8082/api/recordings/files}")
@@ -45,6 +47,9 @@ public class LiveKitWebhookController {
 
             // 이벤트 타입별 처리
             switch (event.getEvent()) {
+                case "participant_joined":
+                    handleParticipantJoined(event);
+                    break;
                 case "egress_started":
                     handleEgressStarted(event);
                     break;
@@ -61,6 +66,18 @@ public class LiveKitWebhookController {
             log.error("Failed to process LiveKit webhook", e);
             return ResponseEntity.ok("OK"); // LiveKit은 200 OK를 기대
         }
+    }
+
+    /**
+     * 참가자 연결 시 스트림 세션을 ACTIVE로 전환 (Go Live 전제 조건)
+     */
+    private void handleParticipantJoined(LivekitWebhook.WebhookEvent event) {
+        if (event.getRoom() == null || event.getParticipant() == null) {
+            return;
+        }
+        String roomName = event.getRoom().getName();
+        String participantIdentity = event.getParticipant().getIdentity();
+        streamService.activateSession(roomName, participantIdentity);
     }
 
     /**

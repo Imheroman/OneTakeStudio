@@ -46,7 +46,7 @@ services:
     ports:
       - "7880:7880"
       - "7881:7881"
-      - "50000-50100:50000-50100/udp"
+      - "50200-50250:50200-50250/udp"
     volumes:
       - ./livekit.yaml:/livekit.yaml
     networks:

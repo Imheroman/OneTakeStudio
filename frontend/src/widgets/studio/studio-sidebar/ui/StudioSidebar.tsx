@@ -5,12 +5,12 @@ import {
   MessageSquare,
   Image,
   Palette,
-  List,
   Users,
   Lock,
   Circle,
   FileText,
   Layers,
+  Share2,
 } from "lucide-react";
 import { IconButton } from "@/shared/common";
 import { cn } from "@/shared/lib/utils";
@@ -21,12 +21,14 @@ import { StudioStylePanel } from "../panels/StudioStylePanel";
 import { StudioNotePanel } from "../panels/StudioNotePanel";
 import { StudioMemberPanel } from "../panels/StudioMemberPanel";
 import { StudioRecordingPanel } from "../panels/StudioRecordingPanel";
+import { StudioDestinationsPanel } from "../panels/StudioDestinationsPanel";
 import { StudioInviteModal } from "@/widgets/studio/studio-invite-modal";
 import type { BannerItem } from "../panels/StudioBannerPanel";
 import type { AssetItem } from "../panels/StudioAssetPanel";
 import type { StudioStyleState } from "../panels/StudioStylePanel";
 
 const TABS = [
+  { id: "destinations", icon: Share2, label: "연동 채널" },
   { id: "chat", icon: MessageSquare, label: "채팅" },
   { id: "banner", icon: Image, label: "배너" },
   { id: "assets", icon: Layers, label: "에셋" },
@@ -39,9 +41,17 @@ const TABS = [
 
 export type StudioSidebarTabId = (typeof TABS)[number]["id"];
 
+export interface ConnectedDestinationItem {
+  id: number;
+  platform: string;
+  channelName?: string | null;
+}
+
 interface StudioSidebarProps {
   studioId: string;
   className?: string;
+  /** 스튜디오 내 연동 채널 목록 (StreamYard 스타일) */
+  connectedDestinations?: ConnectedDestinationItem[];
   activeBanner?: BannerItem | null;
   onSelectBanner?: (banner: BannerItem | null) => void;
   activeAsset?: AssetItem | null;
@@ -53,6 +63,7 @@ interface StudioSidebarProps {
 export function StudioSidebar({
   studioId,
   className,
+  connectedDestinations = [],
   activeBanner = null,
   onSelectBanner,
   activeAsset = null,
@@ -97,8 +108,14 @@ export function StudioSidebar({
         </div>
 
         {/* 패널 영역: 넉넉한 너비로 전송 버튼 등이 잘리지 않도록 */}
-        {activeTab && (
+          {activeTab && (
           <div className="w-80 min-w-80 flex flex-col p-3 min-h-0 overflow-auto bg-gray-900">
+            {activeTab === "destinations" && (
+              <StudioDestinationsPanel
+                destinations={connectedDestinations}
+                onClose={closePanel}
+              />
+            )}
             {activeTab === "chat" && (
               <StudioChatPanel
                 studioId={studioIdNum}

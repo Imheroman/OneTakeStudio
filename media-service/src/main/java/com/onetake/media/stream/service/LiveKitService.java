@@ -53,7 +53,11 @@ public class LiveKitService {
 
         } catch (Exception e) {
             log.error("Failed to generate LiveKit token", e);
-            throw new BusinessException(ErrorCode.LIVEKIT_TOKEN_GENERATION_FAILED, e);
+            String detail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            throw new BusinessException(
+                    ErrorCode.LIVEKIT_TOKEN_GENERATION_FAILED,
+                    "LiveKit 토큰 생성에 실패했습니다. " + detail
+            );
         }
     }
 

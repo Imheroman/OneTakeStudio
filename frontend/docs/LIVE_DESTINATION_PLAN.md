@@ -44,7 +44,7 @@
 - **수정 범위**: 경로/페이로드만 맞추기 (가능하면 프론트만)
 - **테스트**: 채널 추가·해제 한 번씩 수행 후 커밋
 
-### 3단계: Go Live 버튼 → 송출 API 연동
+### 3단계: Go Live 버튼 → 송출 API 연동 ✅
 
 - **목표**: 스튜디오 헤더의 “Go Live” 버튼 클릭 시 Media 송출 API 호출
 - **방법**  
@@ -70,9 +70,10 @@
   - `POST /api/destinations` → 채널 수동 등록  
   - `DELETE /api/destinations/{destinationId}` → 채널 해제  
 - **Media (게이트웨이)**  
-  - 현재: `Path=/api/publish/**` → RewritePath `/api/v1/media/publish/...`  
-  - Media 서비스 실제 prefix: `@RequestMapping("/api/media/publish")`  
-  - **확인 필요**: 게이트웨이 RewritePath와 Media 컨트롤러 경로가 일치하는지, 불일치 시 게이트웨이만 수정할지 결정
+  - `Path=/api/v1/media/publish,**` → RewritePath `/api/v1/media/publish(?<segment>.*)` → `/api/media/publish${segment}` (media-service-publish-v1 라우트, media-service보다 먼저 매칭)  
+  - Media 서비스: `@RequestMapping("/api/media/publish")`  
+  - 프론트: `POST /api/v1/media/publish`, `POST /api/v1/media/publish/stop`, `GET /api/v1/media/publish/status` 호출  
+  - StreamYard 스타일: Go Live 클릭 시 "어느 채널로 송출할까요?" 모달 → 채널 선택 후 Go Live
 
 ---
 
