@@ -6,3 +6,4 @@ export {
   useAdaptivePerformance,
   type UseAdaptivePerformanceOptions,
 } from "./useAdaptivePerformance";
+export { useLiveKit, type UseLiveKitOptions, type UseLiveKitReturn } from "./useLiveKit";

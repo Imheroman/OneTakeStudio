@@ -24,6 +24,9 @@ import {
   getPreferredAudioDeviceId,
 } from "@/shared/lib/device-preferences";
 import { useAdaptivePerformance } from "@/hooks/studio";
+import { joinStream, leaveStream } from "@/shared/api/studio-stream";
+import { startPublish, stopPublish, getPublishStatus } from "@/shared/api/studio-publish";
+import { Room, RoomEvent, ConnectionState, createLocalTracks, Track } from "livekit-client";
 
 const ApiResponseSceneSchema = z.object({
   success: z.boolean(),
@@ -57,6 +60,14 @@ export function useStudioMain(
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isLive, setIsLive] = useState(false);
+
+  // LiveKit & 송출 상태
+  const [isStreamConnected, setIsStreamConnected] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isGoingLive, setIsGoingLive] = useState(false);
+  const [selectedDestinationIds, setSelectedDestinationIds] = useState<number[]>([]);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const roomRef = useRef<Room | null>(null);
 
   const [sources, setSources] = useState<Source[]>([]);
   const [onStageSourceIds, setOnStageSourceIds] = useState<string[]>([]);
@@ -260,10 +271,165 @@ export function useStudioMain(
     });
   }, [displaySourceOrderKey, displaySources]);
 
-  const handleGoLive = () => {
-    setIsLive(true);
-    setIsEditMode(false);
-  };
+  // LiveKit 연결 및 송출 시작
+  const getPreviewStreamRef = options?.getPreviewStreamRef;
+
+  const handleGoLive = useCallback(async (destinationIds?: number[]) => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid)) return;
+
+    // 송출할 채널이 없으면 경고
+    const destIds = destinationIds ?? selectedDestinationIds;
+    if (destIds.length === 0) {
+      setPublishError("송출할 채널을 선택해주세요.");
+      return;
+    }
+
+    try {
+      setIsGoingLive(true);
+      setPublishError(null);
+
+      // 1. LiveKit 스트림 연결
+      if (!roomRef.current || roomRef.current.state !== ConnectionState.Connected) {
+        const tokenResponse = await joinStream({
+          studioId: sid,
+          participantName: user?.nickname || "Host",
+        });
+
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true,
+          videoCaptureDefaults: {
+            resolution: { width: 1280, height: 720, frameRate: 30 },
+          },
+        });
+
+        room.on(RoomEvent.Disconnected, () => {
+          setIsStreamConnected(false);
+          console.log("Disconnected from LiveKit room");
+        });
+
+        room.on(RoomEvent.ConnectionStateChanged, (state) => {
+          setIsStreamConnected(state === ConnectionState.Connected);
+        });
+
+        await room.connect(tokenResponse.livekitUrl, tokenResponse.token);
+
+        // Konva 캔버스 스트림에서 비디오 트랙 가져오기 (레이아웃 적용된 화면)
+        const canvasStream = getPreviewStreamRef?.current?.();
+        if (canvasStream) {
+          const videoTracks = canvasStream.getVideoTracks();
+          if (videoTracks.length > 0) {
+            await room.localParticipant.publishTrack(videoTracks[0], {
+              name: "canvas",
+              source: Track.Source.Camera,
+            });
+            console.log("Published Konva canvas video track");
+          }
+        } else {
+          // 캔버스 스트림이 없으면 기본 카메라 사용 (fallback)
+          console.warn("Canvas stream not available, falling back to camera");
+          const videoTrack = await createLocalTracks({ video: true, audio: false });
+          for (const track of videoTrack) {
+            await room.localParticipant.publishTrack(track);
+          }
+        }
+
+        // 오디오 트랙 별도로 가져오기 (마이크)
+        try {
+          const audioTracks = await createLocalTracks({ video: false, audio: true });
+          for (const track of audioTracks) {
+            await room.localParticipant.publishTrack(track);
+          }
+          console.log("Published audio track");
+        } catch (audioErr) {
+          console.warn("Failed to get audio track:", audioErr);
+        }
+
+        roomRef.current = room;
+        setIsStreamConnected(true);
+        console.log("Connected to LiveKit room:", tokenResponse.roomName);
+      }
+
+      // 2. RTMP 송출 시작
+      await startPublish({
+        studioId: sid,
+        destinationIds: destIds,
+      });
+
+      setIsPublishing(true);
+      setIsLive(true);
+      setIsEditMode(false);
+      console.log("Publishing started to destinations:", destIds);
+    } catch (error) {
+      console.error("Go live failed:", error);
+      const err = error as { message?: string; response?: { data?: { message?: string } } };
+      setPublishError(err.response?.data?.message || err.message || "송출 시작에 실패했습니다.");
+    } finally {
+      setIsGoingLive(false);
+    }
+  }, [studioId, user?.nickname, selectedDestinationIds, getPreviewStreamRef]);
+
+  // 송출 중지 및 LiveKit 연결 해제
+  const handleEndLive = useCallback(async () => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid)) return;
+
+    try {
+      // 1. RTMP 송출 중지
+      if (isPublishing) {
+        await stopPublish(sid);
+        setIsPublishing(false);
+      }
+
+      // 2. LiveKit 연결 해제
+      if (roomRef.current) {
+        await roomRef.current.disconnect();
+        roomRef.current = null;
+        setIsStreamConnected(false);
+      }
+
+      // 3. 서버에 스트림 퇴장 알림
+      await leaveStream(sid).catch(console.error);
+
+      setIsLive(false);
+      console.log("Live ended");
+    } catch (error) {
+      console.error("End live failed:", error);
+    }
+  }, [studioId, isPublishing]);
+
+  // 채널 선택 토글
+  const handleToggleDestination = useCallback((destinationId: number) => {
+    setSelectedDestinationIds((prev) =>
+      prev.includes(destinationId)
+        ? prev.filter((id) => id !== destinationId)
+        : [...prev, destinationId]
+    );
+  }, []);
+
+  // 송출 상태 조회
+  const checkPublishStatus = useCallback(async () => {
+    const sid = Number(studioId);
+    if (Number.isNaN(sid) || !isPublishing) return null;
+
+    try {
+      return await getPublishStatus(sid);
+    } catch (error) {
+      console.error("Failed to get publish status:", error);
+      return null;
+    }
+  }, [studioId, isPublishing]);
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      if (roomRef.current) {
+        roomRef.current.disconnect();
+        roomRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSceneSelect = (sceneId: string) => {
     setActiveSceneId(sceneId);
@@ -475,8 +641,6 @@ export function useStudioMain(
     }
   };
 
-  const getPreviewStreamRef = options?.getPreviewStreamRef;
-
   const handleStartLocalRecording = useCallback(() => {
     const getStream = getPreviewStreamRef?.current;
     const stream = getStream?.() ?? null;
@@ -575,6 +739,7 @@ export function useStudioMain(
     isAudioEnabled,
     isLive,
     handleGoLive,
+    handleEndLive,
     handleSceneSelect,
     handleAddScene,
     handleRemoveScene,
@@ -603,5 +768,14 @@ export function useStudioMain(
     handleStopLocalRecording,
     handleStartCloudRecording,
     handleStopCloudRecording,
+    // 송출 관련
+    isStreamConnected,
+    isPublishing,
+    isGoingLive,
+    selectedDestinationIds,
+    setSelectedDestinationIds,
+    handleToggleDestination,
+    checkPublishStatus,
+    publishError,
   };
 }

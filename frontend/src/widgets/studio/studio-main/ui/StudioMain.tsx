@@ -54,6 +54,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     isAudioEnabled,
     isLive,
     handleGoLive,
+    handleEndLive,
     handleSceneSelect,
     handleAddScene,
     handleRemoveScene,
@@ -82,6 +83,13 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleStopLocalRecording,
     handleStartCloudRecording,
     handleStopCloudRecording,
+    // 송출 관련
+    isStreamConnected,
+    isPublishing,
+    isGoingLive,
+    selectedDestinationIds,
+    setSelectedDestinationIds,
+    publishError,
   } = useStudioMain(studioId, { getPreviewStreamRef });
 
   const audioLevel = useAudioLevel(isAudioEnabled);
@@ -128,8 +136,16 @@ export function StudioMain({ studioId }: StudioMainProps) {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <StudioHeader
           studioTitle={studio.name}
+          studioId={studioId}
           onGoLive={handleGoLive}
+          onEndLive={handleEndLive}
           isLive={isLive}
+          isGoingLive={isGoingLive}
+          isPublishing={isPublishing}
+          isStreamConnected={isStreamConnected}
+          selectedDestinationIds={selectedDestinationIds}
+          setSelectedDestinationIds={setSelectedDestinationIds}
+          publishError={publishError}
           isEditMode={isEditMode}
           onEditModeToggle={() => setIsEditMode((v) => !v)}
         />

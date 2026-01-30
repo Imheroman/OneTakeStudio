@@ -31,6 +31,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "konva": "^10.2.0",
+    "livekit-client": "^2.17.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.4",
     "react": "19.2.3",
