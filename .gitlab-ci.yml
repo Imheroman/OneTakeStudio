@@ -103,7 +103,7 @@ build-media:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - apps/media/**/*
+        - infra/apps/media/**/*
 
 # ─────────────────────────────────────────────
 # Stage 3: Docker 이미지 빌드 & 푸시 (AWS ECR)
@@ -152,7 +152,7 @@ docker-media:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - apps/media/**/*
+        - infra/apps/media/**/*
 
 # ─────────────────────────────────────────────
 # Stage 4: Kubernetes 배포
@@ -195,4 +195,4 @@ deploy-media:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - apps/media/**/*
+        - infra/apps/media/**/*
