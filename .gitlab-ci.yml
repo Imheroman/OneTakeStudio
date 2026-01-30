@@ -1,3 +1,8 @@
+# [핵심] 모든 작업이 'onetakestudio' 태그가 붙은 러너에서 실행되도록 설정
+default:
+  tags:
+    - onetakestudio
+
 stages:
   - setup        # Secret, ConfigMap 생성
   - build        # 앱 빌드
@@ -5,8 +10,11 @@ stages:
   - deploy       # 배포
 
 variables:
-  CORE_IMAGE: $CI_REGISTRY_IMAGE/core
-  MEDIA_IMAGE: $CI_REGISTRY_IMAGE/media
+  # AWS ECR 주소 (GitLab Variables에 ECR_REGISTRY 등록 필요)
+  # 예: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com
+  CORE_IMAGE: $ECR_REGISTRY/core-server
+  MEDIA_IMAGE: $ECR_REGISTRY/media-server
+  DOCKER_TLS_CERTDIR: ""
 
 # ─────────────────────────────────────────────
 # Stage 1: Kubernetes Secret 생성
@@ -20,16 +28,12 @@ setup-secrets:
     - mkdir -p ~/.kube
     - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
-    # ═══════════════════════════════════════════
-    # Namespace 생성
-    # ═══════════════════════════════════════════
+    # 1. Namespace 생성
     - kubectl create namespace database --dry-run=client -o yaml | kubectl apply -f -
     - kubectl create namespace media --dry-run=client -o yaml | kubectl apply -f -
     - kubectl create namespace core --dry-run=client -o yaml | kubectl apply -f -
 
-    # ═══════════════════════════════════════════
-    # MySQL Root Secret (database namespace)
-    # ═══════════════════════════════════════════
+    # 2. DB Password Secret 생성
     - |
       kubectl create secret generic mysql-secret \
         --namespace=database \
@@ -38,9 +42,6 @@ setup-secrets:
         --from-literal=core-password="$CORE_DB_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # ═══════════════════════════════════════════
-    # Media 프로젝트용 DB Secret
-    # ═══════════════════════════════════════════
     - |
       kubectl create secret generic db-secret \
         --namespace=media \
@@ -51,9 +52,6 @@ setup-secrets:
         --from-literal=DB_PASSWORD="$MEDIA_DB_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # ═══════════════════════════════════════════
-    # Core 프로젝트용 DB Secret
-    # ═══════════════════════════════════════════
     - |
       kubectl create secret generic db-secret \
         --namespace=core \
@@ -64,13 +62,14 @@ setup-secrets:
         --from-literal=DB_PASSWORD="$CORE_DB_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # 확인
+    # 3. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
+    # bitnami 이미지엔 aws cli가 없으므로, 현재는 기존 시크릿이 있다고 가정하거나
+    # EC2 호스트에서 CronJob으로 갱신하는 것을 권장합니다.
+    # 만약 파이프라인에서 매번 갱신하려면 aws-cli가 포함된 이미지를 써야 합니다.
+
     - echo "=== Secrets 생성 완료 ==="
-    - kubectl get secrets -n database
-    - kubectl get secrets -n media
-    - kubectl get secrets -n core
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"  # 👈 둘 다 허용
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       when: manual
 
 # ─────────────────────────────────────────────
@@ -87,7 +86,7 @@ build-core:
       - infra/apps/core/build/libs/*.jar
     expire_in: 1 hour
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"  # 👈 둘 다 허용    -
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/core/**/*
 
@@ -102,12 +101,12 @@ build-media:
       - apps/media/build/libs/*.jar
     expire_in: 1 hour
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"  # 👈 둘 다 허용
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - apps/media/**/*
 
 # ─────────────────────────────────────────────
-# Stage 3: Docker 이미지 빌드 & 푸시
+# Stage 3: Docker 이미지 빌드 & 푸시 (AWS ECR)
 # ─────────────────────────────────────────────
 docker-core:
   stage: docker
@@ -117,7 +116,9 @@ docker-core:
   variables:
     DOCKER_TLS_CERTDIR: ""
   before_script:
-    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+    # AWS CLI 설치 및 ECR 로그인
+    - apk add --no-cache aws-cli
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
   script:
     - docker build -t $CORE_IMAGE:$CI_COMMIT_SHORT_SHA -t $CORE_IMAGE:latest -f infra/apps/core/Dockerfile infra/apps/core
     - docker push $CORE_IMAGE:$CI_COMMIT_SHORT_SHA
@@ -126,7 +127,7 @@ docker-core:
     - job: build-core
       artifacts: true
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"  # 👈 둘 다 허용
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/core/**/*
 
@@ -138,7 +139,9 @@ docker-media:
   variables:
     DOCKER_TLS_CERTDIR: ""
   before_script:
-    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+    # AWS CLI 설치 및 ECR 로그인
+    - apk add --no-cache aws-cli
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
   script:
     - docker build -t $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA -t $MEDIA_IMAGE:latest -f apps/media/Dockerfile apps/media
     - docker push $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA
@@ -147,7 +150,7 @@ docker-media:
     - job: build-media
       artifacts: true
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"  # 👈 둘 다 허용
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - apps/media/**/*
 
@@ -163,8 +166,6 @@ deploy-core:
     - mkdir -p ~/.kube
     - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
-    # 1. sed 명령어로 deployment.yaml 파일 안의 'image: ...' 부분을 이번 빌드 버전으로 바꿔치기함
-    # (s|찾을문자열|바꿀문자열|g 문법 사용)
     - |
       sed -i "s|image: .*|image: $CORE_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/apps/core/deployment.yaml
       kubectl apply -f infra/apps/core/deployment.yaml -n core
@@ -172,7 +173,7 @@ deploy-core:
   needs:
     - job: docker-core
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"  # 👈 둘 다 허용
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/core/**/*
 
@@ -185,7 +186,6 @@ deploy-media:
     - mkdir -p ~/.kube
     - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
-    # Media 앱도 똑같이 적용
     - |
       sed -i "s|image: .*|image: $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA|g" apps/media/deployment.yaml
       kubectl apply -f apps/media/deployment.yaml -n media
@@ -193,6 +193,6 @@ deploy-media:
   needs:
     - job: docker-media
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master"  # 👈 둘 다 허용
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - apps/media/**/*
