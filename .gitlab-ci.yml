@@ -167,15 +167,16 @@ deploy-core:
     - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
     - |
-      sed -i "s|image: .*|image: $CORE_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/apps/core/deployment.yaml
-      kubectl apply -f infra/apps/core/deployment.yaml -n core
+      sed -i "s|image: .*|image: $CORE_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/k8s/apps/core/deployment.yaml
+      kubectl apply -f infra/k8s/apps/core/deployment.yaml -n core
       kubectl rollout status deployment/api-server -n core --timeout=300s
   needs:
     - job: docker-core
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - infra/apps/core/**/*
+        - infra/apps/core/**/* # 소스 코드 변경 감지
+        - infra/k8s/apps/core/**/* # k8s 설정 변경 감지 (추가 권장)
 
 deploy-media:
   stage: deploy
@@ -196,3 +197,4 @@ deploy-media:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/media/**/*
+        - infra/k8s/apps/media/**/* # k8s 설정 변경 감지 (추가 권장)
