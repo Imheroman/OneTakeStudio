@@ -1,22 +1,48 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useLayoutEffect } from "react";
-import { Stage, Layer, Group, Image, Rect, Text, Transformer } from "react-konva";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useLayoutEffect,
+} from "react";
+import {
+  Stage,
+  Layer,
+  Group,
+  Image,
+  Rect,
+  Text,
+  Transformer,
+} from "react-konva";
 import Konva from "konva";
 import { Camera } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { LayoutType, Source } from "@/entities/studio/model";
-import type { GetPreviewStreamRef, SourceTransform } from "@/features/studio/studio-main";
-import { arrangeSourcesInLayout, computeSourceFitRect } from "@/shared/lib/canvas";
+import type {
+  GetPreviewStreamRef,
+  SourceTransform,
+} from "@/features/studio/studio-main";
+import {
+  arrangeSourcesInLayout,
+  computeSourceFitRect,
+} from "@/shared/lib/canvas";
 import type { SourceFitMode } from "@/shared/lib/canvas";
 import {
   setPreferredVideoDeviceId,
   setPreferredAudioDeviceId,
 } from "@/shared/lib/device-preferences";
+import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBannerPanel";
+import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
+import type { StudioStyleState } from "@/widgets/studio/studio-sidebar/panels/StudioStylePanel";
 
 export type PreviewResolution = "720p" | "1080p";
 
-const RESOLUTION_SIZE: Record<PreviewResolution, { width: number; height: number }> = {
+const RESOLUTION_SIZE: Record<
+  PreviewResolution,
+  { width: number; height: number }
+> = {
   "720p": { width: 1280, height: 720 },
   "1080p": { width: 1920, height: 1080 },
 };
@@ -39,19 +65,26 @@ function snapPosition(
   let nx = x;
   let ny = y;
   if (Math.abs(x) <= SNAP_THRESHOLD) nx = 0;
-  else if (Math.abs(x + width - stageWidth) <= SNAP_THRESHOLD) nx = stageWidth - width;
-  else if (Math.abs(x + width / 2 - stageWidth / 2) <= SNAP_THRESHOLD) nx = stageWidth / 2 - width / 2;
+  else if (Math.abs(x + width - stageWidth) <= SNAP_THRESHOLD)
+    nx = stageWidth - width;
+  else if (Math.abs(x + width / 2 - stageWidth / 2) <= SNAP_THRESHOLD)
+    nx = stageWidth / 2 - width / 2;
   else nx = snapToGrid(x, SNAP_GRID);
 
   if (Math.abs(y) <= SNAP_THRESHOLD) ny = 0;
-  else if (Math.abs(y + height - stageHeight) <= SNAP_THRESHOLD) ny = stageHeight - height;
-  else if (Math.abs(y + height / 2 - stageHeight / 2) <= SNAP_THRESHOLD) ny = stageHeight / 2 - height / 2;
+  else if (Math.abs(y + height - stageHeight) <= SNAP_THRESHOLD)
+    ny = stageHeight - height;
+  else if (Math.abs(y + height / 2 - stageHeight / 2) <= SNAP_THRESHOLD)
+    ny = stageHeight / 2 - height / 2;
   else ny = snapToGrid(y, SNAP_GRID);
 
   return { x: nx, y: ny };
 }
 
-function snapSize(width: number, height: number): { width: number; height: number } {
+function snapSize(
+  width: number,
+  height: number,
+): { width: number; height: number } {
   return {
     width: Math.max(1, snapToGrid(width, SNAP_GRID)),
     height: Math.max(1, snapToGrid(height, SNAP_GRID)),
@@ -70,8 +103,14 @@ interface PreviewAreaProps {
   getSourceStream?: (sourceId: string) => MediaStream | undefined;
   getPreviewStreamRef?: GetPreviewStreamRef | null;
   sourceTransforms?: Record<string, SourceTransform>;
-  setSourceTransform?: (sourceId: string, partial: Partial<SourceTransform>) => void;
+  setSourceTransform?: (
+    sourceId: string,
+    partial: Partial<SourceTransform>,
+  ) => void;
   onBringSourceToFront?: (sourceId: string) => void;
+  activeBanner?: BannerItem | null;
+  activeAsset?: AssetItem | null;
+  styleState?: StudioStyleState | null;
 }
 
 /** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. 항상 프레임 안에만 표시(contain 우선). */
@@ -93,7 +132,10 @@ function VideoSourceNode({
   isVisible: boolean;
 }) {
   const imageRef = useRef<Konva.Image>(null);
-  const [sourceSize, setSourceSize] = useState({ w: video.videoWidth || 0, h: video.videoHeight || 0 });
+  const [sourceSize, setSourceSize] = useState({
+    w: video.videoWidth || 0,
+    h: video.videoHeight || 0,
+  });
 
   useEffect(() => {
     if (!video) return;
@@ -176,6 +218,175 @@ function ImageSourceNode({
   );
 }
 
+/** 배너 하단 바 + 티커(가로 스크롤) 텍스트 — 티커 시 전체 영역을 가로로 이동 */
+function BannerOverlayNode({
+  banner,
+  stageWidth,
+  stageHeight,
+  layerRef,
+  brandColor,
+}: {
+  banner: BannerItem;
+  stageWidth: number;
+  stageHeight: number;
+  layerRef: React.RefObject<Konva.Layer | null>;
+  brandColor: string;
+}) {
+  const BANNER_HEIGHT = 48;
+  const y = stageHeight - BANNER_HEIGHT;
+  const tickerOffsetRef = useRef(stageWidth);
+  const [tickerX, setTickerX] = useState(stageWidth);
+
+  useLayoutEffect(() => {
+    if (!banner.isTicker || !layerRef.current) return;
+    tickerOffsetRef.current = stageWidth;
+    setTickerX(stageWidth);
+    let rafId: number;
+    const tick = () => {
+      tickerOffsetRef.current -= 1.2;
+      if (tickerOffsetRef.current < -stageWidth * 2)
+        tickerOffsetRef.current = stageWidth;
+      setTickerX(tickerOffsetRef.current);
+      layerRef.current?.batchDraw();
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [banner.isTicker, stageWidth, layerRef]);
+
+  return (
+    <>
+      <Rect
+        x={0}
+        y={y}
+        width={stageWidth}
+        height={BANNER_HEIGHT}
+        fill={brandColor || "#4f46e5"}
+        listening={false}
+      />
+      {banner.isTicker ? (
+        <Group
+          clip={{ x: 0, y, width: stageWidth, height: BANNER_HEIGHT }}
+          listening={false}
+        >
+          <Text
+            x={tickerX}
+            y={y + BANNER_HEIGHT / 2 - 10}
+            text={banner.text}
+            fontSize={18}
+            fontFamily="Arial"
+            fill="white"
+            listening={false}
+          />
+        </Group>
+      ) : (
+        <Text
+          x={16}
+          y={y + BANNER_HEIGHT / 2 - 10}
+          width={stageWidth - 32}
+          text={banner.text}
+          fontSize={18}
+          fontFamily="Arial"
+          fill="white"
+          listening={false}
+        />
+      )}
+    </>
+  );
+}
+
+/** 에셋 오버레이: 드래그·리사이즈 가능, 스타일 색상 반영 */
+function AssetOverlayNode({
+  asset,
+  stageWidth,
+  stageHeight,
+  brandColor,
+  transform,
+  isEditMode,
+  groupRef,
+  onDragEnd,
+  onTransformEnd,
+}: {
+  asset: AssetItem;
+  stageWidth: number;
+  stageHeight: number;
+  brandColor: string;
+  transform: { x: number; y: number; width: number; height: number };
+  isEditMode: boolean;
+  groupRef: React.RefObject<Konva.Group | null>;
+  onDragEnd: (x: number, y: number) => void;
+  onTransformEnd: (x: number, y: number, width: number, height: number) => void;
+}) {
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    if (!asset.fileUrl) return setImg(null);
+    const el = document.createElement("img");
+    el.crossOrigin = "anonymous";
+    el.src = asset.fileUrl;
+    el.onload = () => setImg(el);
+    return () => setImg(null);
+  }, [asset.fileUrl]);
+
+  const { x, y, width: w, height: h } = transform;
+
+  return (
+    <Group
+      id="overlay-asset"
+      ref={groupRef}
+      x={x}
+      y={y}
+      width={w}
+      height={h}
+      draggable={isEditMode}
+      listening={true}
+      onDragEnd={(e) => {
+        const node = e.target;
+        onDragEnd(node.x(), node.y());
+      }}
+      onTransformEnd={(e) => {
+        const node = e.target as Konva.Group;
+        const rect = node.getClientRect();
+        onTransformEnd(rect.x, rect.y, rect.width, rect.height);
+        node.scaleX(1);
+        node.scaleY(1);
+        node.position({ x: rect.x, y: rect.y });
+        node.width(rect.width);
+        node.height(rect.height);
+        node.getChildren().forEach((child) => {
+          child.width(rect.width);
+          child.height(rect.height);
+        });
+      }}
+    >
+      {img ? (
+        <Image image={img} x={0} y={0} width={w} height={h} listening={false} />
+      ) : (
+        <>
+          <Rect
+            x={0}
+            y={0}
+            width={w}
+            height={h}
+            fill={brandColor || "rgba(79, 70, 229, 0.9)"}
+            cornerRadius={8}
+            listening={false}
+          />
+          <Text
+            x={12}
+            y={h / 2 - 10}
+            width={w - 24}
+            text={asset.name}
+            fontSize={14}
+            fontFamily="Arial"
+            fill="white"
+            listening={false}
+          />
+        </>
+      )}
+    </Group>
+  );
+}
+
 export function PreviewArea({
   className,
   layout = "full",
@@ -190,11 +401,15 @@ export function PreviewArea({
   sourceTransforms = {},
   setSourceTransform,
   onBringSourceToFront,
+  activeBanner = null,
+  activeAsset = null,
+  styleState = null,
 }: PreviewAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef<Map<string, Konva.Group>>(new Map());
+  const assetGroupRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -235,16 +450,38 @@ export function PreviewArea({
     };
   }, []);
 
-  const { width: stageWidth, height: stageHeight } = RESOLUTION_SIZE[resolution];
+  const { width: stageWidth, height: stageHeight } =
+    RESOLUTION_SIZE[resolution];
+
+  const defaultAssetTransform = useCallback(
+    () => ({
+      x: (stageWidth - 200) / 2,
+      y: 24,
+      width: 200,
+      height: 60,
+    }),
+    [stageWidth],
+  );
+  const [assetTransform, setAssetTransform] = useState(defaultAssetTransform);
+
+  useEffect(() => {
+    if (activeAsset) setAssetTransform(defaultAssetTransform());
+  }, [activeAsset?.id, defaultAssetTransform]);
+
   const scale =
     containerSize.width > 0 && containerSize.height > 0
-      ? Math.min(containerSize.width / stageWidth, containerSize.height / stageHeight)
+      ? Math.min(
+          containerSize.width / stageWidth,
+          containerSize.height / stageHeight,
+        )
       : 1;
 
   const displaySources = sources.filter((s) => s.isVisible);
   /** 1=맨 앞(상단), 숫자 커질수록 뒤: 낮은 zIndex 먼저 그려서 높은 zIndex가 위에 오도록 */
   const sortedSources = [...displaySources].sort(
-    (a, b) => (sourceTransforms[a.id]?.zIndex ?? 0) - (sourceTransforms[b.id]?.zIndex ?? 0),
+    (a, b) =>
+      (sourceTransforms[a.id]?.zIndex ?? 0) -
+      (sourceTransforms[b.id]?.zIndex ?? 0),
   );
   const arranged = arrangeSourcesInLayout(
     layout,
@@ -266,7 +503,13 @@ export function PreviewArea({
           height: cell.height,
           zIndex: index,
         };
-      return { x: 0, y: 0, width: stageWidth, height: stageHeight, zIndex: index };
+      return {
+        x: 0,
+        y: 0,
+        width: stageWidth,
+        height: stageHeight,
+        zIndex: index,
+      };
     },
     [sourceTransforms, arranged, stageWidth, stageHeight],
   );
@@ -276,22 +519,31 @@ export function PreviewArea({
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const rect = el.getBoundingClientRect();
-      setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+      setContainerSize({
+        width: Math.floor(rect.width),
+        height: Math.floor(rect.height),
+      });
     });
     ro.observe(el);
     const rect = el.getBoundingClientRect();
-    setContainerSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+    setContainerSize({
+      width: Math.floor(rect.width),
+      height: Math.floor(rect.height),
+    });
     return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
-    if (selectedId) {
+    if (selectedId === "overlay-asset") {
+      const node = assetGroupRef.current;
+      trRef.current?.nodes(node ? [node] : []);
+    } else if (selectedId) {
       const node = nodeRefs.current.get(selectedId);
       trRef.current?.nodes(node ? [node] : []);
-      layerRef.current?.batchDraw();
     } else {
       trRef.current?.nodes([]);
     }
+    layerRef.current?.batchDraw();
   }, [selectedId]);
 
   useEffect(() => {
@@ -299,7 +551,8 @@ export function PreviewArea({
     getPreviewStreamRef.current = () => {
       const layer = layerRef.current;
       if (!layer) return null;
-      const canvas = (layer.getCanvas() as { _canvas?: HTMLCanvasElement })?._canvas;
+      const canvas = (layer.getCanvas() as { _canvas?: HTMLCanvasElement })
+        ?._canvas;
       return canvas?.captureStream?.(30) ?? null;
     };
     return () => {
@@ -313,7 +566,10 @@ export function PreviewArea({
     let cancelled = false;
     setSourceElements(new Map());
 
-    const addElement = (sourceId: string, element: HTMLVideoElement | HTMLImageElement) => {
+    const addElement = (
+      sourceId: string,
+      element: HTMLVideoElement | HTMLImageElement,
+    ) => {
       if (cancelled) return;
       setSourceElements((prev) => new Map(prev).set(sourceId, element));
     };
@@ -332,11 +588,17 @@ export function PreviewArea({
           if (typeof getSourceStream === "function") {
             stream = getSourceStream(source.id) ?? null;
           }
-          if (!stream && typeof getSourceStream !== "function" && source.type === "video") {
+          if (
+            !stream &&
+            typeof getSourceStream !== "function" &&
+            source.type === "video"
+          ) {
             try {
               stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                  deviceId: source.deviceId ? { ideal: source.deviceId } : undefined,
+                  deviceId: source.deviceId
+                    ? { ideal: source.deviceId }
+                    : undefined,
                   width: { ideal: 1920, min: 640 },
                   height: { ideal: 1080, min: 480 },
                   frameRate: { ideal: 30 },
@@ -383,7 +645,9 @@ export function PreviewArea({
           if (!stream && typeof getSourceStream !== "function") {
             try {
               stream = await navigator.mediaDevices.getUserMedia({
-                audio: source.deviceId ? { deviceId: { ideal: source.deviceId } } : true,
+                audio: source.deviceId
+                  ? { deviceId: { ideal: source.deviceId } }
+                  : true,
               });
               if (cancelled) {
                 stream.getTracks().forEach((t) => t.stop());
@@ -436,7 +700,9 @@ export function PreviewArea({
         <span
           className={cn(
             "absolute top-2 left-2 z-10 px-2.5 py-1 rounded text-xs font-semibold uppercase tracking-wide",
-            isEditMode ? "bg-amber-500/90 text-amber-950" : "bg-red-600 text-white",
+            isEditMode
+              ? "bg-amber-500/90 text-amber-950"
+              : "bg-red-600 text-white",
           )}
         >
           {isEditMode ? resolution : `Live ${resolution}`}
@@ -459,7 +725,9 @@ export function PreviewArea({
       <span
         className={cn(
           "absolute top-2 left-2 z-10 px-2.5 py-1 rounded text-xs font-semibold uppercase tracking-wide",
-          isEditMode ? "bg-amber-500/90 text-amber-950" : "bg-red-600 text-white",
+          isEditMode
+            ? "bg-amber-500/90 text-amber-950"
+            : "bg-red-600 text-white",
         )}
       >
         {isEditMode ? resolution : `Live ${resolution}`}
@@ -492,7 +760,16 @@ export function PreviewArea({
               const stage = e.target.getStage();
               const layer = layerRef.current;
               let node: Konva.Node | null = e.target;
-              while (node && node.getParent() !== layer) node = node.getParent();
+              while (node && node.getParent() !== layer) {
+                if (
+                  node.getClassName?.() === "Group" &&
+                  (node as Konva.Group).id?.() === "overlay-asset"
+                ) {
+                  setSelectedId("overlay-asset");
+                  return;
+                }
+                node = node.getParent();
+              }
               const group = node?.getClassName() === "Group" ? node : null;
               const id = group?.id();
               if (!id || !sortedSources.some((s) => s.id === id)) {
@@ -506,7 +783,13 @@ export function PreviewArea({
             }}
           >
             <Layer ref={layerRef}>
-              <Rect x={0} y={0} width={stageWidth} height={stageHeight} fill="black" />
+              <Rect
+                x={0}
+                y={0}
+                width={stageWidth}
+                height={stageHeight}
+                fill="black"
+              />
               {!isVideoEnabled && (
                 <Rect
                   x={0}
@@ -529,7 +812,29 @@ export function PreviewArea({
                     }}
                     x={transform.x}
                     y={transform.y}
-                    clip={{ x: 0, y: 0, width: transform.width, height: transform.height }}
+                    clip={
+                      styleState?.theme === "bubble" && source.type === "video"
+                        ? undefined
+                        : {
+                            x: 0,
+                            y: 0,
+                            width: transform.width,
+                            height: transform.height,
+                          }
+                    }
+                    clipFunc={
+                      styleState?.theme === "bubble" && source.type === "video"
+                        ? (ctx) => {
+                            const w = transform.width;
+                            const h = transform.height;
+                            const r = Math.min(w, h) / 2;
+                            ctx.beginPath();
+                            ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);
+                            ctx.closePath();
+                            ctx.clip();
+                          }
+                        : undefined
+                    }
                     draggable={isEditMode}
                     onDragEnd={(e) => {
                       const node = e.target;
@@ -543,7 +848,10 @@ export function PreviewArea({
                         stageWidth,
                         stageHeight,
                       );
-                      setSourceTransform?.(source.id, { x: snapped.x, y: snapped.y });
+                      setSourceTransform?.(source.id, {
+                        x: snapped.x,
+                        y: snapped.y,
+                      });
                     }}
                     onTransformEnd={(e) => {
                       const node = e.target as Konva.Group;
@@ -642,6 +950,32 @@ export function PreviewArea({
                   </Group>
                 );
               })}
+              {activeBanner && (
+                <BannerOverlayNode
+                  banner={activeBanner}
+                  stageWidth={stageWidth}
+                  stageHeight={stageHeight}
+                  layerRef={layerRef}
+                  brandColor={styleState?.brandColor ?? "#4f46e5"}
+                />
+              )}
+              {activeAsset && (
+                <AssetOverlayNode
+                  asset={activeAsset}
+                  stageWidth={stageWidth}
+                  stageHeight={stageHeight}
+                  brandColor={styleState?.brandColor ?? "#4f46e5"}
+                  transform={assetTransform}
+                  isEditMode={isEditMode}
+                  groupRef={assetGroupRef}
+                  onDragEnd={(x, y) =>
+                    setAssetTransform((prev) => ({ ...prev, x, y }))
+                  }
+                  onTransformEnd={(x, y, width, height) =>
+                    setAssetTransform({ x, y, width, height })
+                  }
+                />
+              )}
               {isEditMode && <Transformer ref={trRef} />}
             </Layer>
           </Stage>

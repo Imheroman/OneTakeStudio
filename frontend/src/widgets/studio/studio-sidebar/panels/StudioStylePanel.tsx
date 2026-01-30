@@ -28,14 +28,18 @@ interface StudioStylePanelProps {
   studioId: number;
   onClose?: () => void;
   onStyleChange?: (style: StudioStyleState) => void;
+  /** 부모(송출 화면)에서 내려준 스타일 — 동기화용 */
+  initialStyle?: StudioStyleState | null;
 }
 
 export function StudioStylePanel({
   studioId,
   onClose,
   onStyleChange,
+  initialStyle,
 }: StudioStylePanelProps) {
   const [style, setStyle] = useState<StudioStyleState>(() => {
+    if (initialStyle) return { ...defaultStyle, ...initialStyle };
     if (typeof window === "undefined") return defaultStyle;
     try {
       const raw = sessionStorage.getItem(`${STORAGE_KEY}-${studioId}`);

@@ -18,12 +18,15 @@ interface StudioBannerPanelProps {
   studioId: number;
   onClose?: () => void;
   onSelectBanner?: (banner: BannerItem | null) => void;
+  /** 송출 화면에 표시 중인 배너 ID (패널에서 하이라이트용) */
+  selectedBannerId?: string | null;
 }
 
 export function StudioBannerPanel({
   studioId,
   onClose,
   onSelectBanner,
+  selectedBannerId = null,
 }: StudioBannerPanelProps) {
   const [banners, setBanners] = useState<BannerItem[]>([
     {
@@ -64,6 +67,8 @@ export function StudioBannerPanel({
     onSelectBanner?.(banner);
   };
 
+  const effectiveSelectedId = selectedBannerId ?? selectedId;
+
   return (
     <div className="flex flex-col h-full min-h-0 w-full min-w-0 bg-gray-800 rounded-lg border border-gray-700">
       <div className="flex items-center justify-between p-3 border-b border-gray-700">
@@ -88,7 +93,7 @@ export function StudioBannerPanel({
             key={b.id}
             className={cn(
               "flex items-center justify-between gap-2 p-2 rounded border cursor-pointer",
-              selectedId === b.id
+              effectiveSelectedId === b.id
                 ? "border-indigo-500 bg-indigo-900/20"
                 : "border-gray-600 bg-gray-700/50 hover:bg-gray-700",
             )}

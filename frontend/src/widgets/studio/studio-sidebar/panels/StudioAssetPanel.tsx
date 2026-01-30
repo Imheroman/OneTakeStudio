@@ -24,6 +24,8 @@ interface StudioAssetPanelProps {
   studioId: number;
   onClose?: () => void;
   onSelectAsset?: (asset: AssetItem | null) => void;
+  /** 송출 화면에 표시 중인 에셋 ID (패널에서 하이라이트용) */
+  selectedAssetId?: string | null;
 }
 
 const MOCK_OVERLAYS = [
@@ -38,6 +40,7 @@ export function StudioAssetPanel({
   studioId,
   onClose,
   onSelectAsset,
+  selectedAssetId = null,
 }: StudioAssetPanelProps) {
   const [logos, setLogos] = useState<AssetItem[]>([]);
   const [overlays] = useState<AssetItem[]>(MOCK_OVERLAYS);
@@ -49,6 +52,8 @@ export function StudioAssetPanel({
     setSelectedId(next);
     onSelectAsset?.(next ? asset : null);
   };
+
+  const effectiveSelectedId = selectedAssetId ?? selectedId;
 
   const handleDelete = (id: string, type: AssetType) => {
     if (type === "logo") setLogos((prev) => prev.filter((a) => a.id !== id));
@@ -76,7 +81,7 @@ export function StudioAssetPanel({
             key={a.id}
             className={cn(
               "flex items-center justify-between p-2 rounded border cursor-pointer",
-              selectedId === a.id
+              effectiveSelectedId === a.id
                 ? "border-indigo-500 bg-indigo-900/20"
                 : "border-gray-600 bg-gray-700/50 hover:bg-gray-700",
             )}

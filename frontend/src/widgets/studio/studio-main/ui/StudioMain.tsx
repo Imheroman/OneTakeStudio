@@ -14,6 +14,17 @@ import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
 import { useStudioMain } from "@/features/studio/studio-main";
 import { useAudioLevel, useSourceStreams } from "@/hooks/studio";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
+import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBannerPanel";
+import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
+import type { StudioStyleState } from "@/widgets/studio/studio-sidebar/panels/StudioStylePanel";
+
+const DEFAULT_STYLE: StudioStyleState = {
+  brandColor: "#5d4cc7",
+  theme: "bubble",
+  showDisplayNames: true,
+  showHeadlines: false,
+  font: "",
+};
 
 interface StudioMainProps {
   studioId: string;
@@ -22,6 +33,9 @@ interface StudioMainProps {
 export function StudioMain({ studioId }: StudioMainProps) {
   const getPreviewStreamRef = useRef<(() => MediaStream | null) | null>(null);
   const [toolbarExpanded, setToolbarExpanded] = useState(true);
+  const [activeBanner, setActiveBanner] = useState<BannerItem | null>(null);
+  const [activeAsset, setActiveAsset] = useState<AssetItem | null>(null);
+  const [styleState, setStyleState] = useState<StudioStyleState>(DEFAULT_STYLE);
 
   const {
     studio,
@@ -134,6 +148,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
               sourceTransforms={sourceTransforms}
               setSourceTransform={setSourceTransform}
               onBringSourceToFront={handleBringSourceToFront}
+              activeBanner={activeBanner}
+              activeAsset={activeAsset}
+              styleState={styleState}
             />
           </div>
 
@@ -209,7 +226,15 @@ export function StudioMain({ studioId }: StudioMainProps) {
         />
       </div>
 
-      <StudioSidebar studioId={studioId} />
+      <StudioSidebar
+        studioId={studioId}
+        activeBanner={activeBanner}
+        onSelectBanner={setActiveBanner}
+        activeAsset={activeAsset}
+        onSelectAsset={setActiveAsset}
+        styleState={styleState}
+        onStyleChange={setStyleState}
+      />
     </div>
   );
 }

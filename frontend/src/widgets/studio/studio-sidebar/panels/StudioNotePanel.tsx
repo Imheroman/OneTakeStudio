@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FileText } from "lucide-react";
 import { Label } from "@/shared/ui/label";
 import { cn } from "@/shared/lib/utils";
+import { getStudioNote, putStudioNote } from "@/shared/api/studio-note";
 
 const STORAGE_KEY = "studio-note";
 
@@ -13,19 +14,40 @@ interface StudioNotePanelProps {
 }
 
 export function StudioNotePanel({ studioId, onClose }: StudioNotePanelProps) {
-  const [content, setContent] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      return sessionStorage.getItem(`${STORAGE_KEY}-${studioId}`) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  const [content, setContent] = useState("");
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStudioNote(studioId).then((apiContent) => {
+      if (cancelled) return;
+      if (apiContent !== "") {
+        setContent(apiContent);
+      } else {
+        try {
+          setContent(
+            sessionStorage.getItem(`${STORAGE_KEY}-${studioId}`) ?? "",
+          );
+        } catch {}
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId]);
 
   useEffect(() => {
     try {
       sessionStorage.setItem(`${STORAGE_KEY}-${studioId}`, content);
     } catch {}
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = null;
+      putStudioNote(studioId, content).catch(() => {});
+    }, 800);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
   }, [studioId, content]);
 
   return (
