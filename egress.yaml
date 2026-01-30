@@ -1,0 +1,17 @@
+# LiveKit Egress 설정
+api_key: devkey
+api_secret: secret
+ws_url: ws://livekit:7880
+
+# Redis 연결 (LiveKit과 통신)
+redis:
+  address: redis:6379
+
+# 로컬 파일 저장
+file_output:
+  local:
+    directory: /recordings
+
+# 로깅
+logging:
+  level: info

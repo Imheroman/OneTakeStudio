@@ -44,11 +44,8 @@ public class RecordingSession extends BaseTimeEntity {
     @Column(name = "file_path")
     private String filePath;
 
-    @Column(name = "s3_key")
-    private String s3Key;
-
-    @Column(name = "s3_url")
-    private String s3Url;
+    @Column(name = "file_url")
+    private String fileUrl;
 
     @Column(name = "file_size")
     private Long fileSize;
@@ -88,9 +85,9 @@ public class RecordingSession extends BaseTimeEntity {
         this.status = RecordingStatus.UPLOADING;
     }
 
-    public void complete(String s3Key, String s3Url, Long fileSize, Long durationSeconds) {
-        this.s3Key = s3Key;
-        this.s3Url = s3Url;
+    public void complete(String filePath, String fileUrl, Long fileSize, Long durationSeconds) {
+        this.filePath = filePath;
+        this.fileUrl = fileUrl;
         this.fileSize = fileSize;
         this.durationSeconds = durationSeconds;
         this.status = RecordingStatus.COMPLETED;

@@ -41,9 +41,10 @@ public enum ErrorCode {
     SCREEN_SHARE_ALREADY_ACTIVE(HttpStatus.CONFLICT, "SS002", "이미 화면 공유가 진행 중입니다"),
     SCREEN_SHARE_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "SS003", "활성화된 화면 공유가 없습니다"),
 
-    // S3
-    S3_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 업로드에 실패했습니다"),
-    S3_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F002", "파일 다운로드에 실패했습니다"),
+    // File Storage
+    FILE_STORAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 저장에 실패했습니다"),
+    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "F002", "파일을 찾을 수 없습니다"),
+    FILE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "F003", "파일 접근이 거부되었습니다"),
 
     // Media Settings
     MEDIA_SETTINGS_NOT_FOUND(HttpStatus.NOT_FOUND, "MS001", "미디어 설정을 찾을 수 없습니다"),

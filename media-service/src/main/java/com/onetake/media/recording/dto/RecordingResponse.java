@@ -16,7 +16,8 @@ public class RecordingResponse {
     private Long userId;
     private RecordingStatus status;
     private String fileName;
-    private String s3Url;
+    private String filePath;
+    private String fileUrl;
     private Long fileSize;
     private Long durationSeconds;
     private LocalDateTime startedAt;
@@ -31,7 +32,8 @@ public class RecordingResponse {
                 .userId(session.getUserId())
                 .status(session.getStatus())
                 .fileName(session.getFileName())
-                .s3Url(session.getS3Url())
+                .filePath(session.getFilePath())
+                .fileUrl(session.getFileUrl())
                 .fileSize(session.getFileSize())
                 .durationSeconds(session.getDurationSeconds())
                 .startedAt(session.getStartedAt())

@@ -46,14 +46,15 @@ livekit:
   api:
     key: devkey
     secret: secret
+  egress:
+    output-path: /recordings/
 
-# AWS S3
-aws:
-  s3:
-    bucket: onetakestudio-media
-    region: ap-northeast-2
-  access-key-id: ${AWS_ACCESS_KEY_ID:your-access-key}
-  secret-access-key: ${AWS_SECRET_ACCESS_KEY:your-secret-key}
+# Recording Storage
+# Docker Egress는 /recordings에 저장 → 로컬 ./recordings 폴더와 볼륨 연결됨
+recording:
+  storage:
+    base-path: ${RECORDING_BASE_PATH:./recordings}
+    base-url: ${RECORDING_BASE_URL:http://localhost:8082/api/media/record/files}
 
 # Logging
 logging:
