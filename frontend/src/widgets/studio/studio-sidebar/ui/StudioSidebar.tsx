@@ -22,6 +22,9 @@ import { StudioNotePanel } from "../panels/StudioNotePanel";
 import { StudioMemberPanel } from "../panels/StudioMemberPanel";
 import { StudioRecordingPanel } from "../panels/StudioRecordingPanel";
 import { StudioInviteModal } from "@/widgets/studio/studio-invite-modal";
+import type { BannerItem } from "../panels/StudioBannerPanel";
+import type { AssetItem } from "../panels/StudioAssetPanel";
+import type { StudioStyleState } from "../panels/StudioStylePanel";
 
 const TABS = [
   { id: "chat", icon: MessageSquare, label: "채팅" },
@@ -39,9 +42,24 @@ export type StudioSidebarTabId = (typeof TABS)[number]["id"];
 interface StudioSidebarProps {
   studioId: string;
   className?: string;
+  activeBanner?: BannerItem | null;
+  onSelectBanner?: (banner: BannerItem | null) => void;
+  activeAsset?: AssetItem | null;
+  onSelectAsset?: (asset: AssetItem | null) => void;
+  styleState?: StudioStyleState;
+  onStyleChange?: (style: StudioStyleState) => void;
 }
 
-export function StudioSidebar({ studioId, className }: StudioSidebarProps) {
+export function StudioSidebar({
+  studioId,
+  className,
+  activeBanner = null,
+  onSelectBanner,
+  activeAsset = null,
+  onSelectAsset,
+  styleState,
+  onStyleChange,
+}: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -89,13 +107,28 @@ export function StudioSidebar({ studioId, className }: StudioSidebarProps) {
               />
             )}
             {activeTab === "banner" && (
-              <StudioBannerPanel studioId={studioIdNum} onClose={closePanel} />
+              <StudioBannerPanel
+                studioId={studioIdNum}
+                onClose={closePanel}
+                onSelectBanner={onSelectBanner}
+                selectedBannerId={activeBanner?.id ?? null}
+              />
             )}
             {activeTab === "assets" && (
-              <StudioAssetPanel studioId={studioIdNum} onClose={closePanel} />
+              <StudioAssetPanel
+                studioId={studioIdNum}
+                onClose={closePanel}
+                onSelectAsset={onSelectAsset}
+                selectedAssetId={activeAsset?.id ?? null}
+              />
             )}
             {activeTab === "style" && (
-              <StudioStylePanel studioId={studioIdNum} onClose={closePanel} />
+              <StudioStylePanel
+                studioId={studioIdNum}
+                onClose={closePanel}
+                onStyleChange={onStyleChange}
+                initialStyle={styleState}
+              />
             )}
             {activeTab === "notes" && (
               <StudioNotePanel studioId={studioIdNum} onClose={closePanel} />
