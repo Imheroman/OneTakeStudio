@@ -57,12 +57,14 @@ export function StudioMain({ studioId }: StudioMainProps) {
     handleSceneSelect,
     handleAddScene,
     handleRemoveScene,
+    handleUpdateScene,
     handleAddSource,
     handleAddSourceConfirm,
     handleSourceToggle,
     handleAddToStage,
     handleRemoveFromStage,
     handleReorderSources,
+    handleRemoveSource,
     handleBringSourceToFront,
     handleSaveSceneLayout,
     handleExit,
@@ -116,6 +118,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             onSceneSelect={handleSceneSelect}
             onAddScene={handleAddScene}
             onRemoveScene={handleRemoveScene}
+            onRenameScene={(sceneId, name) => handleUpdateScene(sceneId, { name })}
             onSaveScene={handleSaveSceneLayout}
             isEditMode={isEditMode}
           />
@@ -131,8 +134,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
           onEditModeToggle={() => setIsEditMode((v) => !v)}
         />
 
-        {/* 콘텐츠: 전체 높이 사용, 하단 툴바에 밀리지 않음 */}
-        <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden min-h-0">
+        {/* 콘텐츠: 전체 높이 사용. 하단 pb로 접힌 토글 네브에 퀵 레이아웃 바가 가리지 않도록 여백 */}
+        <div className="flex-1 flex flex-col p-4 pb-14 gap-4 overflow-hidden min-h-0">
           <div className="flex-1 min-h-0">
             <PreviewArea
               className="h-full"
@@ -166,6 +169,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
               onSourceToggle={handleSourceToggle}
               onAddToStage={handleAddToStage}
               onRemoveFromStage={handleRemoveFromStage}
+              onRemoveSource={handleRemoveSource}
             />
           </div>
 

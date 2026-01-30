@@ -1,7 +1,20 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { Plus } from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { StagingSourceTile } from "./StagingSourceTile";
 import type { Source } from "@/entities/studio/model";
 
@@ -16,6 +29,8 @@ interface StagingAreaProps {
   onSourceToggle: (sourceId: string) => void;
   onAddToStage: (sourceId: string) => void;
   onRemoveFromStage: (sourceId: string) => void;
+  /** 백스테이지에서 소스 완전 제거(목록에서 삭제) */
+  onRemoveSource?: (sourceId: string) => void;
 }
 
 function reorderSources(sources: Source[], fromIndex: number, toIndex: number): Source[] {
@@ -24,6 +39,66 @@ function reorderSources(sources: Source[], fromIndex: number, toIndex: number): 
   const [removed] = next.splice(fromIndex, 1);
   next.splice(toIndex, 0, removed);
   return next;
+}
+
+interface SortableStagingTileProps {
+  source: Source;
+  index: number;
+  layerOrder?: number;
+  isEditMode: boolean;
+  isOnStage: boolean;
+  stream?: MediaStream | null;
+  onToggle: (sourceId: string) => void;
+  onAddToStage: (sourceId: string) => void;
+  onRemoveFromStage: (sourceId: string) => void;
+  onRemoveSource?: (sourceId: string) => void;
+}
+
+function SortableStagingTile({
+  source,
+  index,
+  layerOrder,
+  isEditMode,
+  isOnStage,
+  stream,
+  onToggle,
+  onAddToStage,
+  onRemoveFromStage,
+  onRemoveSource,
+}: SortableStagingTileProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: source.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="shrink-0">
+      <StagingSourceTile
+        source={source}
+        index={index}
+        layerOrder={layerOrder}
+        isEditMode={isEditMode}
+        isOnStage={isOnStage}
+        isDragging={isDragging}
+        stream={stream}
+        dragHandleListeners={isEditMode ? listeners : undefined}
+        dragHandleAttributes={isEditMode ? attributes : undefined}
+        onToggle={onToggle}
+        onAddToStage={onAddToStage}
+        onRemoveFromStage={onRemoveFromStage}
+        onRemoveSource={onRemoveSource}
+      />
+    </div>
+  );
 }
 
 export function StagingArea({
@@ -37,29 +112,28 @@ export function StagingArea({
   onSourceToggle,
   onAddToStage,
   onRemoveFromStage,
+  onRemoveSource,
 }: StagingAreaProps) {
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const displaySources = sources.filter((s) => onStageSourceIds.includes(s.id));
+  const sortableIds = sources.map((s) => s.id);
 
-  const handleDragStart = useCallback((_e: React.DragEvent, index: number) => {
-    setDraggingIndex(index);
-  }, []);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
 
-  const handleDragOver = useCallback((e: React.DragEvent, _index: number) => {
-    e.preventDefault();
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent, toIndex: number) => {
-      e.preventDefault();
-      const fromIndexStr = e.dataTransfer.getData("application/x-staging-source-index");
-      const fromIndex = fromIndexStr === "" ? undefined : parseInt(fromIndexStr, 10);
-      setDraggingIndex(null);
-      if (fromIndex === undefined || Number.isNaN(fromIndex)) return;
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const fromIndex = sources.findIndex((s) => s.id === active.id);
+      const toIndex = sources.findIndex((s) => s.id === over.id);
+      if (fromIndex === -1 || toIndex === -1) return;
       const newOrder = reorderSources(sources, fromIndex, toIndex);
       onReorder(newOrder);
     },
-    [sources, onReorder],
+    [sources, onReorder]
   );
 
   return (
@@ -72,40 +146,44 @@ export function StagingArea({
           <span className="text-xs text-gray-500">드래그 비활성화</span>
         )}
       </div>
-      <div className="flex items-center gap-3 overflow-x-auto overflow-y-hidden py-1 min-h-[112px]">
-        {sources.map((source, index) => {
-          const onStageIndex = displaySources.findIndex((s) => s.id === source.id);
-          const layerOrder = onStageIndex >= 0 ? onStageIndex + 1 : undefined;
-          return (
-            <StagingSourceTile
-              key={source.id}
-              source={source}
-              index={index}
-              layerOrder={layerOrder}
-              isEditMode={isEditMode}
-              isOnStage={onStageSourceIds.includes(source.id)}
-              isDragging={draggingIndex === index}
-              stream={getSourceStream?.(source.id)}
-              onToggle={onSourceToggle}
-              onAddToStage={onAddToStage}
-              onRemoveFromStage={onRemoveFromStage}
-              onDragStart={handleDragStart}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            />
-          );
-        })}
-        {canAddSource && (
-          <button
-            type="button"
-            onClick={onAddSource}
-            className="shrink-0 w-[160px] h-[100px] rounded-lg border-2 border-dashed border-gray-600 hover:border-indigo-500 hover:bg-gray-700/50 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-indigo-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-          >
-            <Plus className="h-7 w-7" />
-            <span className="text-xs font-medium">소스 추가</span>
-          </button>
-        )}
-      </div>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext
+          items={sortableIds}
+          strategy={horizontalListSortingStrategy}
+        >
+          <div className="flex items-center gap-3 overflow-x-auto overflow-y-hidden py-1 min-h-[112px]">
+            {sources.map((source, index) => {
+              const onStageIndex = displaySources.findIndex((s) => s.id === source.id);
+              const layerOrder = onStageIndex >= 0 ? onStageIndex + 1 : undefined;
+              return (
+                <SortableStagingTile
+                  key={source.id}
+                  source={source}
+                  index={index}
+                  layerOrder={layerOrder}
+                  isEditMode={isEditMode}
+                  isOnStage={onStageSourceIds.includes(source.id)}
+                  stream={getSourceStream?.(source.id)}
+                  onToggle={onSourceToggle}
+                  onAddToStage={onAddToStage}
+                  onRemoveFromStage={onRemoveFromStage}
+                  onRemoveSource={onRemoveSource}
+                />
+              );
+            })}
+            {canAddSource && (
+              <button
+                type="button"
+                onClick={onAddSource}
+                className="shrink-0 w-[160px] h-[100px] rounded-lg border-2 border-dashed border-gray-600 hover:border-indigo-500 hover:bg-gray-700/50 flex flex-col items-center justify-center gap-2 text-gray-500 hover:text-indigo-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              >
+                <Plus className="h-7 w-7" />
+                <span className="text-xs font-medium">소스 추가</span>
+              </button>
+            )}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
