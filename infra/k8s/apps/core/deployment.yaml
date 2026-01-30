@@ -32,6 +32,8 @@ spec:
               value: "prod"
             - name: JAVA_OPTS
               value: "-Xms256m -Xmx512m"
+            - name: SERVER_PORT
+              value: "8080"
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
