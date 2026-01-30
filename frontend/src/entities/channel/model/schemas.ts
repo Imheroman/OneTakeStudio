@@ -1,20 +1,13 @@
 /**
- * Channel 엔티티 zod 스키마 정의
+ * Channel 엔티티 zod 스키마
  */
 import { z } from "zod";
 
-// 플랫폼 타입
-export const PlatformTypeSchema = z.enum([
-  "youtube",
-  "twitch",
-  "facebook",
-  "custom_rtmp",
-]);
+const PLATFORM_KEYS = ["youtube", "twitch", "facebook", "custom_rtmp"] as const;
 
-// 채널 연결 상태
+export const PlatformTypeSchema = z.enum(PLATFORM_KEYS);
 export const ChannelStatusSchema = z.enum(["connected", "disconnected"]);
 
-// 채널 스키마
 export const ChannelSchema = z.object({
   id: z.string(),
   platform: PlatformTypeSchema,
@@ -24,13 +17,11 @@ export const ChannelSchema = z.object({
   disconnectedAt: z.string().optional(),
 });
 
-// 채널 목록 응답 스키마
 export const ChannelListResponseSchema = z.object({
   channels: z.array(ChannelSchema),
   total: z.number(),
 });
 
-// 플랫폼 정보 스키마
 export const PlatformInfoSchema = z.object({
   type: PlatformTypeSchema,
   name: z.string(),
@@ -38,17 +29,14 @@ export const PlatformInfoSchema = z.object({
   description: z.string().optional(),
 });
 
-// 채널 연결 요청 스키마 (OAuth용, 현재 미사용)
 export const ConnectChannelRequestSchema = z.object({
   platform: PlatformTypeSchema,
 });
 
-// 채널 연결 응답 스키마 (OAuth용, 현재 미사용)
 export const ConnectChannelResponseSchema = z.object({
   authUrl: z.string().url("올바른 URL 형식이 아닙니다."),
 });
 
-// 백엔드 LocalDateTime: 문자열(ISO) 또는 Jackson 기본 배열 [year,month,day,hour,min,sec] 허용
 const BackendCreatedAtSchema = z
   .union([z.string(), z.array(z.number())])
   .optional()
@@ -64,7 +52,6 @@ const BackendCreatedAtSchema = z
     return undefined;
   });
 
-// --- 백엔드 Core GET/POST /api/destinations 응답 (null 허용: Java optional 필드) ---
 export const BackendDestinationResponseSchema = z.object({
   id: z.number(),
   destinationId: z.string(),
@@ -83,7 +70,6 @@ export const ApiResponseDestinationListSchema = z.object({
   data: z.array(BackendDestinationResponseSchema),
 });
 
-// --- 수동 등록: Core POST /api/destinations 요청/응답 ---
 export const CreateDestinationRequestSchema = z.object({
   platform: z.string().min(1, "플랫폼은 필수입니다"),
   channelId: z.string().min(1, "채널 ID는 필수입니다"),
@@ -98,16 +84,12 @@ export const ApiResponseDestinationSchema = z.object({
   data: BackendDestinationResponseSchema,
 });
 
-// OAuth 콜백 응답 스키마
 export const OAuthCallbackResponseSchema = z.object({
   channel: ChannelSchema.optional(),
   message: z.string(),
   redirectUrl: z.string().url().optional(),
 });
 
-const PLATFORM_KEYS = ["youtube", "twitch", "facebook", "custom_rtmp"] as const;
-
-/** 백엔드 data[] → 프론트 Channel[] 매핑 (DELETE 시 destinationId 사용) */
 export function mapDestinationListToChannels(
   data: z.infer<typeof BackendDestinationResponseSchema>[],
 ): z.infer<typeof ChannelSchema>[] {
@@ -128,16 +110,14 @@ export function mapDestinationListToChannels(
     });
 }
 
-/** 스키마 검증 없이 raw 객체 배열 → Channel[] (폴백용) */
 export function safeMapRawDestinationsToChannels(raw: unknown): z.infer<typeof ChannelSchema>[] {
   if (!Array.isArray(raw)) return [];
-  const PLATFORM_KEYS_SAFE = ["youtube", "twitch", "facebook", "custom_rtmp"] as const;
   return raw
     .filter((d): d is Record<string, unknown> => d != null && typeof d === "object")
     .filter((d) => d.isActive !== false)
     .map((d) => {
       const platformRaw = String(d.platform ?? "").toLowerCase();
-      const platform = PLATFORM_KEYS_SAFE.includes(platformRaw as (typeof PLATFORM_KEYS_SAFE)[number])
+      const platform = PLATFORM_KEYS.includes(platformRaw as (typeof PLATFORM_KEYS)[number])
         ? platformRaw
         : "custom_rtmp";
       const createdAt = d.createdAt;
@@ -166,7 +146,6 @@ export function safeMapRawDestinationsToChannels(raw: unknown): z.infer<typeof C
     });
 }
 
-// 타입 추론
 export type PlatformType = z.infer<typeof PlatformTypeSchema>;
 export type ChannelStatus = z.infer<typeof ChannelStatusSchema>;
 export type Channel = z.infer<typeof ChannelSchema>;
