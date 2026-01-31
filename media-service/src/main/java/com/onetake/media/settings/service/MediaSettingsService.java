@@ -73,7 +73,10 @@ public class MediaSettingsService {
         // 유니크 제약 (studio_id, user_id, is_active): (1,1,false) 행은 하나만 허용되므로
         // 기존 활성 행을 is_active=false로 바꾸면 이미 있는 false 행과 충돌함. 따라서 기존 활성 행은 삭제.
         sessionMediaStateRepository.findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
-                .ifPresent(sessionMediaStateRepository::delete);
+                .ifPresent(existing -> {
+                    sessionMediaStateRepository.delete(existing);
+                    sessionMediaStateRepository.flush(); // delete가 먼저 실행되도록 강제
+                });
 
         // 사용자 설정 가져오기
         UserMediaSettings userSettings = userMediaSettingsRepository.findByUserId(userId)
