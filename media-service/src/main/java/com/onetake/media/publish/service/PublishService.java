@@ -95,6 +95,14 @@ public class PublishService {
                 .map(dest -> dest.getRtmpUrl() + dest.getStreamKey())
                 .toList();
 
+        // 디버그: 유튜브 연결 실패 시 형식 확인용 (스트림 키는 마스킹)
+        for (RtmpDestination d : rtmpDestinations) {
+            String key = d.getStreamKey();
+            String masked = key.length() <= 4 ? "****" : key.substring(0, 2) + "****" + key.substring(key.length() - 2);
+            log.info("RTMP destination: {} -> {} (streamKey length={})",
+                    d.getRtmpUrl(), d.getRtmpUrl() + masked, key.length());
+        }
+
         // 사용자 비디오 품질 설정 조회
         VideoQuality videoQuality = userMediaSettingsRepository.findByUserId(userId)
                 .map(UserMediaSettings::getVideoQuality)
@@ -315,8 +323,8 @@ public class PublishService {
                 .map(d -> new RtmpDestination(
                         d.getId(),
                         d.getPlatform(),
-                        normalizeRtmpUrl(d.getRtmpUrl()),
-                        d.getStreamKey()
+                        normalizeRtmpUrl(d.getRtmpUrl().trim()),
+                        d.getStreamKey().trim()  // 복사 시 붙은 공백/줄바꿈 제거 (유튜브 연결 끊김 방지)
                 ))
                 .collect(Collectors.toList());
 
@@ -330,7 +338,8 @@ public class PublishService {
     /** YouTube RTMP URL 끝이 /가 아니면 / 붙여서 streamKey와 결합 시 일관성 유지 */
     private static String normalizeRtmpUrl(String rtmpUrl) {
         if (rtmpUrl == null || rtmpUrl.isBlank()) return rtmpUrl;
-        return rtmpUrl.endsWith("/") ? rtmpUrl : rtmpUrl + "/";
+        String u = rtmpUrl.trim();
+        return u.endsWith("/") ? u : u + "/";
     }
 
     private List<PublishStatusResponse.DestinationStatus> buildDestinationStatuses(PublishSession publishSession) {

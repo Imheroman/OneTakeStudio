@@ -46,6 +46,13 @@ public class DestinationService {
         return channelId == null ? "" : channelId.trim();
     }
 
+    /** RTMP URL/스트림 키 저장 시 앞뒤 공백 제거 (유튜브 "connection closed remotely" 방지) */
+    private static String trimOrNull(String value, String fallback) {
+        if (value == null) return fallback;
+        String t = value.trim();
+        return t.isEmpty() ? fallback : t;
+    }
+
     @Transactional
     public DestinationResponse createDestination(String userId, CreateDestinationRequest request) {
         String platform = normalizePlatform(request.getPlatform());
@@ -66,8 +73,8 @@ public class DestinationService {
             if (request.getChannelName() != null) dest.updateChannelInfo(dest.getChannelId(), request.getChannelName());
             if (request.getRtmpUrl() != null || request.getStreamKey() != null) {
                 dest.updateStreamInfo(
-                        request.getRtmpUrl() != null ? request.getRtmpUrl() : dest.getRtmpUrl(),
-                        request.getStreamKey() != null ? request.getStreamKey() : dest.getStreamKey());
+                        trimOrNull(request.getRtmpUrl(), dest.getRtmpUrl()),
+                        trimOrNull(request.getStreamKey(), dest.getStreamKey()));
             }
             destinationRepository.save(dest);
             return DestinationResponse.from(dest);
@@ -78,8 +85,8 @@ public class DestinationService {
                 .platform(platform)
                 .channelId(channelId)
                 .channelName(request.getChannelName())
-                .rtmpUrl(request.getRtmpUrl())
-                .streamKey(request.getStreamKey())
+                .rtmpUrl(trimOrNull(request.getRtmpUrl(), null))
+                .streamKey(trimOrNull(request.getStreamKey(), null))
                 .isActive(true)
                 .build();
 
@@ -96,8 +103,8 @@ public class DestinationService {
         }
         if (request.getRtmpUrl() != null || request.getStreamKey() != null) {
             destination.updateStreamInfo(
-                    request.getRtmpUrl() != null ? request.getRtmpUrl() : destination.getRtmpUrl(),
-                    request.getStreamKey() != null ? request.getStreamKey() : destination.getStreamKey()
+                    trimOrNull(request.getRtmpUrl(), destination.getRtmpUrl()),
+                    trimOrNull(request.getStreamKey(), destination.getStreamKey())
             );
         }
         return DestinationResponse.from(destination);
