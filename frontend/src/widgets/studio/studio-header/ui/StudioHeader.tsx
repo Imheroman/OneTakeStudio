@@ -22,6 +22,7 @@ import {
   type Channel,
   mapDestinationListToChannels,
 } from "@/entities/channel/model";
+import { Logo } from "@/shared/ui/logo";
 
 interface StudioHeaderProps {
   studioTitle: string;
@@ -182,7 +183,7 @@ export function StudioHeader({
       <header className="h-16 bg-gray-900 text-white flex items-center justify-between px-6 border-b border-gray-800">
         {/* 왼쪽: 로고 및 제목 */}
         <div className="flex items-center gap-4">
-          <span className="text-xl font-black italic text-indigo-400">OneTake</span>
+          <Logo dark size="sm" />
           <span className="text-gray-400">|</span>
           <span className="font-semibold">{studioTitle}</span>
           {isStreamConnected && (

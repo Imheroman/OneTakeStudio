@@ -10,6 +10,7 @@ import { useShortsStore } from "@/stores/useShortsStore"; // 쇼츠 스토어
 import { Button } from "@/shared/ui/button";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { IconButton } from "@/shared/common";
+import { Logo } from "@/shared/ui/logo";
 import { apiClient } from "@/shared/api/client";
 import { NotificationListResponseSchema } from "@/entities/notification/model";
 
@@ -47,18 +48,17 @@ export function WorkspaceTopNav() {
   const totalCount = notificationCount + shortsNotifications.length;
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 sticky top-0 z-40">
-      <Link
+    <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 md:px-16 lg:px-[120px] sticky top-0 z-40">
+      <Logo
         href={user?.userId ? `/workspace/${user.userId}` : "/"}
-        className="text-xl font-black italic text-indigo-600"
-      >
-        OneTake
-      </Link>
+        size="lg"
+      />
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <Button
           variant="ghost"
-          className="font-semibold text-gray-800"
+          size="lg"
+          className="font-semibold text-gray-800 text-base"
           onClick={() => {
             logout();
             router.push("/login");
@@ -69,22 +69,24 @@ export function WorkspaceTopNav() {
 
         {/* ✨ [수정] 클릭 시 무조건 알림 패널만 엽니다 (배지 숫자는 유지) */}
         <IconButton
-          icon={<Bell className="h-5 w-5 text-gray-700" />}
+          icon={<Bell className="h-6 w-6 text-gray-700" />}
           label="Notifications"
           badge={totalCount > 0 ? totalCount : undefined}
           onClick={openNotifications}
+          size="lg"
         />
 
         <IconButton
           icon={
-            <Avatar>
-              <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
+            <Avatar size="lg">
+              <AvatarFallback className="bg-gray-100 text-gray-700 font-bold text-base">
                 {user?.nickname?.[0] ?? "U"}
               </AvatarFallback>
             </Avatar>
           }
           label="Profile"
           href="/mypage"
+          size="lg"
         />
       </div>
     </header>

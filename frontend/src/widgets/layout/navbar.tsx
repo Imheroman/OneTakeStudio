@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
+import { Logo } from "@/shared/ui/logo";
 import { useShortsStore } from "@/stores/useShortsStore";
 import { useShortsPolling } from "@/features/shorts/useShortsPolling"; // 훅 import (없으면 아래 설명 참고)
 import { useState } from "react";
@@ -16,7 +17,7 @@ export const Navbar = () => {
   return (
     <nav className="h-16 border-b bg-white flex items-center justify-between px-6 sticky top-0 z-50">
       {/* 로고 영역 */}
-      <div className="text-xl font-bold text-indigo-600">OneTake</div>
+      <Logo href="/" size="md" />
 
       {/* 우측 아이콘 영역 */}
       <div className="flex items-center gap-4">

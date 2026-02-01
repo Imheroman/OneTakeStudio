@@ -39,7 +39,7 @@ export default function LandingPage() {
       <div id="guide" className="bg-white">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="rounded-3xl border border-gray-200 p-10">
-            <h2 className="text-2xl font-extrabold text-gray-900">GUIDE</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900">이용 방법</h2>
             <p className="mt-2 text-gray-600">
               아직 데모 영상/페이지가 준비 중이라면, 임시로 이 섹션을 “데모
               보기” 버튼의 목적지로 사용하면 돼요.
@@ -57,7 +57,7 @@ export default function LandingPage() {
       <div id="contact" className="bg-white">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <div className="rounded-3xl border border-gray-200 p-10">
-            <h2 className="text-2xl font-extrabold text-gray-900">CONTACT</h2>
+            <h2 className="text-2xl font-extrabold text-gray-900">문의하기</h2>
             <p className="mt-2 text-gray-600">
               문의 채널은 추후 확정. 지금은 폼/메일/디스코드 중 아무거나로
               연결하면 돼요.

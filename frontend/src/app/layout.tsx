@@ -19,6 +19,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "OneTake | 통합 영상 송출 솔루션",
   description: "창작의 시간은 줄이고 가치는 높이는 스트리밍 플랫폼",
+  icons: {
+    icon: "/logo_02.svg",
+  },
 };
 
 export default function RootLayout({
