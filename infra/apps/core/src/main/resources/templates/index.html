@@ -80,6 +80,7 @@
 </head>
 <body>
     <h1>Item API Test</h1>
+    <div style="text-align:center;margin-bottom:20px;"><a href="/test-api/redis-dashboard" style="color:#007bff;text-decoration:none;font-size:14px;">Redis Test Dashboard &rarr;</a></div>
 
     <div class="card">
         <h2>Add / Edit Item</h2>
@@ -126,7 +127,7 @@
     </div>
 
     <script>
-        const API_URL = '/api/items';
+        const API_URL = '/test-api/items';
 
         function showResult(data, isError = false) {
             const resultDiv = document.getElementById('result');

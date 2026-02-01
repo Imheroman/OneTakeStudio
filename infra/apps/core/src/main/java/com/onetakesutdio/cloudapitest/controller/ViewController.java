@@ -10,4 +10,9 @@ public class ViewController {
     public String index() {
         return "index";
     }
+
+    @GetMapping("/test-api/redis-dashboard")
+    public String redisDashboard() {
+        return "redis";
+    }
 }
