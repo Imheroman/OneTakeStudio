@@ -61,6 +61,10 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: DB_PASSWORD
+            - name: REDIS_HOST
+              value: "redis.database.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
 
           resources:
             requests:
