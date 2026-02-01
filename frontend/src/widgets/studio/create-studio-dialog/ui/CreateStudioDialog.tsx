@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Radio, Video, HardDrive, Cloud, ArrowRight } from "lucide-react";
+import { ComingSoonModal } from "@/shared/ui/coming-soon-modal";
 import {
   Dialog,
   DialogContent,
@@ -47,8 +48,17 @@ export function CreateStudioDialog({
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [comingSoonOpen, setComingSoonOpen] = useState(false);
+  const [comingSoonMessage, setComingSoonMessage] = useState("");
 
   const handlePlatformToggle = (platform: Platform) => {
+    if (platform === "chzzk" || platform === "twitch") {
+      setComingSoonMessage(
+        "치지직/트위치 송출은 준비 중입니다. 현재는 YouTube만 지원됩니다.",
+      );
+      setComingSoonOpen(true);
+      return;
+    }
     setPlatforms((prev) =>
       prev.includes(platform)
         ? prev.filter((p) => p !== platform)
@@ -154,24 +164,34 @@ export function CreateStudioDialog({
             <div className="space-y-3">
               <Label className="text-base font-semibold">송출 플랫폼</Label>
               <div className="grid grid-cols-3 gap-3">
-                {(["youtube", "chzzk", "twitch"] as Platform[]).map((platform) => (
-                  <button
-                    key={platform}
-                    type="button"
-                    onClick={() => handlePlatformToggle(platform)}
-                    className={cn(
-                      "p-4 border-2 rounded-lg transition-all text-center",
-                      platforms.includes(platform)
-                        ? "border-indigo-500 bg-indigo-50"
-                        : "border-gray-200 hover:border-gray-300",
-                    )}
-                  >
-                    <div className="text-2xl mb-2">{platformIcons[platform]}</div>
-                    <div className="text-sm font-medium">
-                      {platformNames[platform]}
-                    </div>
-                  </button>
-                ))}
+                {(["youtube", "chzzk", "twitch"] as Platform[]).map((platform) => {
+                  const isComingSoon = platform === "chzzk" || platform === "twitch";
+                  return (
+                    <button
+                      key={platform}
+                      type="button"
+                      onClick={() => handlePlatformToggle(platform)}
+                      className={cn(
+                        "p-4 border-2 rounded-lg transition-all text-center relative",
+                        platforms.includes(platform)
+                          ? "border-indigo-500 bg-indigo-50"
+                          : "border-gray-200 hover:border-gray-300",
+                        isComingSoon && !platforms.includes(platform) && "opacity-75",
+                      )}
+                      title={isComingSoon ? "준비 중" : undefined}
+                    >
+                      <div className="text-2xl mb-2">{platformIcons[platform]}</div>
+                      <div className="text-sm font-medium">
+                        {platformNames[platform]}
+                        {isComingSoon && (
+                          <span className="block text-xs text-amber-600 font-normal mt-0.5">
+                            준비 중
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -199,17 +219,24 @@ export function CreateStudioDialog({
 
                 <button
                   type="button"
-                  onClick={() => setStorageLocation("cloud")}
+                  onClick={() => {
+                    setComingSoonMessage(
+                      "Cloud 저장은 준비 중입니다. 현재는 Local만 지원됩니다.",
+                    );
+                    setComingSoonOpen(true);
+                  }}
                   className={cn(
-                    "p-4 border-2 rounded-lg transition-all text-left",
-                    storageLocation === "cloud"
-                      ? "border-indigo-500 bg-indigo-50"
-                      : "border-gray-200 hover:border-gray-300",
+                    "p-4 border-2 rounded-lg transition-all text-left opacity-70",
+                    "border-gray-200 hover:border-gray-300 cursor-not-allowed",
                   )}
+                  title="준비 중"
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <Cloud className="h-5 w-5" />
                     <span className="font-semibold">Cloud</span>
+                    <span className="text-xs text-amber-600 font-normal">
+                      (준비 중)
+                    </span>
                   </div>
                 </button>
               </div>
@@ -254,6 +281,12 @@ export function CreateStudioDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ComingSoonModal
+        open={comingSoonOpen}
+        onOpenChange={setComingSoonOpen}
+        message={comingSoonMessage}
+      />
     </Dialog>
   );
 }

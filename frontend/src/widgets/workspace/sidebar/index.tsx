@@ -10,6 +10,7 @@ import {
   Users,
   Database,
   LogOut,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -27,6 +28,7 @@ export function Sidebar() {
     { name: "Channels", href: "/channels", icon: Radio },
     { name: "Members", href: "/members", icon: Users },
     { name: "Storage", href: "/storage", icon: Database },
+    { name: "Features", href: "/features", icon: ListChecks },
   ];
 
   const handleLogout = () => {
