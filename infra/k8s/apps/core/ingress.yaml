@@ -8,6 +8,9 @@ metadata:
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - i14c206.p.ssafy.io
   rules:
     - host: i14c206.p.ssafy.io
       http:
