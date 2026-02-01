@@ -5,15 +5,19 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
 import { SocialProofBand } from "@/components/landing/SocialProofBand";
 import { TimelineScanAnimation } from "@/components/landing/TimelineScanAnimation";
 import { GlassmorphicFeatureCard } from "@/components/landing/GlassmorphicFeatureCard";
 import { ImageWithFallback } from "@/components/landing/figma/ImageWithFallback";
 import svgPaths from "@/imports/svg-pm6qk27wb4";
+import { cn } from "@/shared/lib/utils";
 
 export default function LandingPage() {
   const { isLoggedIn, user, hasHydrated } = useAuthStore();
   const router = useRouter();
+  const theme = useLandingThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -23,14 +27,20 @@ export default function LandingPage() {
   }, [hasHydrated, isLoggedIn, user, router]);
 
   return (
-    <div className="w-full min-h-screen bg-black text-white overflow-x-hidden">
+    <div
+      className={cn(
+        "w-full min-h-screen overflow-x-hidden transition-colors duration-300",
+        isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900"
+      )}
+    >
       {/* Hero Section */}
       <section className="relative h-screen overflow-hidden">
         <div
-          className="absolute inset-0 z-0"
+          className="absolute inset-0 z-0 transition-colors duration-300"
           style={{
-            backgroundImage:
-              "linear-gradient(144.063deg, rgba(139, 92, 246, 0.2) 0%, rgb(0, 0, 0) 50%, rgb(0, 0, 0) 100%)",
+            backgroundImage: isDark
+              ? "linear-gradient(144.063deg, rgba(139, 92, 246, 0.2) 0%, rgb(0, 0, 0) 50%, rgb(0, 0, 0) 100%)"
+              : "linear-gradient(144.063deg, rgba(139, 92, 246, 0.12) 0%, rgb(249, 250, 251) 50%, rgb(249, 250, 251) 100%)",
           }}
         />
 
@@ -39,10 +49,22 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="bg-white/10 border border-white/20 rounded-full px-6 py-2 mb-12 flex items-center gap-3"
+            className={cn(
+              "rounded-full px-6 py-2 mb-12 flex items-center gap-3 border transition-colors duration-300",
+              isDark
+                ? "bg-white/10 border-white/20"
+                : "bg-purple-50 border-purple-200"
+            )}
           >
             <div className="w-2 h-2 bg-purple-500 rounded-full opacity-75" />
-            <span className="text-sm text-white/90">차세대 스트리밍 플랫폼</span>
+            <span
+              className={cn(
+                "text-sm",
+                isDark ? "text-white/90" : "text-gray-800"
+              )}
+            >
+              차세대 스트리밍 플랫폼
+            </span>
           </motion.div>
 
           <motion.div
@@ -51,11 +73,21 @@ export default function LandingPage() {
             transition={{ delay: 0.2, duration: 0.8 }}
             className="text-center mb-8"
           >
-            <h1 className="text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight mb-4">
+            <h1
+              className={cn(
+                "text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight mb-4 transition-colors duration-300",
+                isDark ? "text-white" : "text-gray-900"
+              )}
+            >
               방송만 하세요.
             </h1>
-            <h1 className="text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight">
-              편집은 OneTake가 알아서 할게요.
+            <h1
+              className={cn(
+                "text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight transition-colors duration-300",
+                isDark ? "text-white" : "text-gray-900"
+              )}
+            >
+              편집은 원테이크가 알아서 할게요.
             </h1>
           </motion.div>
 
@@ -63,7 +95,10 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
-            className="text-center text-white/70 text-base sm:text-[20px] leading-relaxed mb-12 max-w-2xl"
+            className={cn(
+              "text-center text-base sm:text-[20px] leading-relaxed mb-12 max-w-2xl transition-colors duration-300",
+              isDark ? "text-white/70" : "text-gray-600"
+            )}
           >
             <p>무거운 설치도, 복잡한 설정도 필요 없어요.</p>
             <p>브라우저에서 바로 시작하는 AI 스튜디오.</p>
@@ -86,28 +121,28 @@ export default function LandingPage() {
             </Link>
             <Link href="/#solution">
               <motion.span
-                className="inline-flex items-center gap-2 border border-white/20 text-white/80 font-semibold px-6 py-4 rounded-2xl hover:border-white/40 hover:bg-white/10 transition-all backdrop-blur-sm cursor-pointer"
+                className={cn(
+                  "inline-flex items-center gap-2 border font-semibold px-6 py-4 rounded-2xl transition-all backdrop-blur-sm cursor-pointer",
+                  isDark
+                    ? "border-white/20 text-white/80 hover:border-white/40 hover:bg-white/10"
+                    : "border-gray-300 text-gray-700 hover:border-indigo-400 hover:bg-indigo-50"
+                )}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <span>데모 보기</span>
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 20 20">
-                  <path
-                    d="M4.16667 10H15.8333"
-                    stroke="white"
-                    strokeOpacity="0.8"
-                    strokeWidth="1.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d={svgPaths.p1ae0b780}
-                    stroke="white"
-                    strokeOpacity="0.8"
-                    strokeWidth="1.66667"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                <svg
+                  className="w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 20 20"
+                  stroke="currentColor"
+                  strokeOpacity="0.8"
+                  strokeWidth="1.66667"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4.16667 10H15.8333" />
+                  <path d={svgPaths.p1ae0b780} />
                 </svg>
               </motion.span>
             </Link>
@@ -117,12 +152,18 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.2, duration: 0.8 }}
-            className="absolute bottom-12 w-6 h-10 border-2 border-white/30 rounded-full flex items-start justify-center p-1"
+            className={cn(
+              "absolute bottom-12 w-6 h-10 border-2 rounded-full flex items-start justify-center p-1 transition-colors duration-300",
+              isDark ? "border-white/30" : "border-gray-400"
+            )}
           >
             <motion.div
               animate={{ y: [0, 12, 0] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              className="w-1 h-1.5 bg-white/50 rounded-full"
+              className={cn(
+                "w-1 h-1.5 rounded-full",
+                isDark ? "bg-white/50" : "bg-gray-500"
+              )}
             />
           </motion.div>
         </div>
@@ -163,7 +204,12 @@ export default function LandingPage() {
             <br />
             컷 편집 하시나요?
           </h2>
-          <p className="text-lg sm:text-[24px] text-white/60 leading-relaxed max-w-2xl mx-auto">
+          <p
+            className={cn(
+              "text-lg sm:text-[24px] leading-relaxed max-w-2xl mx-auto",
+              isDark ? "text-white/60" : "text-gray-600"
+            )}
+          >
             라이브가 끝나면 콘텐츠도 끝나야 하니까.
             <br />
             AI가 당신의 소중한 시간을 찾아드려요.
@@ -174,7 +220,13 @@ export default function LandingPage() {
       <TimelineScanAnimation />
 
       {/* Features Grid */}
-      <section className="bg-black py-24 px-6" id="features">
+      <section
+        className={cn(
+          "py-24 px-6 transition-colors duration-300",
+          isDark ? "bg-black" : "bg-white"
+        )}
+        id="features"
+      >
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <motion.div
@@ -202,7 +254,10 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="text-lg text-white/60"
+              className={cn(
+                "text-lg",
+                isDark ? "text-white/60" : "text-gray-600"
+              )}
             >
               전문 스트리머부터 입문자까지, 모두를 위한 완벽한 솔루션
             </motion.p>

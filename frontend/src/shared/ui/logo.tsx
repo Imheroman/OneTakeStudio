@@ -4,7 +4,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/shared/lib/utils";
 
-const LOGO_SRC = "/logo_02.svg";
+const LOGO_SRC = "/logo_01.svg";
+const LOGO_DARK_SRC = "/logo_01_dark.svg";
 
 interface LogoProps {
   /** 링크 URL (없으면 링크 없이 img만) */
@@ -40,11 +41,11 @@ export function Logo({
   const content = (
     <>
       <Image
-        src={LOGO_SRC}
+        src={dark ? LOGO_DARK_SRC : LOGO_SRC}
         alt={alt}
         width={width}
         height={height}
-        className={cn("shrink-0 object-contain", dark && "invert")}
+        className="shrink-0 object-contain"
         priority
       />
       {showLabel && (
@@ -55,7 +56,7 @@ export function Logo({
           )}
         >
           <span className={dark ? "text-white" : "text-indigo-600"}>원</span>
-          <span className="text-black">테이크</span>
+          <span className={dark ? "text-white" : "text-black"}>테이크</span>
         </span>
       )}
     </>

@@ -24,9 +24,11 @@
 ```
 frontend/
   public/
-    logo.svg      ← 로고 파일
-    logo-dark.svg ← 다크 배경용 (필요 시)
+    logo_01.svg        ← 기본 로고 (밝은 배경)
+    logo_01_dark.svg   ← 다크모드 전용 로고 (어두운 배경용, 흰색/밝은 톤)
 ```
+
+**다크 전용 로고**: `public/logo_01_dark.svg` 에 넣으면 `Logo` 컴포넌트의 `dark` prop 시 이 파일을 사용합니다.
 
 ### 2) `src/shared/assets/` 에 두기 (번들 포함)
 

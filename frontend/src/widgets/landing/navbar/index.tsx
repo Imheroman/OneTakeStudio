@@ -73,7 +73,7 @@ export function Navbar({
   return (
     <nav className={cn(base, className)}>
       <div className="flex items-center gap-10">
-        <Logo href="/" size="md" />
+        <Logo href="/" size="md" dark={variant === "dark"} />
         <ul className="flex gap-6 items-center">
           {menuItems.map((item) => {
             if (isDropdown(item)) {
@@ -97,7 +97,12 @@ export function Navbar({
                   </button>
                   {isOpen && (
                     <div
-                      className="absolute top-full left-0 mt-1 min-w-[200px] rounded-lg border border-white/10 bg-black/95 backdrop-blur-md py-2 shadow-xl z-50"
+                      className={cn(
+                        "absolute top-full left-0 mt-1 min-w-[200px] rounded-lg backdrop-blur-md py-2 shadow-xl z-50",
+                        variant === "dark"
+                          ? "border border-white/10 bg-black/95"
+                          : "border border-gray-200 bg-white/95"
+                      )}
                       role="listbox"
                     >
                       {item.items.map((sub) => (
@@ -105,7 +110,12 @@ export function Navbar({
                           key={sub.href + sub.label}
                           href={sub.href}
                           onClick={() => setOpenDropdown(null)}
-                          className="block px-4 py-2.5 text-sm text-white/85 hover:text-white hover:bg-white/10 transition-colors"
+                          className={cn(
+                            "block px-4 py-2.5 text-sm transition-colors",
+                            variant === "dark"
+                              ? "text-white/85 hover:text-white hover:bg-white/10"
+                              : "text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+                          )}
                         >
                           {sub.label}
                         </Link>
