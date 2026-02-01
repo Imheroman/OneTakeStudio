@@ -62,7 +62,14 @@ setup-secrets:
         --from-literal=DB_PASSWORD="$CORE_DB_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # 3. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
+    # 3. Redis Secret 생성
+    - |
+      kubectl create secret generic redis-secret \
+        --namespace=core \
+        --from-literal=REDIS_PASSWORD="$REDIS_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 4. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
     # bitnami 이미지엔 aws cli가 없으므로, 현재는 기존 시크릿이 있다고 가정하거나
     # EC2 호스트에서 CronJob으로 갱신하는 것을 권장합니다.
     # 만약 파이프라인에서 매번 갱신하려면 aws-cli가 포함된 이미지를 써야 합니다.
