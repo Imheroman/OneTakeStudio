@@ -33,7 +33,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
-import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Logo } from "@/shared/ui/logo";
 
 const formSchema = z
   .object({
@@ -262,19 +263,11 @@ export function SignupForm() {
   }
 
   return (
-    <>
-      <div className="fixed top-8 left-8 z-50 md:top-12 md:left-12">
-        <Link
-          href="/"
-          className="text-indigo-600 flex items-center gap-2 hover:underline font-medium text-sm md:text-base"
-        >
-          <ArrowLeft size={20} />
-          홈으로 돌아가기
-        </Link>
+    <Card className="w-full max-w-[500px] border-0 shadow-xl bg-white rounded-2xl">
+      <div className="flex justify-center pt-1 pb-1">
+        <Logo href="/" size="lg" />
       </div>
-
-      <Card className="w-full max-w-[500px] border-0 shadow-xl bg-white rounded-2xl">
-        <CardHeader className="text-center pb-2">
+      <CardHeader className="text-center pb-2">
           <CardTitle className="text-2xl font-bold text-gray-900">회원가입</CardTitle>
           <CardDescription>
             OneTake의 모든 기능을 사용하려면 계정을 생성하세요.
@@ -499,7 +492,7 @@ export function SignupForm() {
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            <Button variant="outline" className="h-11">
+            <Button variant="outline" className="google-oauth-hover h-11 transition-colors">
               Google
             </Button>
             <Button
@@ -527,6 +520,5 @@ export function SignupForm() {
           </Link>
         </CardFooter>
       </Card>
-    </>
   );
 }
