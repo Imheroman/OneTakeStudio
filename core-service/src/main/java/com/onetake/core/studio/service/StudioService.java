@@ -164,4 +164,24 @@ public class StudioService {
                 })
                 .toList();
     }
+
+    // ==================== Note ====================
+
+    public NoteResponse getNote(Long studioId) {
+        Studio studio = studioRepository.findById(studioId)
+                .orElseThrow(() -> new StudioNotFoundException(studioId));
+        return NoteResponse.of(studio.getNote());
+    }
+
+    @Transactional
+    public NoteResponse updateNote(Long studioId, String content) {
+        Studio studio = studioRepository.findById(studioId)
+                .orElseThrow(() -> new StudioNotFoundException(studioId));
+
+        studio.updateNote(content);
+        studioRepository.save(studio);
+
+        log.info("스튜디오 노트 업데이트: studioId={}", studioId);
+        return NoteResponse.of(content);
+    }
 }

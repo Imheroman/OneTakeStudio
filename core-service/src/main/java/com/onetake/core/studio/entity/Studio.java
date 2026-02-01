@@ -44,6 +44,9 @@ public class Studio {
     @Column(length = 50)
     private String template;
 
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     @Builder.Default
@@ -83,5 +86,9 @@ public class Studio {
 
     public void endStreaming() {
         this.status = StudioStatus.ENDED;
+    }
+
+    public void updateNote(String note) {
+        this.note = note;
     }
 }
