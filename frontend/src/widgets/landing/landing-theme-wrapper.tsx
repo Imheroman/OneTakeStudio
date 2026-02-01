@@ -13,12 +13,12 @@ const menuItems = [
     label: "서비스 소개",
     dropdown: true as const,
     items: [
-      { label: "실시간 스트리밍", href: "/#features" },
-      { label: "원클릭 녹화", href: "/#features" },
-      { label: "다중 참여자", href: "/#features" },
-      { label: "실시간 분석", href: "/#features" },
-      { label: "AI 자동 편집", href: "/#features" },
-      { label: "클라우드 저장", href: "/#features" },
+      { label: "YouTube 라이브 송출", href: "/#features" },
+      { label: "로컬·서버 녹화", href: "/#features" },
+      { label: "씬·소스·레이아웃", href: "/#features" },
+      { label: "YouTube 채널 연동", href: "/#features" },
+      { label: "해상도·오디오", href: "/#features" },
+      { label: "녹화·라이브러리", href: "/#features" },
     ],
   },
   { label: "이용 방법", href: "/#guide" },
@@ -37,7 +37,7 @@ export function LandingThemeWrapper({
     <div
       className={cn(
         "min-h-screen flex flex-col transition-colors duration-300",
-        isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900"
+        isDark ? "bg-[#121212] text-white" : "bg-[#F9F9F9] text-gray-900"
       )}
       data-theme={theme}
     >

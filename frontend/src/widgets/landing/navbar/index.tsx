@@ -58,10 +58,10 @@ export function Navbar({
 
   const base =
     variant === "glass"
-      ? "h-16 flex items-center justify-between px-6 md:px-16 lg:px-[120px] bg-white/50 backdrop-blur-md sticky top-0 z-50 border-b border-white/30"
+      ? "h-14 flex items-center justify-between px-6 md:px-16 lg:px-[120px] bg-white/50 backdrop-blur-md sticky top-0 z-50 border-b border-white/30"
       : variant === "dark"
-        ? "h-16 flex items-center justify-between px-6 md:px-16 lg:px-[120px] bg-black/80 backdrop-blur-md sticky top-0 z-50 border-b border-white/10"
-        : "h-16 border-b flex items-center justify-between px-6 md:px-16 lg:px-[120px] bg-white/80 backdrop-blur-md sticky top-0 z-50";
+        ? "h-14 flex items-center justify-between px-6 md:px-16 lg:px-[120px] bg-black/80 backdrop-blur-md sticky top-0 z-50 border-b border-white/10"
+        : "h-14 border-b flex items-center justify-between px-6 md:px-16 lg:px-[120px] bg-white/80 backdrop-blur-md sticky top-0 z-50";
 
   const linkClass = cn(
     "text-sm font-medium transition-colors",

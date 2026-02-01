@@ -10,6 +10,7 @@ import { SocialProofBand } from "@/components/landing/SocialProofBand";
 import { TimelineScanAnimation } from "@/components/landing/TimelineScanAnimation";
 import { GlassmorphicFeatureCard } from "@/components/landing/GlassmorphicFeatureCard";
 import { ImageWithFallback } from "@/components/landing/figma/ImageWithFallback";
+import { GrainOverlay } from "@/components/landing/GrainOverlay";
 import svgPaths from "@/imports/svg-pm6qk27wb4";
 import { cn } from "@/shared/lib/utils";
 
@@ -30,40 +31,55 @@ export default function LandingPage() {
     <div
       className={cn(
         "w-full min-h-screen overflow-x-hidden transition-colors duration-300",
-        isDark ? "bg-black text-white" : "bg-gray-50 text-gray-900"
+        isDark ? "bg-[#121212] text-white" : "bg-[#F9F9F9] text-gray-900"
       )}
     >
-      {/* Hero Section */}
+      {/* Hero Section — Modern SaaS: charcoal/off-white, purple mesh, grain, gradient keyword, 3D glass CTA */}
       <section className="relative h-screen overflow-hidden">
+        {/* Base + purple mesh glow (dark) / clean off-white (light) */}
         <div
           className="absolute inset-0 z-0 transition-colors duration-300"
-          style={{
-            backgroundImage: isDark
-              ? "linear-gradient(144.063deg, rgba(139, 92, 246, 0.2) 0%, rgb(0, 0, 0) 50%, rgb(0, 0, 0) 100%)"
-              : "linear-gradient(144.063deg, rgba(139, 92, 246, 0.12) 0%, rgb(249, 250, 251) 50%, rgb(249, 250, 251) 100%)",
-          }}
+          style={
+            isDark
+              ? {
+                  backgroundColor: "#121212",
+                  backgroundImage: `
+                    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.25), transparent),
+                    radial-gradient(ellipse 60% 40% at 80% 50%, rgba(99, 102, 241, 0.12), transparent),
+                    radial-gradient(ellipse 50% 30% at 20% 80%, rgba(139, 92, 246, 0.1), transparent)
+                  `,
+                }
+              : {
+                  backgroundColor: "#F9F9F9",
+                  backgroundImage: `
+                    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.08), transparent),
+                    radial-gradient(ellipse 60% 40% at 80% 50%, rgba(99, 102, 241, 0.05), transparent)
+                  `,
+                }
+          }
         />
+        <GrainOverlay />
 
-        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 -mt-2">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className={cn(
-              "rounded-full px-6 py-2 mb-12 flex items-center gap-3 border transition-colors duration-300",
+              "rounded-full px-6 py-2 mb-8 flex items-center gap-3 border transition-colors duration-300 backdrop-blur-sm",
               isDark
-                ? "bg-white/10 border-white/20"
-                : "bg-purple-50 border-purple-200"
+                ? "bg-white/5 border-white/10"
+                : "bg-white/80 border-gray-200/80 shadow-sm"
             )}
           >
-            <div className="w-2 h-2 bg-purple-500 rounded-full opacity-75" />
+            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 opacity-90" />
             <span
               className={cn(
-                "text-sm",
-                isDark ? "text-white/90" : "text-gray-800"
+                "text-sm font-medium",
+                isDark ? "text-white/90" : "text-gray-700"
               )}
             >
-              차세대 스트리밍 플랫폼
+              AI 스튜디오
             </span>
           </motion.div>
 
@@ -71,15 +87,15 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-center mb-8"
+            className="text-center mb-6"
           >
             <h1
               className={cn(
-                "text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight mb-4 transition-colors duration-300",
+                "text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight mb-3 transition-colors duration-300",
                 isDark ? "text-white" : "text-gray-900"
               )}
             >
-              방송만 하세요.
+              당신은 방송에만 집중하세요.
             </h1>
             <h1
               className={cn(
@@ -87,7 +103,11 @@ export default function LandingPage() {
                 isDark ? "text-white" : "text-gray-900"
               )}
             >
-              편집은 원테이크가 알아서 할게요.
+              클릭 한 번으로 완성되는{" "}
+              <span className="bg-gradient-to-r from-violet-500 via-purple-400 to-cyan-400 bg-clip-text font-semibold text-transparent">
+                AI 스튜디오
+              </span>
+              .
             </h1>
           </motion.div>
 
@@ -96,12 +116,11 @@ export default function LandingPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
             className={cn(
-              "text-center text-base sm:text-[20px] leading-relaxed mb-12 max-w-2xl transition-colors duration-300",
+              "text-center text-base sm:text-[20px] leading-relaxed mb-10 max-w-2xl transition-colors duration-300",
               isDark ? "text-white/70" : "text-gray-600"
             )}
           >
-            <p>무거운 설치도, 복잡한 설정도 필요 없어요.</p>
-            <p>브라우저에서 바로 시작하는 AI 스튜디오.</p>
+            <p>브라우저에서 바로 시작하세요.</p>
           </motion.div>
 
           <motion.div
@@ -112,8 +131,15 @@ export default function LandingPage() {
           >
             <Link href="/signup">
               <motion.span
-                className="inline-block bg-purple-500 text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-[0px_25px_50px_0px_rgba(139,92,246,0.3)] hover:shadow-[0px_30px_60px_0px_rgba(139,92,246,0.4)] transition-all cursor-pointer"
-                whileHover={{ scale: 1.05 }}
+                className={cn(
+                  "inline-flex items-center justify-center font-bold text-lg px-8 py-4 rounded-2xl cursor-pointer transition-all duration-300",
+                  "backdrop-blur-xl border",
+                  "hover:scale-[1.02] active:scale-[0.98]",
+                  isDark
+                    ? "bg-white/[0.12] text-white border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-white/[0.18] hover:shadow-[0_12px_40px_rgba(139,92,246,0.2),inset_0_1px_0_rgba(255,255,255,0.2)]"
+                    : "bg-white/80 text-gray-900 border-white/60 shadow-[0_8px_32px_rgba(139,92,246,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] hover:bg-white hover:shadow-[0_12px_40px_rgba(139,92,246,0.18),inset_0_1px_0_rgba(255,255,255,1)]"
+                )}
+                whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.98 }}
               >
                 지금 바로 시작하기
@@ -200,9 +226,9 @@ export default function LandingPage() {
           className="relative z-10 text-center px-6"
         >
           <h2 className="text-[40px] sm:text-[52px] md:text-[60px] font-bold leading-tight mb-8">
-            아직도 밤새워
+            복잡한 방송 설정,
             <br />
-            컷 편집 하시나요?
+            따로따로 쓰는 툴에 지치지 않으셨나요?
           </h2>
           <p
             className={cn(
@@ -210,9 +236,9 @@ export default function LandingPage() {
               isDark ? "text-white/60" : "text-gray-600"
             )}
           >
-            라이브가 끝나면 콘텐츠도 끝나야 하니까.
+            원테이크는 씬·소스·송출·녹화를 하나의 스튜디오에서.
             <br />
-            AI가 당신의 소중한 시간을 찾아드려요.
+            YouTube 연동만 하면 바로 Go Live입니다.
           </p>
         </motion.div>
       </section>
@@ -223,7 +249,7 @@ export default function LandingPage() {
       <section
         className={cn(
           "py-24 px-6 transition-colors duration-300",
-          isDark ? "bg-black" : "bg-white"
+          isDark ? "bg-[#121212]" : "bg-white"
         )}
         id="features"
       >
@@ -259,7 +285,7 @@ export default function LandingPage() {
                 isDark ? "text-white/60" : "text-gray-600"
               )}
             >
-              전문 스트리머부터 입문자까지, 모두를 위한 완벽한 솔루션
+              지금 원테이크에서 제공하는 기능입니다.
             </motion.p>
           </div>
 
@@ -285,8 +311,8 @@ export default function LandingPage() {
                   />
                 </svg>
               }
-              title="실시간 스트리밍"
-              description="지연 없는 고화질 라이브 스트리밍으로 시청자와 실시간 소통"
+              title="YouTube 라이브 송출"
+              description="RTMP로 YouTube에 바로 송출. Go Live 한 번이면 라이브 시작."
             />
 
             <GlassmorphicFeatureCard
@@ -317,8 +343,8 @@ export default function LandingPage() {
                   />
                 </svg>
               }
-              title="원클릭 녹화"
-              description="복잡한 설정 없이 클릭 한 번으로 전문가급 영상 제작"
+              title="로컬·서버 녹화"
+              description="브라우저 녹화로 다운로드 또는 서버 녹화로 저장. 클릭 한 번으로 시작."
             />
 
             <GlassmorphicFeatureCard
@@ -356,8 +382,8 @@ export default function LandingPage() {
                   />
                 </svg>
               }
-              title="다중 참여자"
-              description="여러 게스트와 함께하는 협업 스트리밍 환경 지원"
+              title="씬·소스·레이아웃"
+              description="웹캠, 마이크, 씬별 레이아웃(풀뷰, 스플릿 등)을 자유롭게 구성."
             />
 
             <GlassmorphicFeatureCard
@@ -395,8 +421,8 @@ export default function LandingPage() {
                   />
                 </svg>
               }
-              title="실시간 분석"
-              description="시청자 데이터와 인게이지먼트를 한눈에 파악"
+              title="YouTube 채널 연동"
+              description="RTMP URL·스트림 키만 등록하면 바로 송출 준비 완료."
             />
 
             <GlassmorphicFeatureCard
@@ -413,8 +439,8 @@ export default function LandingPage() {
                   />
                 </svg>
               }
-              title="AI 자동 편집"
-              description="침묵과 실수를 자동으로 감지하여 완벽한 영상 제작"
+              title="해상도·오디오"
+              description="720p/1080p 전환, 오디오 레벨 시각화로 방송 품질을 확인."
             />
 
             <GlassmorphicFeatureCard
@@ -440,8 +466,8 @@ export default function LandingPage() {
                   />
                 </svg>
               }
-              title="클라우드 저장"
-              description="언제 어디서나 접근 가능한 안전한 클라우드 스토리지"
+              title="녹화·라이브러리"
+              description="녹화 목록 확인과 다운로드. (클라우드 업로드는 준비 중)"
             />
           </div>
         </div>
@@ -470,7 +496,7 @@ export default function LandingPage() {
               지금 바로 시작하세요
             </h2>
             <p className="text-lg sm:text-xl text-white/90 mb-8">
-              5분 안에 첫 스트림을 시작할 수 있습니다
+              YouTube 채널 연동 후, 씬·소스만 꾸미면 Go Live 한 번이면 됩니다.
             </p>
             <Link href="/signup">
               <motion.span

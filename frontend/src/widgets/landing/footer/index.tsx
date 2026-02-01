@@ -13,7 +13,7 @@ export function LandingFooter() {
       className={cn(
         "border-t py-8 px-6 transition-colors duration-300",
         isDark
-          ? "bg-black border-white/10"
+          ? "bg-[#121212] border-white/10"
           : "bg-white border-gray-200"
       )}
     >

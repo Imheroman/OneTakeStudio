@@ -207,7 +207,10 @@ export function TimelineScanAnimation() {
               NG 장면이 사라져요.
             </h2>
             <p className="text-lg sm:text-[24px] text-white/60 leading-relaxed">
-              AI가 음성을 분석해 침묵과 실수를 골라냅니다.
+              AI가 음성과 댓글 밀집도를 분석해 침묵을 없애고, 알차고 재밌게.
+            </p>
+            <p className="text-lg sm:text-[24px] text-white/60 leading-relaxed mt-2">
+              3개의 쇼츠를 만들어 드려요.
             </p>
           </motion.div>
         )}
@@ -394,7 +397,7 @@ export function TimelineScanAnimation() {
                       ✨ 편집 완료
                     </p>
                     <p className="text-white/70 text-sm">
-                      쇼츠 영상이 준비되었습니다
+                      알차고 재밌는 3개의 쇼츠가 준비되었습니다
                     </p>
                   </div>
                 </div>
@@ -412,7 +415,7 @@ export function TimelineScanAnimation() {
                   ✨ 완료!
                 </p>
                 <p className="text-white/60 text-lg">
-                  완벽한 쇼츠 영상이 준비되었습니다
+                  음성·댓글 분석으로 만든 3개의 쇼츠가 준비되었습니다
                 </p>
               </motion.div>
             </div>

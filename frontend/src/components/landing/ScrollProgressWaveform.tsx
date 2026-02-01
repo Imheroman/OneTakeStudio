@@ -300,7 +300,7 @@ export function ScrollProgressWaveform() {
           transition={{ delay: 0.1, duration: 0.5 }}
           className="text-white/50 text-center max-w-lg mx-auto mb-6 px-4 text-sm sm:text-base"
         >
-          AI가 스캔하면서 지저분한 파형을 깨끗하게 정리합니다.
+          AI가 음성과 댓글 밀집도를 분석해 침묵을 없애고, 알차고 재밌게. 3개의 쇼츠를 만들어 드려요.
         </motion.p>
 
         {/* 진입 시 안내 문구 */}
