@@ -45,26 +45,7 @@ export function Sidebar() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="h-16 flex items-center justify-center border-b border-gray-100 overflow-hidden relative">
-        <h1
-          className={cn(
-            "font-bold text-indigo-600 text-2xl transition-all duration-300 whitespace-nowrap absolute",
-            isHovered ? "opacity-100 scale-100" : "opacity-0 scale-90",
-          )}
-        >
-          OneTake
-        </h1>
-        <span
-          className={cn(
-            "text-xl font-bold text-indigo-600 transition-all duration-300 absolute",
-            !isHovered ? "opacity-100 scale-100" : "opacity-0 scale-90",
-          )}
-        >
-          O
-        </span>
-      </div>
-
-      <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
+      <nav className="flex-1 pt-6 pb-6 flex flex-col gap-2 px-3">
         {menus.map((menu) => (
           <Link
             key={menu.name}

@@ -1,29 +1,45 @@
 import { Navbar } from "@/widgets/landing/navbar";
 import { LandingFooter } from "@/widgets/landing/footer";
-import { Button } from "@/shared/ui/button";
 import Link from "next/link";
 
-export default function LandingLayout({ children }: { children: React.ReactNode }) {
+export default function LandingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-black">
       <Navbar
-        variant="glass"
+        variant="dark"
         menuItems={[
-          { label: "PRODUCT", href: "/#features" },
-          { label: "CONTACT", href: "/#contact" },
-          { label: "GUIDE", href: "/#guide" },
+          {
+            label: "주요기능",
+            dropdown: true,
+            items: [
+              { label: "실시간 스트리밍", href: "/#features" },
+              { label: "원클릭 녹화", href: "/#features" },
+              { label: "다중 참여자", href: "/#features" },
+              { label: "실시간 분석", href: "/#features" },
+              { label: "AI 자동 편집", href: "/#features" },
+              { label: "클라우드 저장", href: "/#features" },
+            ],
+          },
+          { label: "가이드", href: "/#guide" },
+          { label: "고객지원", href: "/#contact" },
         ]}
         rightElement={
           <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button variant="ghost" className="text-gray-800">
-                LOGIN
-              </Button>
+            <Link
+              href="/login"
+              className="rounded-lg px-4 py-2 text-sm font-medium text-white/80 border border-white/20 hover:bg-white/10 transition-colors"
+            >
+              로그인
             </Link>
-            <Link href="/signup">
-              <Button className="bg-indigo-600 hover:bg-indigo-700">
-                SIGN IN
-              </Button>
+            <Link
+              href="/signup"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-white bg-purple-500 hover:bg-purple-600 transition-colors"
+            >
+              지금 시작하기
             </Link>
           </div>
         }
@@ -34,4 +50,3 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
     </div>
   );
 }
-
