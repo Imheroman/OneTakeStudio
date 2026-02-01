@@ -142,14 +142,7 @@ export default function MyPage() {
                 </Avatar>
               </div>
               <CardTitle>{user?.nickname}</CardTitle>
-              <CardDescription>{user?.userId}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-sm text-gray-500 text-center">
-                SSAFY 13기 교육생 <br />
-                Web Developer
-              </div>
-            </CardContent>
             <CardFooter>
               <Button
                 variant="outline"

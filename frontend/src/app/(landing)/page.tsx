@@ -2,18 +2,20 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion } from "motion/react";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { HeroSection } from "@/widgets/landing/hero-section";
-import { FeatureSection } from "@/widgets/landing/feature-section";
-import { CTASection } from "@/widgets/landing/cta-section";
-import { Button } from "@/shared/ui/button";
+import { SocialProofBand } from "@/components/landing/SocialProofBand";
+import { TimelineScanAnimation } from "@/components/landing/TimelineScanAnimation";
+import { GlassmorphicFeatureCard } from "@/components/landing/GlassmorphicFeatureCard";
+import { ImageWithFallback } from "@/components/landing/figma/ImageWithFallback";
+import svgPaths from "@/imports/svg-pm6qk27wb4";
 
 export default function LandingPage() {
   const { isLoggedIn, user, hasHydrated } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    // 로그인된 유저는 본인의 워크스페이스로 자동 리다이렉트 (userId 확정 후에만 이동)
     if (!hasHydrated) return;
     if (isLoggedIn && user?.userId) {
       router.replace(`/workspace/${user.userId}`);
@@ -21,62 +23,415 @@ export default function LandingPage() {
   }, [hasHydrated, isLoggedIn, user, router]);
 
   return (
-    <main className="grow">
-      <HeroSection />
-      <div id="about" className="bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="rounded-3xl border border-gray-200 bg-gray-50 p-10">
-            <h2 className="text-2xl font-extrabold text-gray-900">OneTake는</h2>
-            <p className="mt-3 text-gray-600 leading-relaxed max-w-3xl">
-              방송 준비 시간을 줄이고, 송출 품질과 운영 효율을 높이기 위한 통합
-              워크스페이스를 목표로 합니다. 지금은 랜딩/인증/워크스페이스 뼈대를
-              다듬는 단계이며, 스튜디오 기능을 점진적으로 확장할 예정입니다.
-            </p>
+    <div className="w-full min-h-screen bg-black text-white overflow-x-hidden">
+      {/* Hero Section */}
+      <section className="relative h-screen overflow-hidden">
+        <div
+          className="absolute inset-0 z-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(144.063deg, rgba(139, 92, 246, 0.2) 0%, rgb(0, 0, 0) 50%, rgb(0, 0, 0) 100%)",
+          }}
+        />
+
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="bg-white/10 border border-white/20 rounded-full px-6 py-2 mb-12 flex items-center gap-3"
+          >
+            <div className="w-2 h-2 bg-purple-500 rounded-full opacity-75" />
+            <span className="text-sm text-white/90">차세대 스트리밍 플랫폼</span>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight mb-4">
+              방송만 하세요.
+            </h1>
+            <h1 className="text-[48px] sm:text-[60px] md:text-[72px] font-bold leading-tight">
+              편집은 OneTake가 알아서 할게요.
+            </h1>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="text-center text-white/70 text-base sm:text-[20px] leading-relaxed mb-12 max-w-2xl"
+          >
+            <p>무거운 설치도, 복잡한 설정도 필요 없어요.</p>
+            <p>브라우저에서 바로 시작하는 AI 스튜디오.</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.6 }}
+            className="flex items-center gap-4 flex-wrap justify-center"
+          >
+            <Link href="/signup">
+              <motion.span
+                className="inline-block bg-purple-500 text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-[0px_25px_50px_0px_rgba(139,92,246,0.3)] hover:shadow-[0px_30px_60px_0px_rgba(139,92,246,0.4)] transition-all cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                지금 바로 시작하기
+              </motion.span>
+            </Link>
+            <Link href="/#solution">
+              <motion.span
+                className="inline-flex items-center gap-2 border border-white/20 text-white/80 font-semibold px-6 py-4 rounded-2xl hover:border-white/40 hover:bg-white/10 transition-all backdrop-blur-sm cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span>데모 보기</span>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 20 20">
+                  <path
+                    d="M4.16667 10H15.8333"
+                    stroke="white"
+                    strokeOpacity="0.8"
+                    strokeWidth="1.66667"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={svgPaths.p1ae0b780}
+                    stroke="white"
+                    strokeOpacity="0.8"
+                    strokeWidth="1.66667"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </motion.span>
+            </Link>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2, duration: 0.8 }}
+            className="absolute bottom-12 w-6 h-10 border-2 border-white/30 rounded-full flex items-start justify-center p-1"
+          >
+            <motion.div
+              animate={{ y: [0, 12, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              className="w-1 h-1.5 bg-white/50 rounded-full"
+            />
+          </motion.div>
+        </div>
+      </section>
+
+      <SocialProofBand />
+
+      {/* Problem Section */}
+      <section className="relative min-h-screen flex items-center justify-center py-24 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 0.15 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1.5 }}
+          className="absolute inset-0 z-0"
+        >
+          <ImageWithFallback
+            src="https://images.unsplash.com/photo-1682506457554-b34c9682e985?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb21wbGV4JTIwdmlkZW8lMjBlZGl0aW5nJTIwdGltZWxpbmUlMjBkYXJrJTIwbWVzc3l8ZW58MXx8fHwxNzY5OTQyNDI3fDA&ixlib=rb-4.1.0&q=80&w=1080"
+            alt="복잡한 편집 타임라인"
+            className="w-full h-full object-cover"
+          />
+          <motion.div
+            animate={{ opacity: [0.05, 0.15, 0.05] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=')]"
+          />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="relative z-10 text-center px-6"
+        >
+          <h2 className="text-[40px] sm:text-[52px] md:text-[60px] font-bold leading-tight mb-8">
+            아직도 밤새워
+            <br />
+            컷 편집 하시나요?
+          </h2>
+          <p className="text-lg sm:text-[24px] text-white/60 leading-relaxed max-w-2xl mx-auto">
+            라이브가 끝나면 콘텐츠도 끝나야 하니까.
+            <br />
+            AI가 당신의 소중한 시간을 찾아드려요.
+          </p>
+        </motion.div>
+      </section>
+
+      <TimelineScanAnimation />
+
+      {/* Features Grid */}
+      <section className="bg-black py-24 px-6" id="features">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="inline-block bg-purple-500/10 border border-purple-500/30 rounded-full px-6 py-2 mb-8"
+            >
+              <span className="text-purple-500 font-semibold text-sm">핵심 기능</span>
+            </motion.div>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+              className="text-[40px] sm:text-[48px] font-bold leading-tight mb-6"
+            >
+              원테이크가 특별한 이유
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="text-lg text-white/60"
+            >
+              전문 스트리머부터 입문자까지, 모두를 위한 완벽한 솔루션
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <GlassmorphicFeatureCard
+              index={0}
+              gradient="linear-gradient(135deg, rgb(43, 127, 255) 0%, rgb(0, 184, 219) 100%)"
+              icon={
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d={svgPaths.p1c4d0dc0}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={svgPaths.p4207a00}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              }
+              title="실시간 스트리밍"
+              description="지연 없는 고화질 라이브 스트리밍으로 시청자와 실시간 소통"
+            />
+
+            <GlassmorphicFeatureCard
+              index={1}
+              gradient="linear-gradient(135deg, rgb(173, 70, 255) 0%, rgb(246, 51, 154) 100%)"
+              icon={
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d={svgPaths.p25c6480}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={svgPaths.p1fc92080}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M12 19V22"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              }
+              title="원클릭 녹화"
+              description="복잡한 설정 없이 클릭 한 번으로 전문가급 영상 제작"
+            />
+
+            <GlassmorphicFeatureCard
+              index={2}
+              gradient="linear-gradient(135deg, rgb(255, 105, 0) 0%, rgb(251, 44, 54) 100%)"
+              icon={
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d={svgPaths.p1d820380}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={svgPaths.p161d4800}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={svgPaths.p2981fe00}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={svgPaths.p13e20900}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              }
+              title="다중 참여자"
+              description="여러 게스트와 함께하는 협업 스트리밍 환경 지원"
+            />
+
+            <GlassmorphicFeatureCard
+              index={3}
+              gradient="linear-gradient(135deg, rgb(0, 201, 80) 0%, rgb(0, 188, 125) 100%)"
+              icon={
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d={svgPaths.p36c5af80}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M18 17V9"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M13 17V5"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M8 17V14"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              }
+              title="실시간 분석"
+              description="시청자 데이터와 인게이지먼트를 한눈에 파악"
+            />
+
+            <GlassmorphicFeatureCard
+              index={4}
+              gradient="linear-gradient(135deg, rgb(255, 193, 7) 0%, rgb(255, 152, 0) 100%)"
+              icon={
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d={svgPaths.p1a880700}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              }
+              title="AI 자동 편집"
+              description="침묵과 실수를 자동으로 감지하여 완벽한 영상 제작"
+            />
+
+            <GlassmorphicFeatureCard
+              index={5}
+              gradient="linear-gradient(135deg, rgb(156, 39, 176) 0%, rgb(233, 30, 99) 100%)"
+              icon={
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d={svgPaths.p398e8a80}
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <circle
+                    cx="18"
+                    cy="5"
+                    r="3"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              }
+              title="클라우드 저장"
+              description="언제 어디서나 접근 가능한 안전한 클라우드 스토리지"
+            />
           </div>
         </div>
-      </div>
-      <FeatureSection />
-      <div id="guide" className="bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="rounded-3xl border border-gray-200 p-10">
-            <h2 className="text-2xl font-extrabold text-gray-900">이용 방법</h2>
-            <p className="mt-2 text-gray-600">
-              아직 데모 영상/페이지가 준비 중이라면, 임시로 이 섹션을 “데모
-              보기” 버튼의 목적지로 사용하면 돼요.
+      </section>
+
+      {/* CTA Section */}
+      <section id="guide" className="relative py-24 px-6 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="max-w-4xl mx-auto relative"
+        >
+          <div
+            className="absolute inset-0 rounded-3xl"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(236, 72, 153, 0.3) 100%)",
+              filter: "blur(40px)",
+            }}
+          />
+
+          <div className="relative bg-gradient-to-r from-purple-500 to-pink-500 rounded-3xl p-12 text-center">
+            <h2 className="text-[36px] sm:text-[48px] font-bold mb-4">
+              지금 바로 시작하세요
+            </h2>
+            <p className="text-lg sm:text-xl text-white/90 mb-8">
+              5분 안에 첫 스트림을 시작할 수 있습니다
             </p>
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Button className="bg-indigo-600 hover:bg-indigo-700">
-                데모 시작
-              </Button>
-              <Button variant="outline">가이드 문서</Button>
-            </div>
+            <Link href="/signup">
+              <motion.span
+                className="inline-block bg-white text-purple-600 font-bold text-lg px-10 py-4 rounded-2xl shadow-2xl hover:shadow-[0_20px_50px_rgba(255,255,255,0.3)] transition-all cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                무료로 시작하기
+              </motion.span>
+            </Link>
           </div>
-        </div>
-      </div>
-      <CTASection />
-      <div id="contact" className="bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="rounded-3xl border border-gray-200 p-10">
-            <h2 className="text-2xl font-extrabold text-gray-900">문의하기</h2>
-            <p className="mt-2 text-gray-600">
-              문의 채널은 추후 확정. 지금은 폼/메일/디스코드 중 아무거나로
-              연결하면 돼요.
-            </p>
-            <div className="mt-6 grid sm:grid-cols-2 gap-4 text-sm">
-              <div className="rounded-2xl bg-gray-50 p-5 border border-gray-200">
-                <div className="font-bold text-gray-900">이메일</div>
-                <div className="text-gray-600 mt-1">
-                  contact@onetake.example
-                </div>
-              </div>
-              <div className="rounded-2xl bg-gray-50 p-5 border border-gray-200">
-                <div className="font-bold text-gray-900">가이드/문서</div>
-                <div className="text-gray-600 mt-1">업데이트 예정</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
+        </motion.div>
+      </section>
+
+      {/* Contact 앵커용 빈 섹션 (푸터는 레이아웃에서 렌더) */}
+      <div id="contact" className="h-0" aria-hidden />
+    </div>
   );
 }

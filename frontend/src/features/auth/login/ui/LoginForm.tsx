@@ -32,7 +32,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "올바른 이메일 형식을 입력해주세요." }),
@@ -149,7 +149,18 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md border-0 shadow-xl bg-white rounded-2xl">
+    <>
+      <div className="fixed top-8 left-8 z-50 md:top-12 md:left-12">
+        <Link
+          href="/"
+          className="text-indigo-600 flex items-center gap-2 hover:underline font-medium text-sm md:text-base"
+        >
+          <ArrowLeft size={20} />
+          홈으로 돌아가기
+        </Link>
+      </div>
+
+      <Card className="w-full max-w-md border-0 shadow-xl bg-white rounded-2xl">
       <CardHeader className="space-y-1 text-center pb-6">
         <CardTitle className="text-xl font-bold text-gray-900">로그인</CardTitle>
         <CardDescription className="text-gray-500">
@@ -266,5 +277,6 @@ export function LoginForm() {
         </Link>
       </CardFooter>
     </Card>
+    </>
   );
 }
