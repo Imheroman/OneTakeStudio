@@ -13,6 +13,7 @@ import {
   ListChecks,
   PanelLeftClose,
   PanelLeft,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -29,6 +30,7 @@ export function Sidebar() {
 
   const menus = [
     { name: "Home", href: workspaceLink, icon: Home },
+    { name: "받은 초대", href: "/invites", icon: Mail },
     { name: "Library", href: "/library", icon: BarChart2 },
     { name: "Channels", href: "/channels", icon: Radio },
     { name: "Members", href: "/members", icon: Users },
