@@ -70,7 +70,9 @@ export function useFavoriteManagement() {
     }
   };
 
-  const existingFavoriteIds = favorites.map((f) => f.userId);
+  const existingFavoriteIds = favorites
+    .map((f) => f.userId)
+    .filter((id): id is string => id != null);
   const isMaxReached = favorites.length >= maxCount;
 
   return {

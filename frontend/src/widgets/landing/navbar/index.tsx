@@ -41,7 +41,7 @@ export function Navbar({
   className,
 }: NavbarProps) {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

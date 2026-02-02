@@ -31,10 +31,10 @@ export function Sidebar() {
   const menus = [
     { name: "Home", href: workspaceLink, icon: Home },
     { name: "받은 초대", href: "/invites", icon: Mail },
-    { name: "Library", href: "/library", icon: BarChart2 },
-    { name: "Channels", href: "/channels", icon: Radio },
-    { name: "Members", href: "/members", icon: Users },
-    { name: "Storage", href: "/storage", icon: Database },
+    { name: "내 보관함", href: "/library", icon: BarChart2 },
+    { name: "채널 관리", href: "/channels", icon: Radio },
+    { name: "팀 관리", href: "/members", icon: Users },
+    { name: "저장 공간", href: "/storage", icon: Database },
     { name: "Features", href: "/features", icon: ListChecks },
   ];
 
