@@ -134,15 +134,15 @@ export const CreateStudioResponseSchema = z.object({
   data: StudioSchema,
 });
 
-// 스튜디오 멤버 응답 스키마 (백엔드 StudioMemberResponse)
+// 스튜디오 멤버 응답 스키마 (백엔드 StudioMemberResponse - nickname/email은 user 미조회 시 null)
 export const StudioMemberResponseSchema = z.object({
   memberId: z.number(),
   userId: z.number(),
-  nickname: z.string(),
-  email: z.string(),
+  nickname: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
   profileImageUrl: z.string().nullable().optional(),
   role: z.enum(["host", "manager", "guest"]),
-  joinedAt: z.string(),
+  joinedAt: z.string().optional(),
 });
 
 export const InviteMemberRequestSchema = z.object({
@@ -150,13 +150,16 @@ export const InviteMemberRequestSchema = z.object({
   role: z.enum(["ADMIN", "MEMBER"]),
 });
 
+// 백엔드 InviteResponse: inviteeEmail 사용, studioId는 목록 응답에 없을 수 있음
 export const InviteResponseSchema = z.object({
   inviteId: z.string(),
-  studioId: z.number(),
-  email: z.string(),
+  studioId: z.number().optional(),
+  email: z.string().optional(),
+  inviteeEmail: z.string().optional(),
   role: z.string(),
   status: z.string(),
   expiresAt: z.string(),
+  createdAt: z.string().optional(),
 });
 
 // 스튜디오 상세 정보 스키마

@@ -81,6 +81,7 @@ export function StudioSidebar({
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [refreshMembersTrigger, setRefreshMembersTrigger] = useState(0);
 
   const studioIdNum = Number(studioId) || 0;
   const unreadCount = usePrivateChatStore((state) => state.unreadCounts[studioIdNum] ?? 0);
@@ -239,6 +240,7 @@ export function StudioSidebar({
                 studioId={studioId}
                 onClose={closePanel}
                 onInviteClick={() => setInviteOpen(true)}
+                refreshTrigger={refreshMembersTrigger}
               />
             )}
             {activeTab === "private" && (
@@ -264,7 +266,10 @@ export function StudioSidebar({
         open={inviteOpen}
         onOpenChange={setInviteOpen}
         studioId={studioId}
-        onSuccess={closePanel}
+        onSuccess={() => {
+          setInviteOpen(false);
+          setRefreshMembersTrigger((t) => t + 1);
+        }}
       />
     </>
   );

@@ -1,5 +1,6 @@
 /**
  * 스튜디오 멤버 API
+ * 백엔드 ApiResponse<T> 형식: { resultCode?, success, message?, data }
  */
 import { z } from "zod";
 import { apiClient } from "./client";
@@ -12,15 +13,24 @@ import {
 } from "@/entities/studio/model";
 
 const ApiResponseMembersSchema = z.object({
+  resultCode: z.string().optional(),
   success: z.boolean(),
   message: z.string().optional(),
   data: z.array(StudioMemberResponseSchema),
 });
 
 const ApiResponseInviteSchema = z.object({
+  resultCode: z.string().optional(),
   success: z.boolean(),
   message: z.string().optional(),
   data: InviteResponseSchema,
+});
+
+const ApiResponseInviteListSchema = z.object({
+  resultCode: z.string().optional(),
+  success: z.boolean(),
+  message: z.string().optional(),
+  data: z.array(InviteResponseSchema),
 });
 
 export async function getStudioMembers(
@@ -30,7 +40,7 @@ export async function getStudioMembers(
     `/api/studios/${studioId}/members`,
     ApiResponseMembersSchema,
   );
-  return res.data;
+  return Array.isArray(res.data) ? res.data : [];
 }
 
 export async function inviteStudioMember(
@@ -61,6 +71,7 @@ export async function updateMemberRole(
   role: "ADMIN" | "MEMBER",
 ): Promise<StudioMemberResponse> {
   const ApiResponseMemberSchema = z.object({
+    resultCode: z.string().optional(),
     success: z.boolean(),
     message: z.string().optional(),
     data: StudioMemberResponseSchema,
@@ -71,4 +82,30 @@ export async function updateMemberRole(
     { role },
   );
   return res.data;
+}
+
+/** 스튜디오 초대 대기 목록 — GET /api/studios/{studioId}/invites */
+export async function getStudioInvites(
+  studioId: string | number,
+): Promise<InviteResponse[]> {
+  const res = await apiClient.get(
+    `/api/studios/${studioId}/invites`,
+    ApiResponseInviteListSchema,
+  );
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+/** 초대 취소 — DELETE /api/studios/{studioId}/invites/{inviteId} */
+export async function cancelStudioInvite(
+  studioId: string | number,
+  inviteId: string,
+): Promise<void> {
+  await apiClient.delete(
+    `/api/studios/${studioId}/invites/${inviteId}`,
+    z.object({
+      resultCode: z.string().optional(),
+      success: z.boolean(),
+      message: z.string().optional(),
+    }),
+  );
 }
