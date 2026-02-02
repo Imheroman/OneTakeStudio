@@ -10,9 +10,11 @@ import {
   Users,
   Database,
   LogOut,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { Logo } from "@/shared/ui/logo";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -27,6 +29,7 @@ export function Sidebar() {
     { name: "Channels", href: "/channels", icon: Radio },
     { name: "Members", href: "/members", icon: Users },
     { name: "Storage", href: "/storage", icon: Database },
+    { name: "Features", href: "/features", icon: ListChecks },
   ];
 
   const handleLogout = () => {
@@ -44,22 +47,22 @@ export function Sidebar() {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="h-16 flex items-center justify-center border-b border-gray-100 overflow-hidden relative">
-        <h1
+        <div
           className={cn(
-            "font-bold text-indigo-600 text-2xl transition-all duration-300 whitespace-nowrap absolute",
+            "transition-all duration-300 absolute",
             isHovered ? "opacity-100 scale-100" : "opacity-0 scale-90",
           )}
         >
-          OneTake
-        </h1>
-        <span
+          <Logo href={workspaceLink} size="md" />
+        </div>
+        <div
           className={cn(
-            "text-xl font-bold text-indigo-600 transition-all duration-300 absolute",
+            "transition-all duration-300 absolute",
             !isHovered ? "opacity-100 scale-100" : "opacity-0 scale-90",
           )}
         >
-          O
-        </span>
+          <Logo href={workspaceLink} size="sm" />
+        </div>
       </div>
 
       <nav className="flex-1 py-6 flex flex-col gap-2 px-3">

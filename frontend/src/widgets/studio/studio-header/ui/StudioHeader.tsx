@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Edit, Lock, Unlock, Loader2, Radio, Square } from "lucide-react";
+import { Clock, Edit, Lock, Unlock, Loader2, Radio, Square, Circle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { IconButton } from "@/shared/common";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
@@ -22,6 +22,7 @@ import {
   type Channel,
   mapDestinationListToChannels,
 } from "@/entities/channel/model";
+import { Logo } from "@/shared/ui/logo";
 
 interface StudioHeaderProps {
   studioTitle: string;
@@ -33,6 +34,7 @@ interface StudioHeaderProps {
   isGoingLive?: boolean;
   isPublishing?: boolean;
   isStreamConnected?: boolean;
+  isAutoRecording?: boolean;
   selectedDestinationIds?: number[];
   setSelectedDestinationIds?: (ids: number[]) => void;
   publishError?: string | null;
@@ -57,6 +59,7 @@ export function StudioHeader({
   isGoingLive = false,
   isPublishing = false,
   isStreamConnected = false,
+  isAutoRecording = false,
   selectedDestinationIds = [],
   setSelectedDestinationIds,
   publishError,
@@ -182,7 +185,7 @@ export function StudioHeader({
       <header className="h-16 bg-gray-900 text-white flex items-center justify-between px-6 border-b border-gray-800">
         {/* 왼쪽: 로고 및 제목 */}
         <div className="flex items-center gap-4">
-          <span className="text-xl font-black italic text-indigo-400">OneTake</span>
+          <Logo dark size="sm" />
           <span className="text-gray-400">|</span>
           <span className="font-semibold">{studioTitle}</span>
           {isStreamConnected && (
@@ -203,6 +206,12 @@ export function StudioHeader({
             <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-red-600 rounded text-xs">
               <Radio className="h-3 w-3 animate-pulse" />
               LIVE
+            </span>
+          )}
+          {isAutoRecording && (
+            <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-orange-600 rounded text-xs">
+              <Circle className="h-3 w-3 fill-current" />
+              REC
             </span>
           )}
         </div>

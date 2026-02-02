@@ -5,6 +5,7 @@ import com.onetake.core.security.CurrentUser;
 import com.onetake.core.security.CustomUserDetails;
 import com.onetake.core.destination.dto.CreateDestinationRequest;
 import com.onetake.core.destination.dto.DestinationResponse;
+import com.onetake.core.destination.dto.DestinationInternalResponse;
 import com.onetake.core.destination.dto.UpdateDestinationRequest;
 import com.onetake.core.destination.service.DestinationService;
 import jakarta.validation.Valid;
@@ -69,5 +70,17 @@ public class DestinationController {
             @RequestBody List<Long> ids) {
         List<DestinationResponse> destinations = destinationService.getDestinationsByIds(ids);
         return ResponseEntity.ok(ApiResponse.success("일괄 조회 성공", destinations));
+    }
+
+    /**
+     * 내부 서비스용: 단일 destination 정보 조회 (토큰 포함)
+     *
+     * Media Service에서 채팅 연동 시 사용
+     */
+    @GetMapping("/{destinationId}/internal")
+    public ResponseEntity<ApiResponse<DestinationInternalResponse>> getDestinationInternal(
+            @PathVariable Long destinationId) {
+        DestinationInternalResponse destination = destinationService.getDestinationByIdInternal(destinationId);
+        return ResponseEntity.ok(ApiResponse.success("내부 조회 성공", destination));
     }
 }

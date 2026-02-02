@@ -52,6 +52,11 @@ public class Studio {
     @Builder.Default
     private StudioStatus status = StudioStatus.READY;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recording_storage", length = 20)
+    @Builder.Default
+    private RecordingStorage recordingStorage = RecordingStorage.LOCAL;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

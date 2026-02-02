@@ -33,6 +33,7 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 import { Loader2 } from "lucide-react";
+import { Logo } from "@/shared/ui/logo";
 
 const formSchema = z.object({
   email: z.string().email({ message: "올바른 이메일 형식을 입력해주세요." }),
@@ -150,10 +151,10 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-md border-0 shadow-xl bg-white rounded-2xl">
+      <div className="flex justify-center pt-1 pb-1">
+        <Logo href="/" size="lg" />
+      </div>
       <CardHeader className="space-y-1 text-center pb-6">
-        <h1 className="text-3xl font-black text-indigo-600 tracking-tighter mb-2">
-          OneTake
-        </h1>
         <CardTitle className="text-xl font-bold text-gray-900">로그인</CardTitle>
         <CardDescription className="text-gray-500">
           서비스 이용을 위해 이메일과 비밀번호를 입력해주세요.
@@ -236,7 +237,7 @@ export function LoginForm() {
             type="button"
             variant="outline"
             onClick={() => handleOAuthLogin("google")}
-            className="h-11 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+            className="google-oauth-hover h-11 font-medium text-gray-600 border-gray-200 transition-colors"
           >
             Google
           </Button>

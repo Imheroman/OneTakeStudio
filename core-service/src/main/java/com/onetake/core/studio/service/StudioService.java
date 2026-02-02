@@ -1,6 +1,7 @@
 package com.onetake.core.studio.service;
 
 import com.onetake.core.studio.dto.*;
+import com.onetake.core.studio.entity.RecordingStorage;
 import com.onetake.core.studio.entity.Studio;
 import com.onetake.core.studio.entity.StudioMember;
 import com.onetake.core.studio.entity.StudioMemberRole;
@@ -47,6 +48,16 @@ public class StudioService {
         log.debug("스튜디오 생성 요청: userId={}, name={}", userId, studioName);
         Long internalUserId = getInternalUserId(userId);
 
+        // storageLocation 파싱 (기본값: LOCAL)
+        RecordingStorage recordingStorage = RecordingStorage.LOCAL;
+        if (request.getStorageLocation() != null && !request.getStorageLocation().isBlank()) {
+            try {
+                recordingStorage = RecordingStorage.valueOf(request.getStorageLocation().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log.warn("잘못된 storageLocation 값: {}, 기본값 LOCAL 사용", request.getStorageLocation());
+            }
+        }
+
         Studio studio = Studio.builder()
                 .ownerId(internalUserId)
                 .hostUserId(internalUserId) // host_user_id는 owner_id와 동일하게 설정
@@ -54,6 +65,7 @@ public class StudioService {
                 .title(studioName) // title은 name과 동일하게 설정
                 .description(request.getDescription())
                 .template(request.getTemplate())
+                .recordingStorage(recordingStorage)
                 .build();
 
         Studio saved = studioRepository.save(studio);

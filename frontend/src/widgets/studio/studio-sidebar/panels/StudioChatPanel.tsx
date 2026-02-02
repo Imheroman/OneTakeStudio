@@ -1,24 +1,26 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { MessageSquare, Send, Smile } from "lucide-react";
+import { MessageSquare, Send } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { getChatHistory, sendChatMessage } from "@/shared/api/studio-chat";
 import type { ChatMessage } from "@/entities/chat/model";
 import { cn } from "@/shared/lib/utils";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const PLATFORM_LABEL: Record<string, string> = {
   YOUTUBE: "유튜브",
   TWITCH: "트위치",
   CHZZK: "치지직",
-  INTERNAL: "진행자",
+  HOST: "방장",
+  INTERNAL: "프라이빗",
 };
 
 interface StudioChatPanelProps {
   studioId: number;
   onClose?: () => void;
-  filterPlatform?: "INTERNAL" | null; // null = 전체, INTERNAL = 프라이빗만
+  filterPlatform?: "INTERNAL" | null; // null = 전체(공개), INTERNAL = 프라이빗만
 }
 
 export function StudioChatPanel({
@@ -30,16 +32,16 @@ export function StudioChatPanel({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [emojiOpen, setEmojiOpen] = useState(false);
+  const user = useAuthStore((state) => state.user);
 
   const fetchHistory = useCallback(async () => {
     try {
       setLoading(true);
       const list = await getChatHistory(studioId);
       setMessages(
-        filterPlatform
-          ? list.filter((m) => m.platform === filterPlatform)
-          : list,
+        filterPlatform === "INTERNAL"
+          ? list.filter((m) => m.platform === "INTERNAL") // 프라이빗: INTERNAL만
+          : list.filter((m) => m.platform !== "INTERNAL"), // 전체: INTERNAL 제외 (HOST, YOUTUBE 등 포함)
       );
     } catch (e) {
       console.error("채팅 히스토리 조회 실패:", e);
@@ -50,6 +52,9 @@ export function StudioChatPanel({
 
   useEffect(() => {
     fetchHistory();
+    // 5초마다 자동 새로고침
+    const interval = setInterval(fetchHistory, 5000);
+    return () => clearInterval(interval);
   }, [fetchHistory]);
 
   const handleSend = async () => {
@@ -60,7 +65,9 @@ export function StudioChatPanel({
       await sendChatMessage({
         studioId,
         content,
-        platform: filterPlatform ?? "INTERNAL",
+        senderName: user?.nickname ?? "익명",
+        // 전체 채팅에서는 HOST로, 프라이빗에서는 INTERNAL로 전송
+        platform: filterPlatform === "INTERNAL" ? "INTERNAL" : "HOST",
       });
       setInput("");
       await fetchHistory();
@@ -104,7 +111,8 @@ export function StudioChatPanel({
               key={m.messageId}
               className={cn(
                 "text-sm rounded px-2 py-1",
-                m.platform === "INTERNAL" && "bg-indigo-900/30",
+                m.platform === "HOST" && "bg-indigo-900/30",
+                m.platform === "INTERNAL" && "bg-purple-900/30",
               )}
             >
               <span className="text-gray-400 text-xs mr-2">
@@ -116,73 +124,29 @@ export function StudioChatPanel({
           ))
         )}
       </div>
-      {filterPlatform !== "INTERNAL" && (
-        <>
-          {emojiOpen && (
-            <div className="p-2 border-t border-gray-700 flex flex-wrap gap-1">
-              {["😀", "😂", "❤️", "👍", "🔥", "👋"].map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => {
-                    setInput((prev) => prev + emoji);
-                  }}
-                  className="text-lg"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="p-2 border-t border-gray-700 flex gap-2 min-w-0">
-            <Input
-              placeholder="메시지를 입력하세요..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 flex-1 min-w-0 shrink"
-            />
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => setEmojiOpen(!emojiOpen)}
-              className="text-gray-400 hover:text-white shrink-0"
-            >
-              <Smile className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSend}
-              disabled={sending || !input.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </>
-      )}
-      {filterPlatform === "INTERNAL" && (
-        <div className="p-2 border-t border-gray-700 flex gap-2 min-w-0">
-          <Input
-            placeholder="메시지를 입력하세요..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 flex-1 min-w-0 shrink"
-          />
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleSend}
-            disabled={sending || !input.trim()}
-            className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
-          >
-            전송
-          </Button>
-        </div>
-      )}
+      {/* 채팅 입력 (전체/프라이빗 모두 가능) */}
+      <div className="p-2 border-t border-gray-700 flex gap-2 min-w-0">
+        <Input
+          placeholder={
+            filterPlatform === "INTERNAL"
+              ? "프라이빗 메시지..."
+              : "시청자에게 보낼 메시지..."
+          }
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 flex-1 min-w-0 shrink"
+        />
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleSend}
+          disabled={sending || !input.trim()}
+          className="bg-indigo-600 hover:bg-indigo-700 shrink-0"
+        >
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

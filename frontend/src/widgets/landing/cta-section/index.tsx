@@ -4,7 +4,7 @@ export function CTASection() {
   return (
     <section className="bg-white">
       <div className="max-w-6xl mx-auto px-6 py-16">
-        <div className="rounded-3xl p-10 text-center bg-linear-to-r from-indigo-600 to-fuchsia-600 shadow-xl">
+        <div className="rounded-3xl p-10 text-center bg-gradient-to-r from-indigo-600 to-fuchsia-600 shadow-xl">
           <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
             지금 바로 시작하세요
           </h3>

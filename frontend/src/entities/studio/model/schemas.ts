@@ -93,6 +93,7 @@ export const StudioSchema = z.object({
   thumbnail: z.string().nullable().optional(),
   template: z.string().nullable().optional(),
   status: z.string(),
+  recordingStorage: z.enum(["LOCAL", "CLOUD"]).optional().default("LOCAL"),
   joinUrl: z.string().optional(),
   members: z.array(z.any()).nullable().optional(),
   scenes: z.array(SceneResponseSchema).nullable().optional(),
@@ -113,7 +114,6 @@ export const RecentStudioListResponseSchema = z.object({
 });
 
 // 스튜디오 생성 요청 스키마 (백엔드 CreateStudioRequest)
-// 백엔드는 name과 template만 받음
 export const CreateStudioRequestSchema = z.object({
   name: z
     .string()
@@ -123,6 +123,7 @@ export const CreateStudioRequestSchema = z.object({
     .string()
     .max(50, "템플릿 이름은 50자를 초과할 수 없습니다.")
     .optional(),
+  storageLocation: z.enum(["local", "cloud"]).optional(),
 });
 
 // 스튜디오 생성 응답 스키마 (ApiResponse<StudioDetailResponse>)
@@ -140,7 +141,7 @@ export const StudioMemberResponseSchema = z.object({
   nickname: z.string(),
   email: z.string(),
   profileImageUrl: z.string().nullable().optional(),
-  role: z.enum(["owner", "admin", "member"]),
+  role: z.enum(["host", "manager", "guest"]),
   joinedAt: z.string(),
 });
 

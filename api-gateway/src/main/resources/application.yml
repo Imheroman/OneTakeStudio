@@ -53,6 +53,14 @@ spring:
               filters:
                 - RewritePath=/api/streams/(?<segment>.*), /api/media/stream/${segment}
 
+            # Media Service - Chat Routes
+            - id: media-service-chat
+              uri: lb://media-service
+              predicates:
+                - Path=/api/media/chat/**
+              filters:
+                - StripPrefix=0
+
             # Media Service - Recording Routes
             - id: media-service-recording
               uri: lb://media-service

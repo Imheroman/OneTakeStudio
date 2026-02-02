@@ -140,3 +140,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 구글 시그니처 4색 호버: 테두리만 4색 구분 (위·오른쪽·아래·왼쪽) */
+@layer components {
+  .google-oauth-hover:hover {
+    border-width: 3px !important;
+    border-style: solid !important;
+    border-top-color: #4285f4 !important;    /* 파랑 */
+    border-right-color: #ea4335 !important;  /* 빨강 */
+    border-bottom-color: #fbbc05 !important; /* 노랑 */
+    border-left-color: #34a853 !important;   /* 초록 */
+    color: #202124 !important;
+  }
+}

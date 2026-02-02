@@ -30,6 +30,48 @@
 | 13 | stream/join 500 (Internal Server Error) | LiveKit 토큰 생성 실패(S004) 또는 미디어 상태 초기화 등 | ⚠️ 아래 절차 참고 |
 | 14 | Duplicate entry 'studio-X' for key stream_sessions (joinStream) | room_name 유니크 제약으로 같은 스튜디오 재진입 시 중복 삽입 | ✅ 세션 재사용 로직 적용 |
 | 15 | Duplicate entry '1-1-\x01' / '1-1-\x00' for key session_media_states | (studio_id, user_id, is_active) 유니크 → insert/update 시 (1,1,true) 또는 (1,1,false) 중복 | ✅ 기존 활성 행 삭제(delete) 방식으로 변경 |
+| 16 | YouTube "connection closed remotely" / 스트림 키 잘못됨 (egress 503) | 유튜브가 RTMP 연결을 끊음. 스트림 키·URL 형식·유튜브 스튜디오 상태 등 | ⚠️ 아래 절차 참고 |
+
+---
+
+## 오류 16: YouTube "connection closed remotely" / 스트림 키 잘못됨 (egress 503)
+
+### 오류 메시지 (egress 로그)
+```
+egress_failed  {"outputType": "stream", "error": "Failed to connect: 'publish' cmd failed: connection closed remotely", "code": 503, "details": "End reason: Failure"}
+```
+
+유튜브 화면에는 "스트림 키가 잘못되었습니다" 등으로 보일 수 있습니다.
+
+### 원인
+유튜브 서버가 RTMP 푸시 연결을 **원격에서 끊은** 경우입니다. 스트림 키가 틀린 경우뿐 아니라 아래 상황에서도 같은 오류가 납니다.
+
+1. **스트림 키 앞뒤 공백/줄바꿈**  
+   복사 시 공백이나 줄바꿈이 붙으면 유튜브가 키를 틀린 것으로 처리합니다.
+2. **유튜브 스튜디오에서 “라이브 준비”가 안 된 상태**  
+   스트림 키를 발급받은 뒤, **유튜브 스튜디오 → 라이브 → “라이브 스트리밍”에서 해당 스트림이 “스트리밍할 준비가 되었습니다” 상태**여야 합니다. “만들기”만 하고 준비 완료 전에 송출하면 연결이 끊길 수 있습니다.
+3. **스트림 키 재발급**  
+   유튜브에서 스트림 키를 다시 만들면 이전 키는 무효입니다. 채널에 저장된 키가 최신인지 확인해야 합니다.
+4. **RTMP URL 형식**  
+   - URL: `rtmp://a.rtmp.youtube.com/live2` (또는 `rtmp://b.rtmp.youtube.com/live2`)  
+   - 스트림 키: **키만** 입력 (URL에 키를 포함하지 말 것).  
+   최종 전송 주소는 `rtmp://a.rtmp.youtube.com/live2/여기에스트림키` 형태가 되어야 합니다.
+5. **방화벽/네트워크**  
+   egress가 동작하는 서버(예: Docker 호스트)에서 유튜브 RTMP(1935 등)로 아웃바운드가 막혀 있으면 연결이 실패하거나 끊깁니다.
+
+### 해결
+
+1. **스트림 키·URL 정리**  
+   - 스트림 키: 앞뒤 공백·줄바꿈 제거 후 **키만** 다시 입력해 저장.  
+   - RTMP URL: `rtmp://a.rtmp.youtube.com/live2` (끝에 `/` 또는 스트림 키 없이).
+2. **유튜브 스튜디오 확인**  
+   해당 스트림이 “스트리밍할 준비가 되었습니다” 상태인지 확인한 뒤 다시 송출.
+3. **키 재발급 시**  
+   유튜브에서 새 스트림 키를 만들었다면, 채널(연결 대상) 설정에서 스트림 키를 새 값으로 갱신.
+4. **media-service**  
+   스트림 키/URL 사용 시 `trim()` 적용되어 있으므로, 재배포 후 위 1번대로만 저장하면 공백 문제는 줄어듭니다.
+5. **서버에서 유튜브 연결 테스트**  
+   egress가 돌아가는 서버에서 `telnet a.rtmp.youtube.com 1935` 등으로 1935 포트 아웃바운드 가능 여부 확인.
 
 ---
 
