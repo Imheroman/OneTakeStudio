@@ -43,7 +43,7 @@ export function FavoriteTable({
         <TableRow>
           <TableHead>이메일</TableHead>
           <TableHead>닉네임</TableHead>
-          <TableHead className="text-right">Action</TableHead>
+          <TableHead className="text-right">동작</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

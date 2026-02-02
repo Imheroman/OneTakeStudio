@@ -263,7 +263,7 @@ export function StudioHeader({
                 </AvatarFallback>
               </Avatar>
             }
-            label="Profile"
+            label="프로필"
             href="/mypage"
           />
 

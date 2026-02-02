@@ -79,7 +79,7 @@ export function WorkspaceTopNav() {
               className={cn("h-6 w-6", isDark ? "text-gray-400" : "text-gray-700")}
             />
           }
-          label="Notifications"
+          label="알림"
           badge={totalCount > 0 ? totalCount : undefined}
           onClick={openNotifications}
           size="lg"

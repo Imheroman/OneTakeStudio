@@ -50,6 +50,14 @@
 
 ---
 
+## 역방향 의존 점검 (검증 완료)
+
+- **shared** → app/widgets/features import 없음.
+- **entities** → app/widgets import 없음.
+- app → app (providers 등)만 사용. 위반 없음.
+
+---
+
 ## 워크스페이스 다크/라이트
 
 - 레이아웃·사이드바·탑네브·알림 패널: `useWorkspaceThemeStore`로 테마 적용 완료.

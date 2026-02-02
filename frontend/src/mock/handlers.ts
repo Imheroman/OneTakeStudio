@@ -149,7 +149,6 @@ export const handlers = [
       { status: 401 },
     );
   }),
-  // src/mock/handlers.ts 안에 추가
 
   // 회원가입 모의 API
   http.post("/api/auth/signup", async ({ request }) => {

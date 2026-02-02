@@ -34,7 +34,7 @@ export function Sidebar() {
     { name: "채널 관리", href: "/channels", icon: Radio },
     { name: "팀 관리", href: "/members", icon: Users },
     { name: "저장 공간", href: "/storage", icon: Database },
-    { name: "Features", href: "/features", icon: ListChecks },
+    { name: "기능", href: "/features", icon: ListChecks },
   ];
 
   const handleLogout = () => {

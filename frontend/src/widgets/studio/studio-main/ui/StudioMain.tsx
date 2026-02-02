@@ -253,7 +253,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 audioLevel={audioLevel}
                 onVideoToggle={() => setIsVideoEnabled(!isVideoEnabled)}
                 onAudioToggle={() => setIsAudioEnabled(!isAudioEnabled)}
-                onSettings={() => console.log("Settings")}
+                onSettings={() => {}}
                 onExit={handleExit}
                 isRecordingLocal={isRecordingLocal}
                 isRecordingCloud={isRecordingCloud}
