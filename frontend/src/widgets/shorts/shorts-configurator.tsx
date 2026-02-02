@@ -4,21 +4,27 @@ import { useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { useRouter } from "next/navigation";
-
-/** 쇼츠 API는 백엔드 미구현 → MSW 모킹 시에만 생성 요청 가능 */
-const isShortsApiAvailable = () =>
-  process.env.NEXT_PUBLIC_API_MOCKING === "enabled";
+import { apiClient } from "@/shared/api/client";
+import { z } from "zod";
 
 interface ShortsConfiguratorProps {
-  videoId: string;
+  videoId: string;  // recordingId
 }
 
 type BgColor = "black" | "white";
 type Language = "ko" | "en" | "ja" | "zh";
 
+const GenerateResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    jobId: z.string(),
+    status: z.string(),
+    message: z.string(),
+  }),
+});
+
 export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
   const router = useRouter();
-  const shortsApiAvailable = isShortsApiAvailable();
 
   const [bgColor, setBgColor] = useState<BgColor>("black");
   const [useSubtitles, setUseSubtitles] = useState(true);
@@ -28,22 +34,18 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
   const handleCreate = async () => {
     if (isSubmitting) return;
 
-    if (!shortsApiAvailable) return; // 버튼 비활성화로 진입 불가, 방어용
-
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/v1/shorts/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId,
+      const response = await apiClient.post(
+        "/api/ai/shorts/generate",
+        GenerateResponseSchema,
+        {
+          recordingId: videoId,
+          needSubtitles: useSubtitles,
+          subtitleLang: language,
           bgColor,
-          useSubtitles,
-          language,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to start generation");
+        },
+      );
 
       alert(
         "쇼츠 생성이 시작되었습니다!\n잠시 후 상단 알림을 통해 확인하실 수 있습니다.",
@@ -190,23 +192,14 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
           )}
         </div>
 
-        {/* 3. 생성 요청 버튼 (백엔드 API 미구현 시 MSW 모킹으로만 동작) */}
+        {/* 3. 생성 요청 버튼 */}
         <Button
           className="w-full py-6 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-200 transition-transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           onClick={handleCreate}
-          disabled={isSubmitting || !shortsApiAvailable}
+          disabled={isSubmitting}
         >
-          {isSubmitting
-            ? "요청 중..."
-            : shortsApiAvailable
-              ? "쇼츠 생성 요청"
-              : "준비 중 (API 미구현)"}
+          {isSubmitting ? "요청 중..." : "쇼츠 생성 요청"}
         </Button>
-        {!shortsApiAvailable && (
-          <p className="text-xs text-gray-500 text-center">
-            쇼츠 API는 백엔드 미구현입니다. MSW 활성화 시 체험 가능.
-          </p>
-        )}
       </section>
     </div>
   );

@@ -79,6 +79,17 @@ eureka:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${random.value}
 
+# AI Service
+ai:
+  service:
+    url: http://localhost:8000  # AI FastAPI 서버
+  webhook:
+    url: http://localhost:8080/api/ai/webhook
+
+# Storage
+storage:
+  base-path: /mnt/storage
+
 logging:
   level:
     com.onetake: DEBUG

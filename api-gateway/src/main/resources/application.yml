@@ -13,11 +13,11 @@ spring:
               enabled: true
               lower-case-service-id: true
           routes:
-            # Core Service Routes (쇼츠 API는 백엔드 미구현 → video-service 추가 시 별도 라우트 예정)
+            # Core Service Routes
             - id: core-service
               uri: lb://core-service
               predicates:
-                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**
+                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**, /api/ai/**
               filters:
                 - StripPrefix=0
 
