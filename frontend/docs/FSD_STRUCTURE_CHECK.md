@@ -56,11 +56,19 @@
 
 ## 역방향 의존 점검 (검증 완료)
 
-- **shared** → app/widgets/features/stores import 없음.
-- **entities** → app/widgets/features import 없음.
+- **shared** → app/widgets/features/entities/stores import 없음. (shared 내부는 @/shared/lib, @/shared/ui, @/shared/api 등만 사용)
+- **entities** → app/widgets/features import 없음. (entities → shared 허용)
 - **features** → widgets import 없음.
-- **widgets** → app import 없음. (widgets → features/stores 사용은 허용)
+- **widgets** → app import 없음. (widgets → features/entities/stores 사용은 허용)
 - app → app (providers 등)만 사용. 위반 없음.
+
+### 최근 검증 (FSD 위반 검증)
+
+- `shared/**`: `@/shared/*`만 import. app/widgets/features/entities/stores 미사용.
+- `entities/**`: `@/shared/*`(api/dto, schemas)만 상위 레이어 참조. 위반 없음.
+- `features/**`: entities, shared, stores만 사용. widgets 미참조.
+- `widgets/**`: features, entities, shared, stores 사용. app 미참조.
+- **결론**: 현재 구조 FSD 위반 없음.
 
 ---
 

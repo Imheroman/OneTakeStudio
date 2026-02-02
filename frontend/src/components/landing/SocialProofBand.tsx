@@ -20,7 +20,7 @@ export function SocialProofBand() {
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
           className={cn(
             "text-sm sm:text-base text-center",
             isDark ? "text-white/90" : "text-gray-700"

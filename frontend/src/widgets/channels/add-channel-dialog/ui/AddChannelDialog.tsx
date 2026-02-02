@@ -98,7 +98,7 @@ export function AddChannelDialog({
                 <Card
                   key={platform.type}
                   className={cn(
-                    "cursor-pointer transition-all hover:border-indigo-500 hover:shadow-md",
+                    "cursor-pointer transition-all transition-smooth hover:border-indigo-500 hover:shadow-md gpu-layer gpu-layer-hover",
                     selectedPlatform === platform.type ? "border-indigo-500 bg-indigo-50" : "border-gray-200",
                   )}
                   onClick={() => setSelectedPlatform(platform.type)}

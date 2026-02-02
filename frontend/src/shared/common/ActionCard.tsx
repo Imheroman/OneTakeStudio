@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { motion } from "motion/react";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
@@ -45,15 +48,16 @@ export function ActionCard({
 }: ActionCardProps) {
   const iconBgSet = iconBgClasses[iconBg][dark ? "dark" : "light"];
   return (
-    <Card
-      className={cn(
-        "hover:shadow-lg transition-all group",
-        dark
-          ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800/70"
-          : "border-gray-200",
-        className
-      )}
-    >
+    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+      <Card
+        className={cn(
+          "hover:shadow-lg transition-all transition-smooth group gpu-layer gpu-layer-hover",
+          dark
+            ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800/70"
+            : "border-gray-200",
+          className
+        )}
+      >
       <CardContent className="flex flex-col items-center justify-center p-10 text-center space-y-6">
         <div
           className={cn(
@@ -88,5 +92,6 @@ export function ActionCard({
         </Link>
       </CardContent>
     </Card>
+    </motion.div>
   );
 }

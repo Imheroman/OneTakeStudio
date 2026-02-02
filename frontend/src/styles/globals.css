@@ -12,6 +12,11 @@
   /* 원테이크 대시보드 포인트 컬러 (2026 Bento/Glassmorphism) */
   --color-onetake-point: #6366f1;
 
+  /* 이징: Material 표준·진입·퇴장 (부드러운 주사율) */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
   --color-brand-gray-100: #F1F3F4;
   --color-brand-gray-200: #E8EAED;
   --color-brand-gray-300: #DADCE0;
@@ -170,5 +175,22 @@
     border-bottom-color: #fbbc05 !important; /* 노랑 */
     border-left-color: #34a853 !important;   /* 초록 */
     color: #202124 !important;
+  }
+
+  /* GPU 레이어 분리: 호버·애니메이션 시 주사율 유지 (노션형 부드러운 스크롤) */
+  .gpu-layer {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  .gpu-layer-hover:hover {
+    will-change: transform;
+  }
+  .gpu-layer-open[data-state="open"] {
+    will-change: transform;
+  }
+
+  /* 표준 이징 적용 (Material cubic-bezier) */
+  .transition-smooth {
+    transition-timing-function: var(--ease-standard);
   }
 }

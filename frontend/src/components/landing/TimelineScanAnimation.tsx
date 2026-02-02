@@ -304,7 +304,7 @@ export function TimelineScanAnimation() {
                       className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1"
                       initial={{ opacity: 0, scale: 0 }}
                       animate={{ opacity: [0, 1, 0], scale: [0, 1.5, 0] }}
-                      transition={{ duration: 0.5, delay: clip.id * 0.05 }}
+                      transition={{ duration: 0.5, delay: clip.id * 0.05, ease: [0.4, 0, 0.2, 1] }}
                     >
                       {Array.from({ length: 8 }).map((_, i) => (
                         <motion.div
@@ -319,6 +319,7 @@ export function TimelineScanAnimation() {
                           transition={{
                             duration: 0.4,
                             delay: clip.id * 0.05 + i * 0.02,
+                            ease: [0.4, 0, 0.2, 1],
                           }}
                         />
                       ))}
@@ -450,7 +451,7 @@ export function TimelineScanAnimation() {
             <span>스크롤을 내려 AI 편집 과정을 확인하세요</span>
             <motion.div
               animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
             >
               ↓
             </motion.div>

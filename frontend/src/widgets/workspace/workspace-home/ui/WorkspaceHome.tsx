@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "motion/react";
 import { Radio, Video, Users, VideoIcon } from "lucide-react";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
@@ -23,13 +24,18 @@ function StudioBentoCard({
   span?: 1 | 2;
 }) {
   return (
-    <Link
-      href={`/studio/${studio.id}`}
-      className={cn(
-        "glass-card flex flex-col transition-all duration-200 hover:scale-[1.02] hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-onetake-point focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
-        span === 2 && "md:col-span-2"
-      )}
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className={span === 2 ? "md:col-span-2" : ""}
     >
+      <Link
+        href={`/studio/${studio.id}`}
+        className={cn(
+          "glass-card gpu-layer gpu-layer-hover flex flex-col transition-shadow duration-200 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-onetake-point focus-visible:ring-offset-2 focus-visible:ring-offset-transparent block h-full",
+          span === 2 && "md:col-span-2"
+        )}
+      >
       <div
         className={cn(
           "relative aspect-video w-full flex items-center justify-center shrink-0",
@@ -79,7 +85,8 @@ function StudioBentoCard({
           스튜디오 입장
         </span>
       </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 }
 
@@ -117,40 +124,44 @@ export function WorkspaceHome({ userId }: WorkspaceHomeProps) {
           isDark ? "bg-white/5" : "bg-white/70"
         )}
       >
-        <button
+        <motion.button
           type="button"
           onClick={() => openCreateDialog("live")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-3 py-3.5 px-4 transition-colors min-w-0",
+            "flex-1 flex items-center justify-center gap-3 py-3.5 px-4 min-w-0",
             isDark
               ? "hover:bg-white/10 text-gray-200"
               : "hover:bg-gray-100/80 text-gray-800"
           )}
+          whileHover={{ scale: 1.02, backgroundColor: "rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
         >
           <Radio className="w-5 h-5 shrink-0 text-onetake-point" />
           <span className="font-medium text-sm truncate">라이브 스트리밍</span>
           <span className="text-xs opacity-70 shrink-0">시작</span>
-        </button>
+        </motion.button>
         <div
           className={cn(
             "w-px shrink-0 self-stretch",
             isDark ? "bg-white/10" : "bg-gray-200/80"
           )}
         />
-        <button
+        <motion.button
           type="button"
           onClick={() => openCreateDialog("recording")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-3 py-3.5 px-4 transition-colors min-w-0",
+            "flex-1 flex items-center justify-center gap-3 py-3.5 px-4 min-w-0",
             isDark
               ? "hover:bg-white/10 text-gray-200"
               : "hover:bg-gray-100/80 text-gray-800"
           )}
+          whileHover={{ scale: 1.02, backgroundColor: "rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
         >
           <Video className="w-5 h-5 shrink-0 text-onetake-point" />
           <span className="font-medium text-sm truncate">녹화</span>
           <span className="text-xs opacity-70 shrink-0">시작</span>
-        </button>
+        </motion.button>
       </div>
 
       {/* 최근 스튜디오 벤토 그리드 */}

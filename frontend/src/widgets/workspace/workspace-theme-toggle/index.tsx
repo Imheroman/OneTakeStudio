@@ -39,7 +39,7 @@ export function WorkspaceThemeToggle({
       role="group"
       aria-label="테마 선택"
       className={cn(
-        "inline-flex items-center rounded-lg p-1 shadow-sm transition-colors shrink-0",
+        "inline-flex items-center rounded-lg p-1 shadow-sm transition-colors transition-smooth shrink-0 gpu-layer",
         isDark ? "bg-gray-800" : "bg-gray-200",
         className
       )}

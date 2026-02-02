@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { motion } from "motion/react";
 import {
   Home,
   Archive,
@@ -16,8 +17,12 @@ import {
   Search,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+
+const sidebarSpring = { type: "spring" as const, stiffness: 300, damping: 30 };
+const sidebarEaseReduced = { duration: 0.08, ease: [0.4, 0, 0.2, 1] as const };
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useWorkspaceThemeStore, useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import { usePrefersMotion } from "@/stores/useWorkspaceDisplayStore";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -27,6 +32,8 @@ export function Sidebar() {
   const theme = useWorkspaceThemeStore((s) => s.theme);
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
+  const prefersMotion = usePrefersMotion();
+  const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
   const workspaceLink = user?.userId ? `/workspace/${user.userId}` : "/login";
 
   const menus = [
@@ -44,25 +51,30 @@ export function Sidebar() {
   };
 
   return (
-    <aside
+    <motion.aside
+      layout
       className={cn(
-        "h-screen border-r flex flex-col sticky top-0 z-50 transition-all duration-300 ease-in-out glass-panel",
+        "h-screen border-r flex flex-col sticky top-0 z-50 shrink-0 overflow-hidden transition-[color,background-color,border-color] duration-200 transition-smooth glass-panel",
         isDark
           ? "bg-gray-900/80 dark:bg-gray-900/70 border-gray-700/50"
-          : "bg-white/80 border-gray-200/80",
-        isExpanded ? "w-64" : "w-20",
+          : "bg-white/80 border-gray-200/80"
       )}
+      animate={{ width: isExpanded ? 256 : 80 }}
+      transition={sidebarTransition}
     >
       <div className="flex items-center gap-2 px-3 pt-5 pb-3 shrink-0">
-        <button
+        <motion.button
+          type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "flex items-center justify-center w-12 h-12 shrink-0 rounded-lg transition-colors duration-200",
+            "flex items-center justify-center w-12 h-12 shrink-0 rounded-lg",
             isDark
               ? "bg-transparent hover:bg-gray-800 active:bg-gray-700"
               : "bg-transparent hover:bg-gray-100 active:bg-gray-200"
           )}
           aria-label={isExpanded ? "사이드바 닫기" : "사이드바 열기"}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
           {isExpanded ? (
             <PanelLeftClose
@@ -73,7 +85,7 @@ export function Sidebar() {
               className={cn("w-[28px] h-[28px]", isDark ? "text-gray-400" : "text-gray-600")}
             />
           )}
-        </button>
+        </motion.button>
         {isExpanded && (
           <div
             className={cn(
@@ -97,33 +109,34 @@ export function Sidebar() {
 
       <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
         {menus.map((menu) => (
-          <Link
-            key={menu.name}
-            href={menu.href}
-            className={cn(
-              "flex items-center p-3 rounded-lg transition-all group relative h-12 overflow-hidden",
-              pathname === menu.href
-                ? isDark
-                  ? "bg-onetake-point/20 text-indigo-300"
-                  : "bg-onetake-point/10 text-onetake-point"
-                : isDark
-                  ? "text-gray-400 hover:bg-gray-800 hover:text-white"
-                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
-            )}
-          >
-            <div className="min-w-[24px] flex justify-center items-center">
-              <menu.icon size={24} />
-            </div>
-            <span
+          <motion.div key={menu.name} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+            <Link
+              href={menu.href}
               className={cn(
-                "ml-4 font-medium whitespace-nowrap transition-all duration-300",
-                isExpanded
-                  ? "opacity-100 translate-x-0"
-                  : "opacity-0 -translate-x-2",
+                "flex items-center p-3 rounded-lg transition-all group relative h-12 min-w-0",
+                pathname === menu.href
+                  ? isDark
+                    ? "bg-onetake-point/20 text-indigo-300"
+                    : "bg-onetake-point/10 text-onetake-point"
+                  : isDark
+                    ? "text-gray-400 hover:bg-gray-800 hover:text-white"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
               )}
             >
+            <div className="min-w-[24px] flex justify-center items-center shrink-0">
+              <menu.icon size={24} />
+            </div>
+            <motion.span
+              className="font-medium whitespace-nowrap flex-1 min-w-0 truncate overflow-hidden origin-left"
+              animate={{
+                opacity: isExpanded ? 1 : 0,
+                maxWidth: isExpanded ? 200 : 0,
+                marginLeft: isExpanded ? 16 : 0,
+              }}
+              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+            >
               {menu.name}
-            </span>
+            </motion.span>
             {!isExpanded && (
               <div
                 className={cn(
@@ -134,38 +147,43 @@ export function Sidebar() {
                 {menu.name}
               </div>
             )}
-          </Link>
+            </Link>
+          </motion.div>
         ))}
       </nav>
 
       <div
         className={cn(
-          "p-4 border-t transition-colors duration-300",
+          "px-3 py-4 border-t transition-colors duration-300",
           isDark ? "border-gray-800" : "border-gray-100"
         )}
       >
-        <button
+        <motion.button
+          type="button"
           onClick={handleLogout}
           className={cn(
-            "flex items-center w-full p-2 h-12 rounded-lg transition-colors overflow-hidden group relative",
+            "flex items-center w-full p-3 h-12 rounded-lg min-w-0 group relative",
             isDark
               ? "text-gray-400 hover:bg-gray-800 hover:text-red-400"
               : "text-gray-500 hover:bg-red-50 hover:text-red-500"
           )}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
         >
-          <div className="min-w-[24px] flex justify-center items-center">
+          <div className="min-w-[24px] flex justify-center items-center shrink-0">
             <LogOut size={24} />
           </div>
-          <span
-            className={cn(
-              "ml-4 font-medium whitespace-nowrap transition-all duration-300",
-              isExpanded
-                ? "opacity-100 translate-x-0"
-                : "opacity-0 -translate-x-2",
-            )}
+          <motion.span
+            className="font-medium whitespace-nowrap flex-1 min-w-0 truncate overflow-hidden origin-left"
+            animate={{
+              opacity: isExpanded ? 1 : 0,
+              maxWidth: isExpanded ? 200 : 0,
+              marginLeft: isExpanded ? 16 : 0,
+            }}
+            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
           >
-            Logout
-          </span>
+            로그아웃
+          </motion.span>
           {!isExpanded && (
             <div
               className={cn(
@@ -173,11 +191,11 @@ export function Sidebar() {
                 isDark ? "bg-gray-800 text-white" : "bg-gray-900 text-white"
               )}
             >
-              Logout
+              로그아웃
             </div>
           )}
-        </button>
+        </motion.button>
       </div>
-    </aside>
+    </motion.aside>
   );
 }
