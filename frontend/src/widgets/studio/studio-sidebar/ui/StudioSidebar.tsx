@@ -86,7 +86,7 @@ export function StudioSidebar({
     <>
       <aside
         className={cn(
-          "flex bg-gray-900 border-l border-gray-800 shrink-0 flex-shrink-0",
+          "flex bg-gray-900 border-l border-gray-800 shrink-0",
           activeTab ? "w-[25rem]" : "w-16",
           className,
         )}

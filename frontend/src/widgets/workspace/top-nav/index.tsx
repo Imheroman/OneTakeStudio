@@ -6,17 +6,22 @@ import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
-import { useShortsStore } from "@/stores/useShortsStore"; // 쇼츠 스토어
+import { useShortsStore } from "@/stores/useShortsStore";
+import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
 import { Button } from "@/shared/ui/button";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { IconButton } from "@/shared/common";
 import { Logo } from "@/shared/ui/logo";
+import { WorkspaceThemeToggle } from "@/widgets/workspace/workspace-theme-toggle";
 import { apiClient } from "@/shared/api/client";
 import { NotificationListResponseSchema } from "@/entities/notification/model";
+import { cn } from "@/shared/lib/utils";
 
 export function WorkspaceTopNav() {
   const router = useRouter();
   const { user, logout, isLoggedIn } = useAuthStore();
+  const theme = useWorkspaceThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
 
   // 알림 패널 상태 (Zustand)
   const { isOpen: isNotificationOpen, open: openNotifications } = useNotificationStore();
@@ -48,17 +53,31 @@ export function WorkspaceTopNav() {
   const totalCount = notificationCount + shortsNotifications.length;
 
   return (
-    <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-6 md:px-16 lg:px-[120px] sticky top-0 z-40">
+    <header
+      className={cn(
+        "h-20 border-b flex items-center justify-between px-4 sticky top-0 z-40 transition-colors duration-300",
+        isDark
+          ? "bg-gray-900 border-gray-800"
+          : "bg-white border-gray-200"
+      )}
+    >
       <Logo
         href={user?.userId ? `/workspace/${user.userId}` : "/"}
         size="lg"
+        dark={isDark}
       />
 
       <div className="flex items-center gap-4">
+        <WorkspaceThemeToggle isDark={isDark} />
         <Button
           variant="ghost"
           size="lg"
-          className="font-semibold text-gray-800 text-base"
+          className={cn(
+            "font-semibold text-base",
+            isDark
+              ? "text-gray-300 hover:text-white hover:bg-gray-800"
+              : "text-gray-800 hover:bg-gray-100"
+          )}
           onClick={() => {
             logout();
             router.push("/login");
@@ -67,9 +86,12 @@ export function WorkspaceTopNav() {
           LOGOUT
         </Button>
 
-        {/* ✨ [수정] 클릭 시 무조건 알림 패널만 엽니다 (배지 숫자는 유지) */}
         <IconButton
-          icon={<Bell className="h-6 w-6 text-gray-700" />}
+          icon={
+            <Bell
+              className={cn("h-6 w-6", isDark ? "text-gray-400" : "text-gray-700")}
+            />
+          }
           label="Notifications"
           badge={totalCount > 0 ? totalCount : undefined}
           onClick={openNotifications}
@@ -79,7 +101,12 @@ export function WorkspaceTopNav() {
         <IconButton
           icon={
             <Avatar size="lg">
-              <AvatarFallback className="bg-gray-100 text-gray-700 font-bold text-base">
+              <AvatarFallback
+                className={cn(
+                  "font-bold text-base",
+                  isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-700"
+                )}
+              >
                 {user?.nickname?.[0] ?? "U"}
               </AvatarFallback>
             </Avatar>

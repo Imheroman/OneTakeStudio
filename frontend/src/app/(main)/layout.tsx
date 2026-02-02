@@ -9,7 +9,9 @@ import type { NotificationWithActions } from "@/widgets/workspace/notification-p
 import { NotificationListResponseSchema } from "@/entities/notification/model";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
 import { apiClient } from "@/shared/api/client";
+import { cn } from "@/shared/lib/utils";
 
 // 쇼츠 관련 Import
 import { useShortsPolling } from "@/features/shorts/useShortsPolling";
@@ -136,17 +138,33 @@ export default function MainLayout({
   // 두 리스트 합치기 (최신 쇼츠 알림이 위로 오게)
   const allNotifications = [...shortsNotifications, ...apiNotifications];
 
+  const theme = useWorkspaceThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
+
   if (isStudioPage) {
     return <>{children}</>;
   }
 
   return (
-    <div className="flex h-screen w-full">
+    <div
+      className={cn(
+        "flex h-screen w-full transition-colors duration-300",
+        isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
+      )}
+      data-theme={theme}
+    >
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-w-0">
         <WorkspaceTopNav />
-        <main className="flex-1 overflow-auto p-8">{children}</main>
+        <main
+          className={cn(
+            "flex-1 overflow-auto p-8 transition-colors duration-300",
+            isDark ? "bg-gray-900" : "bg-white"
+          )}
+        >
+          {children}
+        </main>
       </div>
 
       {/* 알림 패널 */}

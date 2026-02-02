@@ -180,9 +180,9 @@ export function StudioHeader({
 
   return (
     <>
-      <header className="h-16 bg-gray-900 text-white flex items-center justify-between px-6 border-b border-gray-800">
+      <header className="h-16 bg-gray-900 text-white flex items-center justify-between gap-4 px-6 border-b border-gray-800 shrink-0 overflow-visible">
         {/* 왼쪽: 로고 및 제목 */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0 shrink">
           <Logo dark size="sm" />
           <span className="text-gray-400">|</span>
           <span className="font-semibold">{studioTitle}</span>
@@ -195,7 +195,7 @@ export function StudioHeader({
         </div>
 
         {/* 중앙: 시간 */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Clock className="h-4 w-4 text-gray-400" />
           <span className={cn("font-mono text-sm", isLive && "text-red-400")}>
             {elapsedTime}
@@ -209,7 +209,7 @@ export function StudioHeader({
         </div>
 
         {/* 오른쪽: 액션 버튼들 */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           {onEditModeToggle && (
             <Button
               variant="ghost"
