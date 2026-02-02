@@ -4,6 +4,8 @@ import com.onetake.core.notification.entity.Notification;
 import com.onetake.core.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -21,5 +23,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Optional<Notification> findByReferenceId(String referenceId);
 
     @Modifying
-    void deleteByReferenceId(String referenceId);
+    @Query("DELETE FROM Notification n WHERE n.referenceId = :referenceId")
+    void deleteByReferenceId(@Param("referenceId") String referenceId);
 }

@@ -38,11 +38,13 @@ public class InviteController {
             @CurrentUser CustomUserDetails userDetails,
             @PathVariable String inviteId) {
 
-        log.debug("초대 수락 요청: inviteId={}", inviteId);
+        log.info("초대 수락 요청: inviteId={}, userId={}", inviteId, userDetails.getUserId());
         StudioMemberResponse member = studioMemberService.acceptInvite(userDetails.getUserId(), inviteId);
 
         // 초대 관련 알림 삭제
+        log.info("초대 알림 삭제 시도: referenceId={}", inviteId);
         notificationService.deleteByReferenceId(inviteId);
+        log.info("초대 알림 삭제 완료: referenceId={}", inviteId);
 
         return ResponseEntity.ok(ApiResponse.success("초대를 수락했습니다", member));
     }
@@ -52,11 +54,13 @@ public class InviteController {
             @CurrentUser CustomUserDetails userDetails,
             @PathVariable String inviteId) {
 
-        log.debug("초대 거절 요청: inviteId={}", inviteId);
+        log.info("초대 거절 요청: inviteId={}, userId={}", inviteId, userDetails.getUserId());
         studioMemberService.rejectInvite(userDetails.getUserId(), inviteId);
 
         // 초대 관련 알림 삭제
+        log.info("초대 알림 삭제 시도: referenceId={}", inviteId);
         notificationService.deleteByReferenceId(inviteId);
+        log.info("초대 알림 삭제 완료: referenceId={}", inviteId);
 
         return ResponseEntity.ok(ApiResponse.success("초대를 거절했습니다"));
     }
