@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { StudioHeader } from "@/widgets/studio/studio-header";
@@ -13,10 +13,13 @@ import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
 import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
 import { useStudioMain } from "@/features/studio/studio-main";
 import { useAudioLevel, useSourceStreams } from "@/hooks/studio";
+import { apiClient } from "@/shared/api/client";
+import { ApiResponseDestinationListSchema } from "@/entities/channel/model";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
 import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBannerPanel";
 import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
 import type { StudioStyleState } from "@/widgets/studio/studio-sidebar/panels/StudioStylePanel";
+import type { ConnectedDestinationItem } from "@/widgets/studio/studio-sidebar/ui/StudioSidebar";
 
 const DEFAULT_STYLE: StudioStyleState = {
   brandColor: "#5d4cc7",
@@ -36,6 +39,28 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const [activeBanner, setActiveBanner] = useState<BannerItem | null>(null);
   const [activeAsset, setActiveAsset] = useState<AssetItem | null>(null);
   const [styleState, setStyleState] = useState<StudioStyleState>(DEFAULT_STYLE);
+  const [destinations, setDestinations] = useState<ConnectedDestinationItem[]>([]);
+
+  // 연동된 채널 목록 가져오기
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const response = await apiClient.get(
+          "/api/destinations",
+          ApiResponseDestinationListSchema
+        );
+        const items: ConnectedDestinationItem[] = (response.data ?? []).map((d) => ({
+          id: d.id,
+          platform: d.platform,
+          channelName: d.channelName ?? d.channelId ?? null,
+        }));
+        setDestinations(items);
+      } catch (error) {
+        console.error("채널 목록 조회 실패:", error);
+      }
+    };
+    fetchDestinations();
+  }, []);
 
   const {
     studio,
@@ -79,6 +104,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     setIsAudioEnabled,
     isRecordingLocal,
     isRecordingCloud,
+    isAutoRecording,
     handleStartLocalRecording,
     handleStopLocalRecording,
     handleStartCloudRecording,
@@ -143,6 +169,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           isGoingLive={isGoingLive}
           isPublishing={isPublishing}
           isStreamConnected={isStreamConnected}
+          isAutoRecording={isAutoRecording}
           selectedDestinationIds={selectedDestinationIds}
           setSelectedDestinationIds={setSelectedDestinationIds}
           publishError={publishError}
@@ -248,12 +275,15 @@ export function StudioMain({ studioId }: StudioMainProps) {
 
       <StudioSidebar
         studioId={studioId}
+        connectedDestinations={destinations}
         activeBanner={activeBanner}
         onSelectBanner={setActiveBanner}
         activeAsset={activeAsset}
         onSelectAsset={setActiveAsset}
         styleState={styleState}
         onStyleChange={setStyleState}
+        getPreviewStream={() => getPreviewStreamRef.current?.() ?? null}
+        recordingStorage={(studio?.recordingStorage as "LOCAL" | "CLOUD") ?? "LOCAL"}
       />
     </div>
   );

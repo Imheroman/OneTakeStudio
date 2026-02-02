@@ -3,8 +3,10 @@ package com.onetake.media.chat.controller;
 import com.onetake.media.chat.entity.ChatPlatform;
 import com.onetake.media.chat.integration.ChatIntegrationService;
 import com.onetake.media.chat.integration.PlatformCredentials;
+import com.onetake.media.chat.integration.YouTubeBroadcastService;
 import com.onetake.media.global.common.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,15 +19,17 @@ import java.util.Map;
  * 송출 시작 시 해당 플랫폼의 채팅 연동을 시작하고,
  * 송출 종료 시 연동을 종료하는 용도
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/media/chat/integration")
 @RequiredArgsConstructor
 public class ChatIntegrationController {
 
     private final ChatIntegrationService chatIntegrationService;
+    private final YouTubeBroadcastService youTubeBroadcastService;
 
     /**
-     * YouTube 채팅 연동 시작
+     * YouTube 채팅 연동 시작 (liveChatId 직접 지정)
      */
     @PostMapping("/{studioId}/youtube/start")
     public ResponseEntity<ApiResponse<Void>> startYouTubeIntegration(
@@ -41,6 +45,40 @@ public class ChatIntegrationController {
 
         chatIntegrationService.startIntegration(studioId, credentials);
         return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    /**
+     * YouTube 채팅 연동 시작 (자동으로 liveChatId 조회)
+     *
+     * accessToken만 있으면 현재 활성/예정 라이브 방송의 채팅을 자동 연결
+     */
+    @PostMapping("/{studioId}/youtube/auto-start")
+    public ResponseEntity<ApiResponse<YouTubeAutoStartResponse>> startYouTubeIntegrationAuto(
+            @PathVariable Long studioId,
+            @RequestBody YouTubeAutoStartRequest request) {
+
+        // 자동으로 liveChatId 조회
+        String liveChatId = youTubeBroadcastService.getLiveChatId(request.accessToken());
+
+        if (liveChatId == null) {
+            log.warn("No active YouTube broadcast found for studioId={}", studioId);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("활성 또는 예정된 YouTube 라이브 방송이 없습니다."));
+        }
+
+        PlatformCredentials credentials = PlatformCredentials.forYouTube(
+                studioId,
+                request.accessToken(),
+                request.refreshToken(),
+                liveChatId
+        );
+
+        chatIntegrationService.startIntegration(studioId, credentials);
+        log.info("YouTube Chat auto-connected: studioId={}, liveChatId={}", studioId, liveChatId);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                new YouTubeAutoStartResponse(liveChatId, "YouTube 채팅 연동 성공")
+        ));
     }
 
     /**
@@ -129,6 +167,17 @@ public class ChatIntegrationController {
             String accessToken,
             String refreshToken,
             String liveChatId
+    ) {}
+
+    public record YouTubeAutoStartRequest(
+            String accessToken,
+            String refreshToken
+    ) {}
+
+    // Response DTOs
+    public record YouTubeAutoStartResponse(
+            String liveChatId,
+            String message
     ) {}
 
     public record TwitchIntegrationRequest(

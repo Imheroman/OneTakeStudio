@@ -4,19 +4,21 @@
 import { z } from "zod";
 import { DeleteResponseSchema } from "@/shared/api/schemas";
 
-// 즐겨찾기 파트너 스키마 (백엔드 응답: favoriteId, userId, createdAt)
+// 즐겨찾기 파트너 스키마 (백엔드 응답: id, nickname, email)
 export const FavoriteSchema = z.object({
+  id: z.string().optional(),
   favoriteId: z.string().optional(),
-  userId: z.string(),
+  userId: z.string().optional(),
   nickname: z.string(),
   email: z.string().email().optional(),
   profileImageUrl: z.string().nullable().optional(),
   createdAt: z.string().optional(),
 });
 // id 별칭 (기존 코드 호환)
-export const FavoriteWithIdSchema = FavoriteSchema.extend({
-  id: z.string().optional(),
-}).transform((v) => ({ ...v, id: v.id ?? v.userId ?? v.favoriteId ?? "" }));
+export const FavoriteWithIdSchema = FavoriteSchema.transform((v) => ({
+  ...v,
+  id: v.id ?? v.userId ?? v.favoriteId ?? "",
+}));
 
 // 즐겨찾기 목록 응답 스키마 (래퍼 없음)
 export const FavoriteListResponseSchema = z.object({

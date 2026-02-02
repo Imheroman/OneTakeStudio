@@ -196,52 +196,59 @@ export function CreateStudioDialog({
             </div>
           )}
 
-          {/* 저장 위치 (저장된 영상일 때만) */}
-          {transmissionType === "saved_video" && (
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Storage Location</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setStorageLocation("local")}
-                  className={cn(
-                    "p-4 border-2 rounded-lg transition-all text-left",
-                    storageLocation === "local"
-                      ? "border-indigo-500 bg-indigo-50"
-                      : "border-gray-200 hover:border-gray-300",
-                  )}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <HardDrive className="h-5 w-5" />
-                    <span className="font-semibold">Local Drive</span>
-                  </div>
-                </button>
+          {/* 녹화 저장 위치 (라이브/저장 모두 표시) */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">녹화 저장 위치</Label>
+            <p className="text-sm text-gray-500">
+              라이브 종료 후 저장 및 수동 녹화 시 파일이 저장될 위치입니다.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setStorageLocation("local")}
+                className={cn(
+                  "p-4 border-2 rounded-lg transition-all text-left",
+                  storageLocation === "local"
+                    ? "border-indigo-500 bg-indigo-50"
+                    : "border-gray-200 hover:border-gray-300",
+                )}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <HardDrive className="h-5 w-5" />
+                  <span className="font-semibold">내 컴퓨터</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  녹화 완료 시 자동으로 다운로드
+                </p>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setComingSoonMessage(
-                      "Cloud 저장은 준비 중입니다. 현재는 Local만 지원됩니다.",
-                    );
-                    setComingSoonOpen(true);
-                  }}
-                  className={cn(
-                    "p-4 border-2 rounded-lg transition-all text-left opacity-70",
-                    "border-gray-200 hover:border-gray-300 cursor-not-allowed",
-                  )}
-                  title="준비 중"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Cloud className="h-5 w-5" />
-                    <span className="font-semibold">Cloud</span>
-                    <span className="text-xs text-amber-600 font-normal">
-                      (준비 중)
-                    </span>
-                  </div>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setComingSoonMessage(
+                    "클라우드 저장은 준비 중입니다. 현재는 내 컴퓨터 저장만 지원됩니다.",
+                  );
+                  setComingSoonOpen(true);
+                }}
+                className={cn(
+                  "p-4 border-2 rounded-lg transition-all text-left opacity-70",
+                  "border-gray-200 hover:border-gray-300",
+                )}
+                title="준비 중"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Cloud className="h-5 w-5" />
+                  <span className="font-semibold">클라우드</span>
+                  <span className="text-xs text-amber-600 font-normal">
+                    (준비 중)
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  서버에 저장
+                </p>
+              </button>
             </div>
-          )}
+          </div>
 
           {/* 제목 */}
           <div className="space-y-2">

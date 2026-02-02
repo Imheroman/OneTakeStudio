@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Edit, Lock, Unlock, Loader2, Radio, Square } from "lucide-react";
+import { Clock, Edit, Lock, Unlock, Loader2, Radio, Square, Circle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { IconButton } from "@/shared/common";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
@@ -34,6 +34,7 @@ interface StudioHeaderProps {
   isGoingLive?: boolean;
   isPublishing?: boolean;
   isStreamConnected?: boolean;
+  isAutoRecording?: boolean;
   selectedDestinationIds?: number[];
   setSelectedDestinationIds?: (ids: number[]) => void;
   publishError?: string | null;
@@ -58,6 +59,7 @@ export function StudioHeader({
   isGoingLive = false,
   isPublishing = false,
   isStreamConnected = false,
+  isAutoRecording = false,
   selectedDestinationIds = [],
   setSelectedDestinationIds,
   publishError,
@@ -204,6 +206,12 @@ export function StudioHeader({
             <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-red-600 rounded text-xs">
               <Radio className="h-3 w-3 animate-pulse" />
               LIVE
+            </span>
+          )}
+          {isAutoRecording && (
+            <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-orange-600 rounded text-xs">
+              <Circle className="h-3 w-3 fill-current" />
+              REC
             </span>
           )}
         </div>

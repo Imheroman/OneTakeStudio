@@ -2,6 +2,7 @@ package com.onetake.core.destination.service;
 
 import com.onetake.core.destination.dto.CreateDestinationRequest;
 import com.onetake.core.destination.dto.DestinationResponse;
+import com.onetake.core.destination.dto.DestinationInternalResponse;
 import com.onetake.core.destination.dto.UpdateDestinationRequest;
 import com.onetake.core.destination.entity.ConnectedDestination;
 import com.onetake.core.destination.exception.DestinationNotFoundException;
@@ -127,6 +128,15 @@ public class DestinationService {
         return destinationRepository.findByIdInAndIsActiveTrue(ids).stream()
                 .map(DestinationResponse::from)
                 .toList();
+    }
+
+    /**
+     * 내부 서비스용: 단일 destination 정보 조회 (토큰 포함)
+     */
+    public DestinationInternalResponse getDestinationByIdInternal(Long destinationId) {
+        ConnectedDestination destination = destinationRepository.findById(destinationId)
+                .orElseThrow(() -> new DestinationNotFoundException(String.valueOf(destinationId)));
+        return DestinationInternalResponse.from(destination);
     }
 
     private ConnectedDestination findDestinationByIdAndUserId(String destinationId, Long internalUserId) {

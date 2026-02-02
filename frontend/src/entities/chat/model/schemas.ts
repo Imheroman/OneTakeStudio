@@ -8,8 +8,16 @@ export const ChatPlatformSchema = z.enum([
   "TWITCH",
   "CHZZK",
   "INTERNAL",
+  "HOST",
 ]);
-export const ChatMessageTypeSchema = z.enum(["NORMAL", "DONATION", "SYSTEM"]);
+export const ChatMessageTypeSchema = z.enum([
+  "CHAT",
+  "SUPER_CHAT",
+  "SYSTEM",
+  "JOIN",
+  "LEAVE",
+  "NOTICE",
+]);
 
 export const ChatMessageSchema = z.object({
   messageId: z.string(),
@@ -29,6 +37,7 @@ export const ChatMessageSchema = z.object({
 export const ChatSendRequestSchema = z.object({
   studioId: z.number(),
   content: z.string(),
+  senderName: z.string(),
   platform: ChatPlatformSchema.optional(),
 });
 

@@ -30,6 +30,7 @@ export function useStudioCreation(initialType: "live" | "recording") {
       const request: CreateStudioRequest = {
         name: data.title,
         template: initialType === "live" ? "live" : "recording",
+        storageLocation: data.storageLocation,
       };
 
       const response = await apiClient.post(

@@ -26,6 +26,7 @@ import {
 import { useAdaptivePerformance } from "@/hooks/studio";
 import { joinStream, leaveStream } from "@/shared/api/studio-stream";
 import { startPublish, stopPublish, getPublishStatus } from "@/shared/api/studio-publish";
+import { startChatIntegrationByDestinations, stopAllChatIntegrations } from "@/shared/api/chat-integration";
 import { Room, RoomEvent, ConnectionState, createLocalTracks, Track } from "livekit-client";
 
 const ApiResponseSceneSchema = z.object({
@@ -88,6 +89,11 @@ export function useStudioMain(
   const [isRecordingCloud, setIsRecordingCloud] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+
+  // 라이브 자동 녹화용 (수동 녹화와 분리)
+  const [isAutoRecording, setIsAutoRecording] = useState(false);
+  const autoRecorderRef = useRef<MediaRecorder | null>(null);
+  const autoRecordedChunksRef = useRef<Blob[]>([]);
 
   const displaySources = useMemo(
     () => sources.filter((s) => onStageSourceIds.includes(s.id)),
@@ -274,6 +280,73 @@ export function useStudioMain(
   // LiveKit 연결 및 송출 시작
   const getPreviewStreamRef = options?.getPreviewStreamRef;
 
+  // 라이브 자동 녹화 시작 (라이브 시작 시 호출)
+  const startAutoRecording = useCallback(() => {
+    const getStream = getPreviewStreamRef?.current;
+    const stream = getStream?.() ?? null;
+    if (!stream || stream.getVideoTracks().length === 0) {
+      console.warn("자동 녹화: 캔버스 스트림을 사용할 수 없습니다.");
+      return;
+    }
+
+    try {
+      autoRecordedChunksRef.current = [];
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm";
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 2500000,
+      });
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          autoRecordedChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(autoRecordedChunksRef.current, { type: mimeType });
+        if (blob.size > 0) {
+          const now = new Date();
+          const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
+          const fileName = `라이브녹화_${dateStr}.webm`;
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          console.log("라이브 녹화 완료: 자동 다운로드됨 -", fileName);
+        }
+        autoRecordedChunksRef.current = [];
+      };
+
+      recorder.start(1000);
+      autoRecorderRef.current = recorder;
+      setIsAutoRecording(true);
+      console.log("라이브 자동 녹화 시작");
+    } catch (err) {
+      console.error("자동 녹화 시작 실패:", err);
+    }
+  }, [getPreviewStreamRef]);
+
+  // 라이브 자동 녹화 중지 (라이브 종료 시 호출)
+  const stopAutoRecording = useCallback(() => {
+    const recorder = autoRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+      autoRecorderRef.current = null;
+    }
+    setIsAutoRecording(false);
+    console.log("라이브 자동 녹화 중지");
+  }, []);
+
   const handleGoLive = useCallback(async (destinationIds?: number[]) => {
     const sid = Number(studioId);
     if (Number.isNaN(sid)) return;
@@ -357,10 +430,32 @@ export function useStudioMain(
         destinationIds: destIds,
       });
 
+      // 3. 채팅 연동 자동 시작 (YouTube, Twitch, Chzzk)
+      try {
+        const chatResults = await startChatIntegrationByDestinations(sid, destIds);
+        chatResults.forEach((result) => {
+          if (result.success) {
+            console.log(`${result.platform} 채팅 연동 성공`);
+          } else {
+            console.warn(`${result.platform} 채팅 연동 실패: ${result.message}`);
+          }
+        });
+      } catch (chatError) {
+        console.warn("채팅 연동 시작 실패 (송출은 계속됨):", chatError);
+      }
+
       setIsPublishing(true);
       setIsLive(true);
       setIsEditMode(false);
       console.log("Publishing started to destinations:", destIds);
+
+      // 4. 자동 녹화 시작 (recordingStorage가 LOCAL인 경우)
+      if (studio?.recordingStorage === "LOCAL") {
+        // 약간의 딜레이 후 녹화 시작 (스트림 안정화)
+        setTimeout(() => {
+          startAutoRecording();
+        }, 500);
+      }
     } catch (error) {
       console.error("Go live failed:", error);
       const err = error as { message?: string; response?: { data?: { message?: string } } };
@@ -368,7 +463,7 @@ export function useStudioMain(
     } finally {
       setIsGoingLive(false);
     }
-  }, [studioId, user?.nickname, selectedDestinationIds, getPreviewStreamRef]);
+  }, [studioId, user?.nickname, selectedDestinationIds, getPreviewStreamRef, studio?.recordingStorage, startAutoRecording]);
 
   // 송출 중지 및 LiveKit 연결 해제
   const handleEndLive = useCallback(async () => {
@@ -376,6 +471,11 @@ export function useStudioMain(
     if (Number.isNaN(sid)) return;
 
     try {
+      // 0. 자동 녹화 중지 (가장 먼저 실행하여 녹화 데이터 손실 방지)
+      if (isAutoRecording) {
+        stopAutoRecording();
+      }
+
       // 1. RTMP 송출 중지
       if (isPublishing) {
         await stopPublish(sid);
@@ -389,7 +489,10 @@ export function useStudioMain(
         setIsStreamConnected(false);
       }
 
-      // 3. 서버에 스트림 퇴장 알림
+      // 3. 채팅 연동 종료
+      await stopAllChatIntegrations(sid).catch(console.error);
+
+      // 4. 서버에 스트림 퇴장 알림
       await leaveStream(sid).catch(console.error);
 
       setIsLive(false);
@@ -397,7 +500,7 @@ export function useStudioMain(
     } catch (error) {
       console.error("End live failed:", error);
     }
-  }, [studioId, isPublishing]);
+  }, [studioId, isPublishing, isAutoRecording, stopAutoRecording]);
 
   // 채널 선택 토글
   const handleToggleDestination = useCallback((destinationId: number) => {
@@ -424,9 +527,18 @@ export function useStudioMain(
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
+      // LiveKit 연결 해제
       if (roomRef.current) {
         roomRef.current.disconnect();
         roomRef.current = null;
+      }
+      // 자동 녹화 중지
+      if (autoRecorderRef.current?.state !== "inactive") {
+        autoRecorderRef.current?.stop();
+      }
+      // 수동 녹화 중지
+      if (mediaRecorderRef.current?.state !== "inactive") {
+        mediaRecorderRef.current?.stop();
       }
     };
   }, []);
@@ -764,6 +876,7 @@ export function useStudioMain(
     setIsAudioEnabled: setIsAudioEnabledState,
     isRecordingLocal,
     isRecordingCloud,
+    isAutoRecording,
     handleStartLocalRecording,
     handleStopLocalRecording,
     handleStartCloudRecording,
