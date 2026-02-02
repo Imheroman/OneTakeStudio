@@ -33,14 +33,14 @@ function isTokenExpired(token: string): boolean {
   }
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // localStorage는 서버에서 접근 불가하므로 쿠키 사용
   // 클라이언트에서 zustand persist가 localStorage를 사용하므로,
   // 여기서는 간단한 체크만 수행
 
-  // API 경로는 proxy 스킵
+  // API 경로는 middleware 스킵
   if (pathname.startsWith("/api") || pathname.startsWith("/_next")) {
     return NextResponse.next();
   }
