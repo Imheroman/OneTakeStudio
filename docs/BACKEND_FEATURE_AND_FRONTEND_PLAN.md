@@ -173,48 +173,41 @@ Gateway 재작성 경로:
 
 ## 3. API Gateway 라우트 현황
 
-- **Core:** `/api/auth/**`, `/api/users/**`, `/api/studios/**`, `/api/workspace/**`, `/api/notifications/**`, `/api/destinations/**`, `/api/dashboard`, `/api/favorites/**`  
-- **누락:** `/api/library/**`, `/api/invites/**` → **추가 필요.**
+- **Core:** `/api/auth/**`, `/api/users/**`, `/api/studios/**`, `/api/workspace/**`, `/api/notifications/**`, `/api/destinations/**`, `/api/dashboard`, `/api/favorites/**`, `/api/library/**`, `/api/invites/**`
 
 ---
 
 ## 4. 프론트엔드 연동 작업 목록
 
-### 4.1 완료/기존 연동
+### 4.1 연동 완료
 - 로그인, 회원가입(register), OAuth 콜백
-- 워크스페이스 최근 스튜디오, 알림, 즐겨찾기 요청 수락/거절
-- 스튜디오 CRUD, 노트, 멤버, 에셋, 씬
+- 워크스페이스 최근 스튜디오, 알림(stub), 즐겨찾기 요청 수락/거절
+- 스튜디오 CRUD, 노트, **멤버·초대 대기 목록·초대 취소**, 에셋, 씬
 - 송출 채널(destinations)
 - 스트림 join/leave, 녹화 start/stop, 송출 start/stop/status, 채팅/연동
-
-### 4.2 구현 필요
-1. **API Gateway**  
-   - Core Service에 `/api/library/**`, `/api/invites/**` 추가.
-
-2. **라이브러리(비디오) 페이지**  
-   - 호출: `GET /api/library/recordings?page=0&size=20` (및 선택 시 `studioId`).  
-   - 응답: `ApiResponse<RecordingListResponse>` → `data.recordings`, `data.pagination`.  
-   - 매핑: Recording → Video (recordingId→id, title, date from createdAt, duration from durationSeconds, status 매핑, thumbnailUrl, type 기본값 등).  
-   - 프론트 스키마: `ApiResponse` + `RecordingListResponse` 형태로 파싱 후 `videos`로 변환.
-
-3. **스토리지 페이지**  
-   - 호출: `GET /api/library/storage` (Gateway 라우트 추가 후).  
-   - 응답: `ApiResponse<StorageResponse>` → usedBytes, limitBytes, usedPercentage, usedFormatted, limitFormatted.  
-   - 매핑: StorageData { used: usedBytes, total: limitBytes, available 등 }.  
-   - `/api/storage/files`는 백엔드 없음 → 최근 파일은 빈 배열 또는 library/recordings 일부로 대체.
-
-4. **즐겨찾기 삭제**  
-   - 백엔드: `DELETE /api/favorites/{userId}`.  
-   - 프론트에서 삭제 시 사용하는 `id`가 대상 사용자 ID인지 확인 후, 필요 시 목록/스키마를 userId 기준으로 맞추기.
-
-5. **비디오 상세/다운로드/클립**  
-   - 상세: `GET /api/library/recordings/{recordingId}` → 기존 비디오 상세 스키마와 매핑.  
-   - 다운로드: `GET /api/library/recordings/{recordingId}/download` (URL 응답 사용).  
-   - 클립 생성 등: 백엔드 `/api/library/clips` 스펙 확인 후 연동.
+- **라이브러리:** recordings 목록·상세·다운로드 URL, 스토리지 용량(`GET /api/library/storage`)
 
 ---
 
-## 5. 참고 문서
+## 5. 미연동·미구현 API (남은 작업)
+
+나중에 백엔드 연동·UI 구현 시 참고용 목록. 필요할 때 순서대로 진행하면 됨.
+
+| 구분 | API / 기능 | 비고 |
+|------|-------------|------|
+| **받은 초대** | `GET /api/invites/received`, `POST /api/invites/{id}/accept`, `POST /api/invites/{id}/reject` | 레이아웃 알림에서 수락/거절은 사용 중. "받은 초대 목록" 전용 UI/연동 없음. |
+| **알림** | `GET /api/notifications` | 현재 stub(빈 목록). 백엔드 실제 알림 구현 시 스키마·UI 연동. |
+| **즐겨찾기 삭제** | `DELETE /api/favorites/{userId}` | 삭제 시 전달하는 `id`가 대상 사용자 ID인지 확인 후, 필요 시 목록/스키마 수정. |
+| **마이페이지** | `PUT /api/users/me` | 프로필 수정 호출이 주석 처리됨. 활성화 시 연동. |
+| **비밀번호 재설정** | `POST /api/auth/password-reset`, `password-reset/confirm` | forgot-password 페이지에서 호출 주석 처리됨. |
+| **클립 생성** | `POST /api/library/clips` | 백엔드에 해당 API 있으면 연동. 없으면 스펙 확인 후 추가 요청. |
+| **대시보드** | `GET /api/workspace/dashboard` | 프론트에서 사용하는 화면 있으면 연동. |
+| **채널 OAuth 콜백** | `/api/destinations/oauth/callback` 등 | channels/oauth/callback 페이지에서 주석 처리됨. 채널 연동 시 구현. |
+| **스토리지 파일 목록** | (백엔드 미제공) | `/api/storage/files` 없음. 팀원 스토리지 담당 시 API 추가 후 연동. |
+
+---
+
+## 6. 참고 문서
 
 - `docs/CORE_SERVICE_API.md` — 인증/사용자 API 상세
 - `docs/workspace-api-integration.md` — 워크스페이스/알림/경로 통일

@@ -12,6 +12,8 @@ interface AuthState {
   setHasHydrated: (value: boolean) => void;
   login: (userData: User, accessToken: string, refreshToken?: string) => void;
   logout: () => void;
+  /** 프로필 수정 등으로 사용자 정보만 갱신 (토큰 유지) */
+  updateUser: (userData: User) => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
   checkAuth: () => boolean;
   isAuthenticated: () => boolean;
@@ -54,6 +56,11 @@ export const useAuthStore = create<AuthState>()(
           isLoggedIn: false,
         });
       },
+
+      updateUser: (userData) =>
+        set({
+          user: userData,
+        }),
 
       setTokens: (accessToken, refreshToken) =>
         set({

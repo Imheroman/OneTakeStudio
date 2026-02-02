@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { apiClient } from "@/shared/api/client";
+import { updateProfile } from "@/shared/api/users";
 
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -31,10 +31,12 @@ import {
 import { Loader2, User, Lock, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-// 1. 프로필 수정 스키마
+// 1. 프로필 수정 스키마 (백엔드: 2–20자)
 const profileSchema = z.object({
-  nickname: z.string().min(2, { message: "닉네임은 2글자 이상이어야 합니다." }),
-  // 이메일이나 이름은 보통 변경 불가하거나 별도 인증 필요 (여기선 읽기 전용)
+  nickname: z
+    .string()
+    .min(2, { message: "닉네임은 2글자 이상이어야 합니다." })
+    .max(20, { message: "닉네임은 20자 이하여야 합니다." }),
 });
 
 // 2. 비밀번호 변경 스키마
@@ -55,16 +57,22 @@ const passwordSchema = z
 
 export default function MyPage() {
   const router = useRouter();
-  const { user, logout, login } = useAuthStore(); // login 함수를 통해 정보 업데이트
+  const { user, logout, updateUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
 
-  // 프로필 폼
   const profileForm = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      nickname: user?.nickname || "", // 현재 닉네임(이름) 불러오기
+      nickname: user?.nickname ?? "",
     },
   });
+
+  useEffect(() => {
+    if (user?.nickname != null) {
+      profileForm.reset({ nickname: user.nickname });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- user 변경 시 폼만 동기화
+  }, [user?.nickname]);
 
   // 비밀번호 폼
   const passwordForm = useForm<z.infer<typeof passwordSchema>>({
@@ -76,21 +84,13 @@ export default function MyPage() {
     },
   });
 
-  // [Action] 프로필 업데이트
   async function onProfileSubmit(values: z.infer<typeof profileSchema>) {
     try {
       setIsLoading(true);
-      // API 요청 (MSW가 가로챔)
-      // const response = await apiClient.put("/api/users/me", values);
-
-      console.log("프로필 업데이트:", values);
-
-      // Zustand 스토어 정보 업데이트 (새로고침 없이 반영)
-      if (user) {
-        // 실제로는 API 응답을 받아서 처리해야 함. 여기선 임시로 로컬 상태만 변경
-        // (주의: login 함수는 토큰도 필요하므로 실제 구현 시엔 updateUser 액션을 따로 만드는 게 정석)
-        alert(`닉네임이 '${values.nickname}'(으)로 변경되었습니다.`);
-      }
+      const updated = await updateProfile({ nickname: values.nickname });
+      updateUser(updated);
+      profileForm.reset({ nickname: updated.nickname });
+      alert(`닉네임이 '${updated.nickname}'(으)로 변경되었습니다.`);
     } catch (error) {
       console.error(error);
       alert("프로필 수정 중 오류가 발생했습니다.");
@@ -135,7 +135,7 @@ export default function MyPage() {
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 relative">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src="" /> {/* 나중에 이미지 URL 연결 */}
+                  <AvatarImage src={user?.profileImageUrl ?? undefined} />
                   <AvatarFallback className="bg-indigo-100 text-indigo-600 text-2xl font-bold">
                     {user?.nickname?.[0] || "U"}
                   </AvatarFallback>
