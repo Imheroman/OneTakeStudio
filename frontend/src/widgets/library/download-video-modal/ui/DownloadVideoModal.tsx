@@ -9,9 +9,7 @@ import {
 } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
 import type { VideoDetail } from "@/entities/video/model";
-import { useAuthStore } from "@/stores/useAuthStore";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+import { getRecordingDownloadUrl } from "@/shared/api/library";
 
 interface DownloadVideoModalProps {
   open: boolean;
@@ -24,37 +22,17 @@ export function DownloadVideoModal({
   onClose,
   video,
 }: DownloadVideoModalProps) {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const userId = useAuthStore((s) => s.user?.userId);
-
-  const handleDownloadOriginal = () => {
-    const url = `${BASE_URL}/api/library/videos/${video.id}/download`;
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `${video.title}.mp4`);
-    if (accessToken) {
+  const handleDownloadOriginal = async () => {
+    try {
+      const downloadUrl = await getRecordingDownloadUrl(video.id);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", `${video.title}.mp4`);
       link.setAttribute("rel", "noopener");
-      fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          ...(userId ? { "X-User-Id": userId } : {}),
-        },
-      })
-        .then((res) => res.blob())
-        .then((blob) => {
-          const blobUrl = URL.createObjectURL(blob);
-          link.href = blobUrl;
-          link.click();
-          URL.revokeObjectURL(blobUrl);
-        })
-        .catch(() => {
-          link.href = url;
-          link.target = "_blank";
-          link.click();
-        });
-    } else {
       link.target = "_blank";
       link.click();
+    } catch (err) {
+      console.error("다운로드 URL 조회 실패:", err);
     }
     onClose();
   };

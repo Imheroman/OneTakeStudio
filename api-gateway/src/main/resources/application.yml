@@ -17,7 +17,7 @@ spring:
             - id: core-service
               uri: lb://core-service
               predicates:
-                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**
+                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/library/**, /api/invites/**
               filters:
                 - StripPrefix=0
 

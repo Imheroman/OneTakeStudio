@@ -22,13 +22,8 @@ import {
 import { Badge } from "@/shared/ui/badge";
 import { HardDrive, MoreHorizontal, PlayCircle } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { apiClient } from "@/shared/api/client";
-import {
-  StorageDataSchema,
-  StorageFilesResponseSchema,
-  type StorageData,
-  type StorageFile,
-} from "@/entities/storage/model";
+import { getStorage } from "@/shared/api/library";
+import type { StorageData, StorageFile } from "@/entities/storage/model";
 
 export default function StoragePage() {
   const [storageData, setStorageData] = useState<StorageData>({
@@ -43,13 +38,14 @@ export default function StoragePage() {
   useEffect(() => {
     const fetchStorageData = async () => {
       try {
-        const [storageResponse, filesResponse] = await Promise.all([
-          apiClient.get("/api/storage", StorageDataSchema),
-          apiClient.get("/api/storage/files", StorageFilesResponseSchema),
-        ]);
-
-        setStorageData(storageResponse);
-        setRecentFiles(filesResponse.files);
+        const data = await getStorage();
+        setStorageData({
+          used: data.used,
+          total: data.total,
+          videoUsage: data.videoUsage ?? 0,
+          assetUsage: data.assetUsage ?? 0,
+        });
+        setRecentFiles([]);
       } catch (error) {
         console.error("스토리지 데이터 조회 실패:", error);
       } finally {
@@ -95,7 +91,7 @@ export default function StoragePage() {
             </span>
           </div>
           <CardDescription>
-            {storageData.used}GB used of {storageData.total}GB
+            {storageData.used.toFixed(2)}GB used of {storageData.total.toFixed(2)}GB
           </CardDescription>
         </CardHeader>
         <CardContent>

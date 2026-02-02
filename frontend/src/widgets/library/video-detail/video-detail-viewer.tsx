@@ -11,9 +11,9 @@ import {
 } from "@/features/library/video-library";
 import { DownloadVideoModal } from "@/widgets/library/download-video-modal";
 import { ShortsPlaybackModal } from "@/widgets/library/shorts-playback-modal";
+import { getRecordingDetail } from "@/shared/api/library";
 import { apiClient } from "@/shared/api/client";
 import {
-  VideoDetailApiResponseSchema,
   CreateClipApiResponseSchema,
   type VideoDetail,
   type Clip,
@@ -37,12 +37,9 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
       try {
         setLoading(true);
         setError(null);
-        const res = await apiClient.get(
-          `/api/library/videos/${videoId}`,
-          VideoDetailApiResponseSchema,
-        );
-        setVideo(res.data);
-        const totalSec = parseDurationToSeconds(res.data.duration);
+        const data = await getRecordingDetail(videoId);
+        setVideo(data as VideoDetail);
+        const totalSec = parseDurationToSeconds(data.duration);
         setTrimEnd(totalSec);
       } catch (err) {
         console.error("비디오 상세 조회 실패:", err);
@@ -63,11 +60,8 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
         startTimeSec: trimStart,
         endTimeSec: trimEnd,
       });
-      const res = await apiClient.get(
-        `/api/library/videos/${videoId}`,
-        VideoDetailApiResponseSchema,
-      );
-      setVideo(res.data);
+      const data = await getRecordingDetail(videoId);
+      setVideo(data as VideoDetail);
     } catch (err) {
       console.error("클립 생성 실패:", err);
     }
