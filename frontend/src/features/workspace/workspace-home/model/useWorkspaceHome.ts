@@ -1,32 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiClient } from "@/shared/api/client";
+import { getDashboard } from "@/shared/api/workspace";
 import type { RecentStudio } from "@/entities/studio/model";
-import { RecentStudioListResponseSchema } from "@/entities/studio/model";
 
 export function useWorkspaceHome(userId: string) {
   const [recentStudios, setRecentStudios] = useState<RecentStudio[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<{
+    connectedDestinationCount: number;
+    totalStudioCount: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [createDialogType, setCreateDialogType] = useState<"live" | "recording">("live");
 
   useEffect(() => {
-    const fetchRecentStudios = async () => {
+    const fetchDashboard = async () => {
       try {
-        const response = await apiClient.get(
-          `/api/workspace/${userId}/studios/recent`,
-          RecentStudioListResponseSchema,
-        );
-        setRecentStudios(response.studios);
+        const data = await getDashboard();
+        setRecentStudios(data.recentStudios);
+        setDashboardStats({
+          connectedDestinationCount: data.connectedDestinationCount,
+          totalStudioCount: data.totalStudioCount,
+        });
       } catch (error) {
-        console.error("최근 스튜디오 조회 실패:", error);
+        console.error("대시보드 조회 실패:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchRecentStudios();
+    fetchDashboard();
   }, [userId]);
 
   const openCreateDialog = (type: "live" | "recording") => {
@@ -36,6 +40,7 @@ export function useWorkspaceHome(userId: string) {
 
   return {
     recentStudios,
+    dashboardStats,
     isLoading,
     isCreateDialogOpen,
     setIsCreateDialogOpen,

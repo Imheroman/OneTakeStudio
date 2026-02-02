@@ -24,6 +24,7 @@ interface WorkspaceHomeProps {
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
   const {
     recentStudios,
+    dashboardStats,
     isLoading,
     isCreateDialogOpen,
     setIsCreateDialogOpen,
@@ -42,6 +43,12 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
         }
         description="오늘도 당신만의 멋진 방송을 만들어보세요."
       />
+      {dashboardStats != null && (
+        <p className="text-sm text-gray-500 -mt-4">
+          스튜디오 {dashboardStats.totalStudioCount}개
+          · 연결된 송출 채널 {dashboardStats.connectedDestinationCount}개
+        </p>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActionCard
