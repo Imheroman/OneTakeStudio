@@ -1,12 +1,12 @@
 package com.onetake.media.studio.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
@@ -45,11 +45,10 @@ public class StudioStateMessage {
     private Map<String, Object> payload;
 
     /**
-     * 타임스탬프
+     * 타임스탬프 (ISO 8601 문자열 - 프론트엔드와 호환)
      */
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private String timestamp = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
     public enum StudioStateType {
         // 레이아웃 관련
@@ -62,6 +61,8 @@ public class StudioStateMessage {
         SOURCE_TOGGLED,         // 소스 on/off
         SOURCE_REORDERED,       // 소스 순서 변경
         SOURCE_BROUGHT_FRONT,   // 소스 맨 앞으로
+        SOURCE_ADDED_TO_STAGE,  // 소스 스테이지 추가
+        SOURCE_REMOVED_FROM_STAGE, // 소스 스테이지 제거
 
         // 배너/에셋 관련
         BANNER_SELECTED,        // 배너 선택
@@ -85,6 +86,8 @@ public class StudioStateMessage {
         EDIT_MODE_CHANGED,      // 편집 모드 on/off
         RESOLUTION_CHANGED,     // 해상도 변경
         MEMBER_JOINED,          // 멤버 입장
-        MEMBER_LEFT             // 멤버 퇴장
+        MEMBER_LEFT,            // 멤버 퇴장
+        CURRENT_MEMBERS,        // 현재 접속자 목록 (새 접속자에게 전송)
+        FULL_STATE_SYNC         // 전체 상태 동기화 (새 접속자에게 현재 상태 전송)
     }
 }

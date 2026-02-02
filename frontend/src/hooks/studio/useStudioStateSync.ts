@@ -3,7 +3,7 @@
  * WebSocket을 통한 실시간 상태 동기화
  */
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Client, IMessage } from "@stomp/stompjs";
+import { Client, IMessage, IFrame } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
 export type StudioStateType =
@@ -14,6 +14,8 @@ export type StudioStateType =
   | "SOURCE_TOGGLED"
   | "SOURCE_REORDERED"
   | "SOURCE_BROUGHT_FRONT"
+  | "SOURCE_ADDED_TO_STAGE"
+  | "SOURCE_REMOVED_FROM_STAGE"
   | "BANNER_SELECTED"
   | "BANNER_DESELECTED"
   | "ASSET_SELECTED"
@@ -27,7 +29,9 @@ export type StudioStateType =
   | "EDIT_MODE_CHANGED"
   | "RESOLUTION_CHANGED"
   | "MEMBER_JOINED"
-  | "MEMBER_LEFT";
+  | "MEMBER_LEFT"
+  | "CURRENT_MEMBERS"
+  | "FULL_STATE_SYNC";
 
 export interface StudioStateMessage {
   type: StudioStateType;
@@ -49,15 +53,34 @@ export interface UseStudioStateSyncOptions {
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8082/ws/media";
 
+export interface OnlineMember {
+  odUserId: string;
+  nickname: string;
+  joinedAt: string;
+}
+
 export function useStudioStateSync(options: UseStudioStateSyncOptions) {
   const { studioId, userId, nickname, onStateChange, onLockChange, onPresenceChange } = options;
 
   const clientRef = useRef<Client | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineMembers, setOnlineMembers] = useState<OnlineMember[]>([]);
+
+  // 콜백을 ref로 유지해서 항상 최신 버전 참조 (클로저 문제 해결)
+  const onStateChangeRef = useRef(onStateChange);
+  const onLockChangeRef = useRef(onLockChange);
+  const onPresenceChangeRef = useRef(onPresenceChange);
+  onStateChangeRef.current = onStateChange;
+  onLockChangeRef.current = onLockChange;
+  onPresenceChangeRef.current = onPresenceChange;
 
   // WebSocket 연결
   useEffect(() => {
     if (!studioId || studioId === 0) return;
+    if (!userId) {
+      console.warn("[StudioStateSync] userId가 없어서 WebSocket 연결 스킵");
+      return;
+    }
 
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
@@ -72,9 +95,10 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
         client.subscribe(`/topic/studio/${studioId}/state`, (message: IMessage) => {
           try {
             const stateMessage: StudioStateMessage = JSON.parse(message.body);
+            console.log("[StudioStateSync] 수신된 메시지:", stateMessage.type, stateMessage.userId);
             // 내가 보낸 메시지는 무시
             if (stateMessage.userId !== userId) {
-              onStateChange?.(stateMessage);
+              onStateChangeRef.current?.(stateMessage);
             }
           } catch (e) {
             console.error("[StudioStateSync] 상태 메시지 파싱 실패:", e);
@@ -85,7 +109,7 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
         client.subscribe(`/topic/studio/${studioId}/lock`, (message: IMessage) => {
           try {
             const lockMessage: StudioStateMessage = JSON.parse(message.body);
-            onLockChange?.(lockMessage);
+            onLockChangeRef.current?.(lockMessage);
           } catch (e) {
             console.error("[StudioStateSync] 락 메시지 파싱 실패:", e);
           }
@@ -95,17 +119,73 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
         client.subscribe(`/topic/studio/${studioId}/presence`, (message: IMessage) => {
           try {
             const presenceMessage: StudioStateMessage = JSON.parse(message.body);
-            onPresenceChange?.(presenceMessage);
+
+            // 온라인 멤버 목록 업데이트
+            if (presenceMessage.type === "CURRENT_MEMBERS") {
+              // 서버에서 전송한 현재 접속자 목록으로 초기화
+              const members = (presenceMessage.payload?.members as Array<{
+                odUserId: string;
+                nickname: string;
+                joinedAt: string;
+              }>) ?? [];
+              setOnlineMembers(members.map((m) => ({
+                odUserId: m.odUserId,
+                nickname: m.nickname,
+                joinedAt: m.joinedAt,
+              })));
+              console.log("[StudioStateSync] 현재 접속자 목록 수신:", members.length, "명");
+            } else if (presenceMessage.type === "MEMBER_JOINED") {
+              setOnlineMembers((prev) => {
+                // 이미 있으면 무시
+                if (prev.some((m) => m.odUserId === presenceMessage.userId)) {
+                  return prev;
+                }
+                return [
+                  ...prev,
+                  {
+                    odUserId: presenceMessage.userId,
+                    nickname: presenceMessage.nickname,
+                    joinedAt: presenceMessage.timestamp,
+                  },
+                ];
+              });
+            } else if (presenceMessage.type === "MEMBER_LEFT") {
+              setOnlineMembers((prev) =>
+                prev.filter((m) => m.odUserId !== presenceMessage.userId)
+              );
+            }
+
+            onPresenceChangeRef.current?.(presenceMessage);
           } catch (e) {
             console.error("[StudioStateSync] 프레즌스 메시지 파싱 실패:", e);
           }
+        });
+
+        // 내 입장 알림 전송 (서버에서 접속자 목록 관리 + CURRENT_MEMBERS 응답)
+        const joinMessage: StudioStateMessage = {
+          type: "MEMBER_JOINED",
+          studioId,
+          userId,
+          nickname,
+          timestamp: new Date().toISOString(),
+        };
+        client.publish({
+          destination: `/app/studio/${studioId}/presence`,
+          body: JSON.stringify(joinMessage),
+        });
+
+        // fallback: 서버가 CURRENT_MEMBERS를 보내지 않을 경우 자신을 목록에 추가
+        // (서버에서 CURRENT_MEMBERS가 오면 덮어쓰기됨)
+        setOnlineMembers((prev) => {
+          if (prev.some((m) => m.odUserId === userId)) return prev;
+          return [...prev, { odUserId: userId, nickname, joinedAt: new Date().toISOString() }];
         });
       },
       onDisconnect: () => {
         console.log("[StudioStateSync] WebSocket 연결 해제됨");
         setIsConnected(false);
       },
-      onStompError: (frame) => {
+      onStompError: (frame: IFrame) => {
         console.error("[StudioStateSync] STOMP 에러:", frame.headers["message"]);
       },
     });
@@ -114,10 +194,25 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
     client.activate();
 
     return () => {
+      // 퇴장 알림 브로드캐스트
+      if (client.connected) {
+        const leaveMessage: StudioStateMessage = {
+          type: "MEMBER_LEFT",
+          studioId,
+          userId,
+          nickname,
+          timestamp: new Date().toISOString(),
+        };
+        client.publish({
+          destination: `/app/studio/${studioId}/presence`,
+          body: JSON.stringify(leaveMessage),
+        });
+      }
       client.deactivate();
       clientRef.current = null;
+      setOnlineMembers([]);
     };
-  }, [studioId, userId, onStateChange, onLockChange, onPresenceChange]);
+  }, [studioId, userId, nickname]); // 콜백은 ref로 관리하므로 의존성에서 제외
 
   // 상태 변경 브로드캐스트
   const broadcastState = useCallback(
@@ -153,8 +248,8 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
   );
 
   const broadcastSourceTransform = useCallback(
-    (sourceId: string, transform: Record<string, unknown>) => {
-      broadcastState("SOURCE_TRANSFORM", { sourceId, transform });
+    (sourceId: string, transform: object) => {
+      broadcastState("SOURCE_TRANSFORM", { sourceId, transform: transform as Record<string, unknown> });
     },
     [broadcastState]
   );
@@ -189,6 +284,7 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
 
   return {
     isConnected,
+    onlineMembers,
     broadcastState,
     broadcastLayoutChange,
     broadcastSourceTransform,

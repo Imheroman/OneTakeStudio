@@ -23,7 +23,7 @@ import {
   getPreferredVideoDeviceId,
   getPreferredAudioDeviceId,
 } from "@/shared/lib/device-preferences";
-import { useAdaptivePerformance } from "@/hooks/studio";
+import { useAdaptivePerformance, useEditLock, useStudioStateSync, useStudioLiveKit, type StudioStateMessage } from "@/hooks/studio";
 import { joinStream, leaveStream } from "@/shared/api/studio-stream";
 import { startPublish, stopPublish, getPublishStatus } from "@/shared/api/studio-publish";
 import { startChatIntegrationByDestinations, stopAllChatIntegrations } from "@/shared/api/chat-integration";
@@ -74,6 +74,8 @@ export function useStudioMain(
   const [onStageSourceIds, setOnStageSourceIds] = useState<string[]>([]);
   const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
   const [isEditMode, setIsEditMode] = useState(true);
+  // FULL_STATE_SYNC를 수신했는지 추적 (수신 시 씬 레이아웃 자동 로드 건너뛰기)
+  const receivedFullStateSyncRef = useRef(false);
 
   const [previewResolution, setPreviewResolution] = useState<"720p" | "1080p">("720p");
   /** 소스별 위치·크기·zIndex (Konva 드래그/리사이즈/레이어 반영). 없으면 레이아웃 기본값 사용. */
@@ -85,6 +87,318 @@ export function useStudioMain(
       setPreviewResolution((prev) => (prev === "1080p" ? "720p" : prev)),
     enabled: !!studio,
   });
+
+  // 편집 락 관리
+  const {
+    lockStatus,
+    isLoading: isLockLoading,
+    hasLock,
+    isLockedByOther,
+    lockedByNickname,
+    acquire: acquireLock,
+    release: releaseLock,
+    forceRelease: forceReleaseLock,
+    refresh: refreshLockStatus,
+  } = useEditLock({
+    studioId: Number(studioId) || 0,
+    userId: user?.userId || "",
+    autoExtend: true,
+    extendInterval: 2 * 60 * 1000, // 2분마다 갱신
+  });
+
+  // 실시간 상태 동기화 콜백
+  const handleRemoteStateChange = useCallback((message: StudioStateMessage) => {
+    console.log("[StateSync] 원격 상태 변경:", message.type, message.payload);
+
+    switch (message.type) {
+      case "LAYOUT_CHANGE":
+        if (message.payload?.layout) {
+          setCurrentLayout(message.payload.layout as LayoutType);
+        }
+        break;
+      case "SOURCE_TRANSFORM":
+        if (message.payload?.sourceId && message.payload?.transform) {
+          const { sourceId, transform } = message.payload as { sourceId: string; transform: SourceTransform };
+          setSourceTransforms((prev) => ({
+            ...prev,
+            [sourceId]: transform,
+          }));
+        }
+        break;
+      case "SOURCE_ADDED":
+        if (message.payload?.source) {
+          const newSource = message.payload.source as Source;
+          setSources((prev) => {
+            // 이미 존재하는 소스면 무시 (내가 추가한 소스)
+            if (prev.some((s) => s.id === newSource.id)) {
+              return prev;
+            }
+            // 원격에서 받은 소스는 isRemote: true로 마킹
+            // 실제 스트림은 LiveKit을 통해 받음
+            return [...prev, { ...newSource, isRemote: true }];
+          });
+        }
+        break;
+      case "SOURCE_REMOVED":
+        if (message.payload?.sourceId) {
+          const sourceId = message.payload.sourceId as string;
+          setSources((prev) => prev.filter((s) => s.id !== sourceId));
+          setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
+        }
+        break;
+      case "SOURCE_TOGGLED":
+        if (message.payload?.sourceId) {
+          const sourceId = message.payload.sourceId as string;
+          const isVisible = message.payload.isVisible as boolean;
+          setSources((prev) =>
+            prev.map((s) => (s.id === sourceId ? { ...s, isVisible } : s))
+          );
+        }
+        break;
+      case "SOURCE_REORDERED":
+        if (message.payload?.sourceOrder) {
+          const order = message.payload.sourceOrder as string[];
+          setSources((prev) => {
+            const sorted = [...prev].sort(
+              (a, b) => order.indexOf(a.id) - order.indexOf(b.id)
+            );
+            return sorted;
+          });
+        }
+        break;
+      case "SOURCE_BROUGHT_FRONT":
+        if (message.payload?.sourceId) {
+          const sourceId = message.payload.sourceId as string;
+          setSources((prev) => {
+            const idx = prev.findIndex((s) => s.id === sourceId);
+            if (idx < 0) return prev;
+            const next = [...prev];
+            const [removed] = next.splice(idx, 1);
+            next.unshift(removed);
+            return next;
+          });
+        }
+        break;
+      case "SCENE_SELECTED":
+        if (message.payload?.sceneId) {
+          setActiveSceneId(message.payload.sceneId as string);
+        }
+        break;
+      case "EDIT_MODE_CHANGED":
+        if (typeof message.payload?.isEditMode === "boolean") {
+          setIsEditMode(message.payload.isEditMode as boolean);
+        }
+        break;
+      case "RESOLUTION_CHANGED":
+        if (message.payload?.resolution) {
+          setPreviewResolution(message.payload.resolution as "720p" | "1080p");
+        }
+        break;
+      case "SOURCE_ADDED_TO_STAGE":
+        if (message.payload?.sourceId) {
+          const sourceId = message.payload.sourceId as string;
+          setOnStageSourceIds((prev) => (prev.includes(sourceId) ? prev : [...prev, sourceId]));
+        }
+        break;
+      case "SOURCE_REMOVED_FROM_STAGE":
+        if (message.payload?.sourceId) {
+          const sourceId = message.payload.sourceId as string;
+          setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
+        }
+        break;
+      case "FULL_STATE_SYNC":
+        // 다른 사용자의 전체 상태 수신 시 적용
+        console.log("[StateSync] 전체 상태 동기화 수신 from", message.nickname, ":", message.payload);
+        if (message.payload) {
+          receivedFullStateSyncRef.current = true;
+          console.log("[StateSync] receivedFullStateSyncRef = true 설정됨");
+          const { onStageSourceIds: remoteOnStageIds, sourceTransforms: remoteTransforms, currentLayout: remoteLayout } = message.payload as {
+            onStageSourceIds?: string[];
+            sourceTransforms?: Record<string, SourceTransform>;
+            currentLayout?: LayoutType;
+          };
+          if (remoteOnStageIds) {
+            setOnStageSourceIds(remoteOnStageIds);
+          }
+          if (remoteTransforms) {
+            setSourceTransforms(remoteTransforms);
+          }
+          if (remoteLayout) {
+            setCurrentLayout(remoteLayout);
+          }
+        }
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const handleRemoteLockChange = useCallback((message: StudioStateMessage) => {
+    console.log("[StateSync] 락 상태 변경:", message.type);
+    // 락 상태 변경 시 새로고침
+    refreshLockStatus();
+  }, [refreshLockStatus]);
+
+  const handleRemotePresenceChange = useCallback((message: StudioStateMessage) => {
+    console.log("[StateSync] 프레즌스 변경:", message.type, message.nickname);
+    // TODO: 접속자 목록 UI 업데이트
+  }, []);
+
+  // 실시간 상태 동기화
+  const {
+    isConnected: isStateSyncConnected,
+    onlineMembers,
+    broadcastState,
+    broadcastLayoutChange,
+    broadcastSourceTransform,
+    broadcastSceneSelected,
+  } = useStudioStateSync({
+    studioId: Number(studioId) || 0,
+    userId: user?.userId || "",
+    nickname: user?.nickname || "Guest",
+    onStateChange: handleRemoteStateChange,
+    onLockChange: handleRemoteLockChange,
+    onPresenceChange: handleRemotePresenceChange,
+  });
+
+  // 화면 공유 종료 시 콜백 (브라우저에서 "공유 중지" 클릭 시)
+  const handleTrackEnded = useCallback((sourceId: string) => {
+    console.log("[StudioMain] 트랙 ended, 소스 제거:", sourceId);
+    // 소스 제거
+    setSources((prev) => prev.filter((s) => s.id !== sourceId));
+    setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
+    setSourceTransforms((prev) => {
+      const next = { ...prev };
+      delete next[sourceId];
+      return next;
+    });
+    // 브로드캐스트
+    if (isStateSyncConnected) {
+      broadcastState("SOURCE_REMOVED", { sourceId });
+    }
+  }, [isStateSyncConnected, broadcastState]);
+
+  // LiveKit 실시간 미디어 공유
+  const {
+    isConnected: isLiveKitConnected,
+    remoteSources,
+    publishedTracks,
+    publishVideoTrack,
+    publishAudioTrack,
+    publishScreenTrack,
+    unpublishTrack,
+    getRemoteStream,
+  } = useStudioLiveKit({
+    studioId: Number(studioId) || 0,
+    userId: user?.userId || "",
+    nickname: user?.nickname || "Guest",
+    enabled: !isLoading && !!studio, // 스튜디오 로드 후 연결
+    onTrackEnded: handleTrackEnded,
+  });
+
+  // 원격 소스의 trackSid를 업데이트 (LiveKit에서 받은 정보로)
+  // SOURCE_ADDED로 받은 소스에는 trackSid가 없으므로, remoteSources에서 가져와서 업데이트
+  useEffect(() => {
+    if (!remoteSources.length) return;
+
+    setSources((prev) => {
+      let changed = false;
+      const updated = prev.map((source) => {
+        // 이미 trackSid가 있으면 스킵
+        if (source.trackSid) return source;
+        // 로컬 소스는 스킵
+        if (!source.isRemote) return source;
+
+        // remoteSources에서 같은 ID의 소스 찾기
+        const remoteSource = remoteSources.find((rs) => rs.id === source.id);
+        if (remoteSource) {
+          changed = true;
+          console.log("[StudioMain] 원격 소스 trackSid 업데이트:", source.id, remoteSource.trackSid);
+          return {
+            ...source,
+            trackSid: remoteSource.trackSid,
+            participantId: remoteSource.participantId,
+            participantName: remoteSource.participantName,
+          };
+        }
+        return source;
+      });
+
+      // remoteSources에는 있지만 sources에는 없는 새 소스 추가
+      // (SOURCE_ADDED 브로드캐스트를 못 받은 경우)
+      const existingIds = prev.map((s) => s.id);
+      const newSources = remoteSources
+        .filter((rs) => !existingIds.includes(rs.id))
+        .map((rs) => ({
+          id: rs.id,
+          type: rs.type,
+          name: `${rs.participantName}의 ${rs.type === "video" ? "카메라" : rs.type === "screen" ? "화면" : "오디오"}`,
+          isVisible: true,
+          isRemote: true,
+          trackSid: rs.trackSid,
+          participantId: rs.participantId,
+          participantName: rs.participantName,
+        }));
+
+      if (newSources.length > 0) {
+        changed = true;
+        console.log("[StudioMain] 새 원격 소스 추가 (백스테이지):", newSources.length, "개");
+        // 원격 소스는 백스테이지에만 추가, 스테이지에는 수동으로 추가해야 함
+      }
+
+      return changed ? [...updated, ...newSources] : prev;
+    });
+  }, [remoteSources]);
+
+  // 원격 소스가 제거되면 sources에서도 제거
+  useEffect(() => {
+    const remoteIds = remoteSources.map((rs) => rs.id);
+    setSources((prev) => {
+      const filtered = prev.filter(
+        (s) => !s.isRemote || remoteIds.includes(s.id)
+      );
+      return filtered.length === prev.length ? prev : filtered;
+    });
+    setOnStageSourceIds((prev) => {
+      const filtered = prev.filter((id) => {
+        const source = sources.find((s) => s.id === id);
+        return !source?.isRemote || remoteIds.includes(id);
+      });
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [remoteSources, sources]);
+
+  // 새 멤버 입장 시 현재 상태 동기화 (refs를 사용하여 최신 상태 참조)
+  const onStageSourceIdsRef = useRef(onStageSourceIds);
+  const sourceTransformsRef = useRef(sourceTransforms);
+  const currentLayoutRef = useRef(currentLayout);
+  const prevOnlineMembersCountRef = useRef(0);
+  onStageSourceIdsRef.current = onStageSourceIds;
+  sourceTransformsRef.current = sourceTransforms;
+  currentLayoutRef.current = currentLayout;
+
+  useEffect(() => {
+    // 새 멤버가 입장했을 때 (멤버 수 증가)
+    const prevCount = prevOnlineMembersCountRef.current;
+    const currentCount = onlineMembers.length;
+
+    if (currentCount > prevCount && prevCount > 0 && isStateSyncConnected) {
+      // 새 멤버가 입장하면 현재 상태 브로드캐스트 (빈 상태도 유효함)
+      console.log("[StudioMain] 새 멤버 입장, 현재 상태 브로드캐스트:", {
+        onStageSourceIds: onStageSourceIdsRef.current,
+        sourceTransformsKeys: Object.keys(sourceTransformsRef.current),
+        currentLayout: currentLayoutRef.current,
+      });
+      broadcastState("FULL_STATE_SYNC", {
+        onStageSourceIds: onStageSourceIdsRef.current,
+        sourceTransforms: sourceTransformsRef.current,
+        currentLayout: currentLayoutRef.current,
+      });
+    }
+
+    prevOnlineMembersCountRef.current = currentCount;
+  }, [onlineMembers, isStateSyncConnected, broadcastState]);
+
   const [isRecordingLocal, setIsRecordingLocal] = useState(false);
   const [isRecordingCloud, setIsRecordingCloud] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -156,14 +470,24 @@ export function useStudioMain(
   useEffect(() => {
     if (!activeScene) {
       prevSceneIdRef.current = "";
-      setSources([]);
-      setOnStageSourceIds([]);
-      setSourceTransforms({});
+      // FULL_STATE_SYNC를 받은 경우 상태 초기화 안 함
+      if (!receivedFullStateSyncRef.current) {
+        setSources([]);
+        setOnStageSourceIds([]);
+        setSourceTransforms({});
+      }
       return;
     }
     const sceneId = activeSceneId ?? "";
     if (prevSceneIdRef.current !== sceneId) {
       prevSceneIdRef.current = sceneId;
+
+      // FULL_STATE_SYNC를 받았으면 씬 레이아웃에서 소스만 로드하고 스테이지 상태는 건너뛰기
+      if (receivedFullStateSyncRef.current) {
+        console.log("[StudioMain] FULL_STATE_SYNC 수신됨, 씬 레이아웃 스테이지 상태 건너뛰기");
+        return;
+      }
+
       const elements = activeScene.layout?.elements;
       const rawElements = Array.isArray(elements) ? elements : [];
       const nextSources = layoutElementsToSources(rawElements);
@@ -543,9 +867,12 @@ export function useStudioMain(
     };
   }, []);
 
-  const handleSceneSelect = (sceneId: string) => {
+  const handleSceneSelect = useCallback((sceneId: string) => {
     setActiveSceneId(sceneId);
-  };
+    if (isStateSyncConnected) {
+      broadcastSceneSelected(sceneId);
+    }
+  }, [isStateSyncConnected, broadcastSceneSelected]);
 
   const handleAddScene = async () => {
     const sid = Number(studioId);
@@ -599,7 +926,7 @@ export function useStudioMain(
   };
 
   const handleAddSourceConfirm = useCallback(
-    (type: "video" | "audio" | "screen", deviceId?: string) => {
+    async (type: "video" | "audio" | "screen", deviceId?: string) => {
       const id =
         type === "video"
           ? `video-${Date.now()}`
@@ -614,16 +941,43 @@ export function useStudioMain(
             (type === "video"
               ? getPreferredVideoDeviceId() ?? undefined
               : getPreferredAudioDeviceId() ?? undefined);
-      setSources((prev) => [
-        ...prev,
-        { id, type, name, isVisible: true, deviceId: resolvedDeviceId },
-      ]);
+      const newSource: Source = { id, type, name, isVisible: true, deviceId: resolvedDeviceId, isRemote: false };
+      setSources((prev) => [...prev, newSource]);
       setShowAddSourceDialog(false);
+      // 브로드캐스트 (연결된 모든 사용자가 공유)
+      if (isStateSyncConnected) {
+        broadcastState("SOURCE_ADDED", { source: newSource });
+      }
+
+      // LiveKit에 트랙 publish (다른 참가자와 미디어 공유)
+      console.log("[StudioMain] isLiveKitConnected:", isLiveKitConnected);
+      if (isLiveKitConnected) {
+        try {
+          if (type === "video") {
+            const trackSid = await publishVideoTrack(id, resolvedDeviceId);
+            if (trackSid) {
+              console.log("[StudioMain] 비디오 트랙 공유됨:", trackSid);
+            }
+          } else if (type === "screen") {
+            const trackSid = await publishScreenTrack(id);
+            if (trackSid) {
+              console.log("[StudioMain] 화면 공유 트랙 공유됨:", trackSid);
+            }
+          } else if (type === "audio") {
+            const trackSid = await publishAudioTrack(id, resolvedDeviceId);
+            if (trackSid) {
+              console.log("[StudioMain] 오디오 트랙 공유됨:", trackSid);
+            }
+          }
+        } catch (err) {
+          console.error("[StudioMain] 미디어 공유 실패:", err);
+        }
+      }
     },
-    [],
+    [isStateSyncConnected, broadcastState, isLiveKitConnected, publishVideoTrack, publishScreenTrack, publishAudioTrack],
   );
 
-  const setSourceTransform = useCallback((sourceId: string, partial: Partial<SourceTransform>) => {
+  const setSourceTransform = useCallback((sourceId: string, partial: Partial<SourceTransform>, broadcast = true) => {
     setSourceTransforms((prev) => {
       const current = prev[sourceId];
       const next: SourceTransform = {
@@ -633,14 +987,24 @@ export function useStudioMain(
         height: partial.height ?? current?.height ?? 0,
         zIndex: partial.zIndex ?? current?.zIndex ?? 0,
       };
+      // 브로드캐스트 (연결된 모든 사용자가 공유)
+      if (broadcast && isStateSyncConnected) {
+        broadcastSourceTransform(sourceId, next);
+      }
       return { ...prev, [sourceId]: next };
     });
-  }, []);
+  }, [isStateSyncConnected, broadcastSourceTransform]);
 
   const handleAddToStage = useCallback(
     (sourceId: string) => {
       setOnStageSourceIds((prev) => (prev.includes(sourceId) ? prev : [...prev, sourceId]));
       const source = sources.find((s) => s.id === sourceId);
+
+      // 브로드캐스트 (연결된 모든 사용자가 공유)
+      if (isStateSyncConnected) {
+        broadcastState("SOURCE_ADDED_TO_STAGE", { sourceId });
+      }
+
       if (!source || !(source.type === "video" || source.type === "screen")) return;
       const { width: stageWidth, height: stageHeight } = stageSize;
       if (source.type === "video") {
@@ -661,7 +1025,7 @@ export function useStudioMain(
         });
       }
     },
-    [sources, stageSize, setSourceTransform],
+    [sources, stageSize, setSourceTransform, isStateSyncConnected, broadcastState],
   );
 
   const handleBringSourceToFront = useCallback((sourceId: string) => {
@@ -672,28 +1036,59 @@ export function useStudioMain(
       const next = [...prev];
       const [removed] = next.splice(idx, 1);
       next.splice(firstOnStage, 0, removed);
+      // 브로드캐스트 (연결된 모든 사용자가 공유)
+      if (isStateSyncConnected) {
+        broadcastState("SOURCE_BROUGHT_FRONT", { sourceId });
+      }
       return next;
     });
-  }, [onStageSourceIds]);
+  }, [onStageSourceIds, isStateSyncConnected, broadcastState]);
 
   const handleRemoveFromStage = useCallback((sourceId: string) => {
+    console.log("[StudioMain] Remove from stage:", sourceId);
     setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
-  }, []);
+    // 브로드캐스트 (연결된 모든 사용자가 공유)
+    if (isStateSyncConnected) {
+      console.log("[StudioMain] Broadcasting SOURCE_REMOVED_FROM_STAGE:", sourceId);
+      broadcastState("SOURCE_REMOVED_FROM_STAGE", { sourceId });
+    }
+  }, [isStateSyncConnected, broadcastState]);
 
   const handleSourceToggle = useCallback((sourceId: string) => {
-    setSources((prev) =>
-      prev.map((s) =>
-        s.id === sourceId ? { ...s, isVisible: !s.isVisible } : s,
-      ),
-    );
-  }, []);
+    setSources((prev) => {
+      const source = prev.find((s) => s.id === sourceId);
+      const newVisible = !source?.isVisible;
+      // 브로드캐스트 (연결된 모든 사용자가 공유)
+      if (isStateSyncConnected) {
+        broadcastState("SOURCE_TOGGLED", { sourceId, isVisible: newVisible });
+      }
+      return prev.map((s) =>
+        s.id === sourceId ? { ...s, isVisible: newVisible } : s,
+      );
+    });
+  }, [isStateSyncConnected, broadcastState]);
 
   const handleReorderSources = useCallback((newOrder: Source[]) => {
     setSources(newOrder);
-  }, []);
+    // 브로드캐스트 (연결된 모든 사용자가 공유)
+    if (isStateSyncConnected) {
+      broadcastState("SOURCE_REORDERED", { sourceOrder: newOrder.map((s) => s.id) });
+    }
+  }, [isStateSyncConnected, broadcastState]);
 
   /** 백스테이지에서 소스 완전 제거(목록·스테이지에서 삭제) */
-  const handleRemoveSource = useCallback((sourceId: string) => {
+  const handleRemoveSource = useCallback(async (sourceId: string) => {
+    // LiveKit에서 트랙 unpublish (로컬 소스인 경우만)
+    const source = sources.find((s) => s.id === sourceId);
+    if (source && !source.isRemote && isLiveKitConnected) {
+      try {
+        await unpublishTrack(sourceId);
+        console.log("[StudioMain] 미디어 공유 해제됨:", sourceId);
+      } catch (err) {
+        console.error("[StudioMain] 미디어 공유 해제 실패:", err);
+      }
+    }
+
     setSources((prev) => prev.filter((s) => s.id !== sourceId));
     setOnStageSourceIds((prev) => prev.filter((id) => id !== sourceId));
     setSourceTransforms((prev) => {
@@ -701,7 +1096,11 @@ export function useStudioMain(
       delete next[sourceId];
       return next;
     });
-  }, []);
+    // 브로드캐스트 (연결된 모든 사용자가 공유)
+    if (isStateSyncConnected) {
+      broadcastState("SOURCE_REMOVED", { sourceId });
+    }
+  }, [sources, isStateSyncConnected, broadcastState, isLiveKitConnected, unpublishTrack]);
 
   const handleSaveSceneLayout = useCallback(async () => {
     const sid = Number(studioId);
@@ -830,7 +1229,30 @@ export function useStudioMain(
     }
   }, [studioId]);
 
-  const setCurrentLayoutState = setCurrentLayout;
+  // 레이아웃 변경 (브로드캐스트 포함)
+  const setCurrentLayoutWithBroadcast = useCallback((layout: LayoutType) => {
+    setCurrentLayout(layout);
+    if (isStateSyncConnected) {
+      broadcastLayoutChange(layout);
+    }
+  }, [isStateSyncConnected, broadcastLayoutChange]);
+
+  // 편집 모드 변경 (브로드캐스트 포함)
+  const setIsEditModeWithBroadcast = useCallback((editMode: boolean) => {
+    setIsEditMode(editMode);
+    if (isStateSyncConnected) {
+      broadcastState("EDIT_MODE_CHANGED", { isEditMode: editMode });
+    }
+  }, [isStateSyncConnected, broadcastState]);
+
+  // 해상도 변경 (브로드캐스트 포함)
+  const setPreviewResolutionWithBroadcast = useCallback((resolution: "720p" | "1080p") => {
+    setPreviewResolution(resolution);
+    if (isStateSyncConnected) {
+      broadcastState("RESOLUTION_CHANGED", { resolution });
+    }
+  }, [isStateSyncConnected, broadcastState]);
+
   const setIsVideoEnabledState = setIsVideoEnabled;
   const setIsAudioEnabledState = setIsAudioEnabled;
 
@@ -838,7 +1260,7 @@ export function useStudioMain(
     studio,
     isLoading,
     currentLayout,
-    setCurrentLayout: setCurrentLayoutState,
+    setCurrentLayout: setCurrentLayoutWithBroadcast,
     activeSceneId,
     scenesForPanel,
     sources,
@@ -846,7 +1268,7 @@ export function useStudioMain(
     onStageSourceIds,
     canAddSource,
     isEditMode,
-    setIsEditMode,
+    setIsEditMode: setIsEditModeWithBroadcast,
     isVideoEnabled,
     isAudioEnabled,
     isLive,
@@ -869,7 +1291,7 @@ export function useStudioMain(
     showAddSourceDialog,
     setShowAddSourceDialog,
     previewResolution,
-    setPreviewResolution,
+    setPreviewResolution: setPreviewResolutionWithBroadcast,
     sourceTransforms,
     setSourceTransform,
     setIsVideoEnabled: setIsVideoEnabledState,
@@ -890,5 +1312,22 @@ export function useStudioMain(
     handleToggleDestination,
     checkPublishStatus,
     publishError,
+    // 편집 락 관련
+    lockStatus,
+    isLockLoading,
+    hasLock,
+    isLockedByOther,
+    lockedByNickname,
+    acquireLock,
+    releaseLock,
+    forceReleaseLock,
+    refreshLockStatus,
+    // 상태 동기화 관련
+    isStateSyncConnected,
+    onlineMembers,
+    // 실시간 미디어 공유 관련
+    isLiveKitConnected,
+    remoteSources,
+    publishedTracks,
   };
 }
