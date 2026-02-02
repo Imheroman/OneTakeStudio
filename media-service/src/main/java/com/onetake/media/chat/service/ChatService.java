@@ -8,6 +8,10 @@ import com.onetake.media.chat.entity.ChatPlatform;
 import com.onetake.media.chat.repository.ChatMessageRepository;
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
+import com.onetake.media.marker.service.ChatHighlightDetector;
+import com.onetake.media.recording.entity.RecordingSession;
+import com.onetake.media.recording.entity.RecordingStatus;
+import com.onetake.media.recording.repository.RecordingSessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +33,8 @@ public class ChatService {
 
     private final ChatMessageRepository chatMessageRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatHighlightDetector chatHighlightDetector;
+    private final RecordingSessionRepository recordingSessionRepository;
 
     private static final String CHAT_TOPIC = "/topic/chat/";
 
@@ -57,6 +63,9 @@ public class ChatService {
         ChatMessage saved = chatMessageRepository.save(message);
         ChatMessageResponse response = ChatMessageResponse.from(saved);
 
+        // 채팅 급증 감지를 위해 메시지 기록 (녹화 중인 경우)
+        notifyChatHighlightDetector(request.getStudioId());
+
         // WebSocket으로 브로드캐스트
         broadcastMessage(request.getStudioId(), response);
 
@@ -64,6 +73,22 @@ public class ChatService {
                 request.getStudioId(), request.getPlatform(), request.getSenderName());
 
         return response;
+    }
+
+    /**
+     * 채팅 급증 감지기에 메시지 알림 (녹화 중인 경우만)
+     */
+    private void notifyChatHighlightDetector(Long studioId) {
+        try {
+            // 현재 녹화 중인 세션이 있는지 확인
+            recordingSessionRepository.findByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)
+                    .ifPresent(session -> {
+                        chatHighlightDetector.onChatMessage(studioId, session.getRecordingId());
+                    });
+        } catch (Exception e) {
+            // 하이라이트 감지 실패가 채팅 메시지 전송을 막으면 안됨
+            log.debug("채팅 하이라이트 감지기 알림 실패: {}", e.getMessage());
+        }
     }
 
     @Transactional

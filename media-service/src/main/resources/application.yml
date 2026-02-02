@@ -1,40 +1,45 @@
+server:
+  port: 8082
+
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: media-service
 
   # MySQL Database
   datasource:
-    url: jdbc:mysql://localhost:3306/media_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-    username: media_user
-    password: media_password
+    url: ${DB_URL:jdbc:mysql://localhost:3306/media_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:media_user}
+    password: ${DB_PASSWORD:media_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # JPA
   jpa:
     hibernate:
-      ddl-auto: update  # 개발: update, 운영: validate
-    show-sql: true
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:true}
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false
 
-  # Redis (Streams 포함)
+  # Redis
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
-# Server
-server:
-  port: 8082
+# JWT (media-service에서도 인증 처리 시 필요, base64 encoded)
+jwt:
+  secret: ${JWT_SECRET:bG9jYWxkZXZqd3RzZWNyZXRrZXlmb3JoczI1NmFsZ29yaXRobW11c3RiZWF0bGVhc3QyNTZiaXRz}
 
 # Eureka Client
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
     register-with-eureka: true
     fetch-registry: true
   instance:
@@ -42,21 +47,19 @@ eureka:
 
 # LiveKit
 livekit:
-  host: http://localhost:7880
+  host: ${LIVEKIT_HOST:http://localhost:7880}
   api:
-    key: devkey
-    # LiveKit 서버와 동일 (최소 32자)
-    secret: devkey-secret-for-livekit-min-32-chars
+    key: ${LIVEKIT_API_KEY:devkey}
+    secret: ${LIVEKIT_API_SECRET:devkey-secret-for-livekit-min-32-chars}
   egress:
     output-path: /recordings/
 
-# Core Service (송출 채널 정보 조회)
+# Core Service
 core:
   service:
-    url: http://localhost:8080
+    url: ${CORE_SERVICE_URL:http://localhost:8080}
 
 # Recording Storage
-# Docker Egress는 /recordings에 저장 → 로컬 ./recordings 폴더와 볼륨 연결됨
 recording:
   storage:
     base-path: ${RECORDING_BASE_PATH:./recordings}
@@ -65,7 +68,6 @@ recording:
 # Logging
 logging:
   level:
-    com.onetake.media: DEBUG
+    com.onetake.media: ${LOG_LEVEL:DEBUG}
     org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:DEBUG}

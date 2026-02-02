@@ -1,0 +1,38 @@
+# =====================================================
+# Production Configuration - core-service
+# 이 파일은 .gitignore에 추가하거나, 환경변수만 참조하도록 유지
+# =====================================================
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 운영에서는 validate
+    show-sql: false
+
+logging:
+  level:
+    com.onetake: INFO
+    org.springframework.security: WARN
+
+# 운영 환경에서 필요한 환경변수 목록:
+# -----------------------------------------------------
+# DB_URL                    - MySQL 연결 URL
+# DB_USERNAME               - DB 사용자명
+# DB_PASSWORD               - DB 비밀번호
+# REDIS_HOST                - Redis 호스트
+# REDIS_PORT                - Redis 포트
+# MAIL_USERNAME             - SMTP 사용자명
+# MAIL_PASSWORD             - SMTP 비밀번호
+# JWT_SECRET                - JWT 시크릿 키 (최소 256bit)
+# OAUTH_GOOGLE_CLIENT_ID    - Google OAuth Client ID
+# OAUTH_GOOGLE_CLIENT_SECRET- Google OAuth Client Secret
+# OAUTH_KAKAO_CLIENT_ID     - Kakao OAuth Client ID
+# OAUTH_KAKAO_CLIENT_SECRET - Kakao OAuth Client Secret
+# OAUTH_NAVER_CLIENT_ID     - Naver OAuth Client ID
+# OAUTH_NAVER_CLIENT_SECRET - Naver OAuth Client Secret
+# EUREKA_URL                - Eureka 서버 URL
+# AI_SERVICE_URL            - AI 서비스 URL
+# AI_WEBHOOK_URL            - AI Webhook URL
+# MEDIA_SERVICE_URL         - Media 서비스 URL
+# STORAGE_BASE_PATH         - 저장소 기본 경로
+# -----------------------------------------------------
