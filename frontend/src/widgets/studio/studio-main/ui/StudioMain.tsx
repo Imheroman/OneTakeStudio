@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { StudioHeader } from "@/widgets/studio/studio-header";
@@ -12,7 +12,11 @@ import { ControlBar } from "@/widgets/studio/control-bar";
 import { StudioSidebar } from "@/widgets/studio/studio-sidebar";
 import { AddSourceDialog } from "@/widgets/studio/add-source-dialog";
 import { useStudioMain } from "@/features/studio/studio-main";
-import { useAudioLevel, useSourceStreams } from "@/hooks/studio";
+import {
+  useAudioLevel,
+  useSourceStreams,
+  useVolumeMeter,
+} from "@/hooks/studio";
 import { apiClient } from "@/shared/api/client";
 import { ApiResponseDestinationListSchema } from "@/entities/channel/model";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
@@ -37,9 +41,38 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const getPreviewStreamRef = useRef<(() => MediaStream | null) | null>(null);
   const [toolbarExpanded, setToolbarExpanded] = useState(true);
   const [activeBanner, setActiveBanner] = useState<BannerItem | null>(null);
+  const [bannerRemainingSeconds, setBannerRemainingSeconds] = useState<
+    number | null
+  >(null);
   const [activeAsset, setActiveAsset] = useState<AssetItem | null>(null);
   const [styleState, setStyleState] = useState<StudioStyleState>(DEFAULT_STYLE);
-  const [destinations, setDestinations] = useState<ConnectedDestinationItem[]>([]);
+  const [destinations, setDestinations] = useState<ConnectedDestinationItem[]>(
+    []
+  );
+
+  // 배너 타이머: timerSeconds가 있으면 카운트다운, 0이 되면 자동 중단
+  useEffect(() => {
+    if (!activeBanner) {
+      setBannerRemainingSeconds(null);
+      return;
+    }
+    const total = activeBanner.timerSeconds;
+    if (total == null || total <= 0) {
+      setBannerRemainingSeconds(null);
+      return;
+    }
+    setBannerRemainingSeconds(total);
+    let remaining = total;
+    const id = setInterval(() => {
+      remaining -= 1;
+      setBannerRemainingSeconds(remaining);
+      if (remaining <= 0) {
+        clearInterval(id);
+        setActiveBanner(null);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [activeBanner?.id, activeBanner?.timerSeconds]);
 
   // 연동된 채널 목록 가져오기
   useEffect(() => {
@@ -49,11 +82,13 @@ export function StudioMain({ studioId }: StudioMainProps) {
           "/api/destinations",
           ApiResponseDestinationListSchema
         );
-        const items: ConnectedDestinationItem[] = (response.data ?? []).map((d) => ({
-          id: d.id,
-          platform: d.platform,
-          channelName: d.channelName ?? d.channelId ?? null,
-        }));
+        const items: ConnectedDestinationItem[] = (response.data ?? []).map(
+          (d) => ({
+            id: d.id,
+            platform: d.platform,
+            channelName: d.channelName ?? d.channelId ?? null,
+          })
+        );
         setDestinations(items);
       } catch (error) {
         console.error("채널 목록 조회 실패:", error);
@@ -119,8 +154,24 @@ export function StudioMain({ studioId }: StudioMainProps) {
   } = useStudioMain(studioId, { getPreviewStreamRef });
 
   const audioLevel = useAudioLevel(isAudioEnabled);
-  const { getStream: getSourceStream, streamIds: availableStreamIds } =
-    useSourceStreams(sources, { isVideoEnabled, isAudioEnabled });
+  const {
+    getStream: getSourceStream,
+    streamIds: availableStreamIds,
+    streamsMap,
+  } = useSourceStreams(sources, { isVideoEnabled, isAudioEnabled });
+
+  const streamsWithAudio = useMemo(
+    () =>
+      Array.from(streamsMap.values()).filter(
+        (s) => s.getAudioTracks().length > 0
+      ),
+    [streamsMap]
+  );
+  const levelHistory = useVolumeMeter(
+    isAudioEnabled,
+    audioLevel,
+    streamsWithAudio
+  );
 
   if (isLoading) {
     return (
@@ -152,7 +203,9 @@ export function StudioMain({ studioId }: StudioMainProps) {
             onSceneSelect={handleSceneSelect}
             onAddScene={handleAddScene}
             onRemoveScene={handleRemoveScene}
-            onRenameScene={(sceneId, name) => handleUpdateScene(sceneId, { name })}
+            onRenameScene={(sceneId, name) =>
+              handleUpdateScene(sceneId, { name })
+            }
             onSaveScene={handleSaveSceneLayout}
             isEditMode={isEditMode}
           />
@@ -178,8 +231,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
         />
 
         {/* 콘텐츠: 전체 높이 사용. 하단 pb로 접힌 토글 네브에 퀵 레이아웃 바가 가리지 않도록 여백 */}
-        <div className="flex-1 flex flex-col p-4 pb-14 gap-4 overflow-hidden min-h-0">
-          <div className="flex-1 min-h-0">
+        <div className="flex-1 flex flex-col p-4 pb-14 gap-4 overflow-hidden min-h-0 min-w-0">
+          <div className="flex-1 min-h-0 min-w-0">
             <PreviewArea
               className="h-full"
               layout={currentLayout}
@@ -251,6 +304,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 isVideoEnabled={isVideoEnabled}
                 isAudioEnabled={isAudioEnabled}
                 audioLevel={audioLevel}
+                levelHistory={levelHistory}
                 onVideoToggle={() => setIsVideoEnabled(!isVideoEnabled)}
                 onAudioToggle={() => setIsAudioEnabled(!isAudioEnabled)}
                 onSettings={() => console.log("Settings")}
@@ -277,13 +331,19 @@ export function StudioMain({ studioId }: StudioMainProps) {
         studioId={studioId}
         connectedDestinations={destinations}
         activeBanner={activeBanner}
+        bannerRemainingSeconds={bannerRemainingSeconds}
         onSelectBanner={setActiveBanner}
         activeAsset={activeAsset}
         onSelectAsset={setActiveAsset}
         styleState={styleState}
         onStyleChange={setStyleState}
         getPreviewStream={() => getPreviewStreamRef.current?.() ?? null}
-        recordingStorage={(studio?.recordingStorage as "LOCAL" | "CLOUD") ?? "LOCAL"}
+        recordingStorage={
+          (studio?.recordingStorage as "LOCAL" | "CLOUD") ?? "LOCAL"
+        }
+        isRecordingLocal={isRecordingLocal}
+        onStartLocalRecording={handleStartLocalRecording}
+        onStopLocalRecording={handleStopLocalRecording}
       />
     </div>
   );
