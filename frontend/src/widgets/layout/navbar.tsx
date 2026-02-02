@@ -3,13 +3,10 @@
 import { Bell } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
 import { useShortsStore } from "@/stores/useShortsStore";
-import { useShortsPolling } from "@/features/shorts/useShortsPolling"; // 훅 import (없으면 아래 설명 참고)
 import { useState } from "react";
-import { cn } from "@/shared/lib/utils";
 
 export const Navbar = () => {
-  // ✅ 핵심: 여기서 폴링 훅을 실행해야 앱 전체에서 알림 체크가 동작합니다.
-  useShortsPolling();
+  // useShortsPolling은 (main)/layout.tsx에서 호출되므로 여기서는 생략
 
   const { notifications, openResultModal } = useShortsStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);

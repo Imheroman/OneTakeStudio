@@ -7,6 +7,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 /**
@@ -41,7 +42,7 @@ public class StudioStateService {
                 .studioId(studioId)
                 .userId(userId)
                 .nickname(nickname)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         messagingTemplate.convertAndSend("/topic/studio/" + studioId + "/lock", message);
@@ -57,7 +58,7 @@ public class StudioStateService {
                 .studioId(studioId)
                 .userId(userId)
                 .nickname(nickname)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         messagingTemplate.convertAndSend("/topic/studio/" + studioId + "/lock", message);
@@ -74,7 +75,7 @@ public class StudioStateService {
                 .userId(userId)
                 .nickname(nickname)
                 .payload(Map.of("layout", layout))
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         broadcastState(studioId, message);
@@ -91,7 +92,7 @@ public class StudioStateService {
                 .userId(userId)
                 .nickname(nickname)
                 .payload(Map.of("sourceId", sourceId, "transform", transform))
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         broadcastState(studioId, message);
@@ -107,7 +108,7 @@ public class StudioStateService {
                 .userId(userId)
                 .nickname(nickname)
                 .payload(Map.of("banner", banner != null ? banner : "null"))
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         broadcastState(studioId, message);
@@ -123,7 +124,7 @@ public class StudioStateService {
                 .userId(userId)
                 .nickname(nickname)
                 .payload(Map.of("asset", asset != null ? asset : "null"))
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         broadcastState(studioId, message);
@@ -138,7 +139,7 @@ public class StudioStateService {
                 .studioId(studioId)
                 .userId(userId)
                 .nickname(nickname)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         messagingTemplate.convertAndSend("/topic/studio/" + studioId + "/presence", message);
@@ -154,7 +155,7 @@ public class StudioStateService {
                 .studioId(studioId)
                 .userId(userId)
                 .nickname(nickname)
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                 .build();
 
         messagingTemplate.convertAndSend("/topic/studio/" + studioId + "/presence", message);

@@ -6,8 +6,14 @@ import com.onetake.core.studio.dto.EditLockResponse;
 import com.onetake.core.studio.exception.EditLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -21,6 +27,10 @@ public class EditLockService {
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
+
+    @Value("${media-service.url:http://localhost:8082}")
+    private String mediaServiceUrl;
 
     private static final String LOCK_KEY_PREFIX = "studio:edit-lock:";
     private static final Duration LOCK_TTL = Duration.ofMinutes(5); // 5분 후 자동 해제
@@ -73,6 +83,8 @@ public class EditLockService {
 
         if (Boolean.TRUE.equals(success)) {
             log.info("편집 락 획득: studioId={}, userId={}, nickname={}", studioId, userId, nickname);
+            // WebSocket 브로드캐스트
+            broadcastLockAcquired(studioId, userId, nickname);
             return EditLockResponse.of(userId, nickname, now, expiresAt, userId);
         }
 
@@ -145,8 +157,11 @@ public class EditLockService {
             );
         }
 
+        String nickname = lockData.get("nickname");
         redisTemplate.delete(lockKey);
         log.info("편집 락 해제: studioId={}, userId={}", studioId, userId);
+        // WebSocket 브로드캐스트
+        broadcastLockReleased(studioId, userId, nickname);
     }
 
     /**
@@ -175,8 +190,72 @@ public class EditLockService {
      */
     public void forceReleaseLock(Long studioId) {
         String lockKey = LOCK_KEY_PREFIX + studioId;
+
+        // 기존 락 정보 조회 (브로드캐스트용)
+        String existingLock = redisTemplate.opsForValue().get(lockKey);
+        String userId = null;
+        String nickname = null;
+        if (existingLock != null) {
+            Map<String, String> lockData = parseLockData(existingLock);
+            userId = lockData.get("userId");
+            nickname = lockData.get("nickname");
+        }
+
         redisTemplate.delete(lockKey);
         log.info("편집 락 강제 해제: studioId={}", studioId);
+
+        // WebSocket 브로드캐스트
+        if (userId != null) {
+            broadcastLockReleased(studioId, userId, nickname);
+        }
+    }
+
+    /**
+     * 락 획득 브로드캐스트 (media-service로 전송)
+     */
+    @Async
+    public void broadcastLockAcquired(Long studioId, String userId, String nickname) {
+        try {
+            String url = mediaServiceUrl + "/api/internal/studio/" + studioId + "/lock/acquired";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, String> body = new HashMap<>();
+            body.put("userId", userId);
+            body.put("nickname", nickname);
+
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity(url, request, Map.class);
+
+            log.debug("락 획득 브로드캐스트 성공: studioId={}", studioId);
+        } catch (Exception e) {
+            log.warn("락 획득 브로드캐스트 실패: studioId={}, error={}", studioId, e.getMessage());
+        }
+    }
+
+    /**
+     * 락 해제 브로드캐스트 (media-service로 전송)
+     */
+    @Async
+    public void broadcastLockReleased(Long studioId, String userId, String nickname) {
+        try {
+            String url = mediaServiceUrl + "/api/internal/studio/" + studioId + "/lock/released";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, String> body = new HashMap<>();
+            body.put("userId", userId);
+            body.put("nickname", nickname != null ? nickname : "");
+
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity(url, request, Map.class);
+
+            log.debug("락 해제 브로드캐스트 성공: studioId={}", studioId);
+        } catch (Exception e) {
+            log.warn("락 해제 브로드캐스트 실패: studioId={}, error={}", studioId, e.getMessage());
+        }
     }
 
     private String serializeLockData(Map<String, String> lockData) {

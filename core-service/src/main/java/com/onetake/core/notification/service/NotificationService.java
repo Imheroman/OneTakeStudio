@@ -70,10 +70,11 @@ public class NotificationService {
 
     private NotificationResponse toResponse(Notification notification) {
         return NotificationResponse.builder()
-                .id(notification.getReferenceId() != null ? notification.getReferenceId() : notification.getNotificationId())
+                .id(notification.getNotificationId())
                 .type(convertType(notification.getType()))
                 .title(notification.getTitle())
                 .message(notification.getMessage())
+                .referenceId(notification.getReferenceId())
                 .time(formatTime(notification.getCreatedAt()))
                 .createdAt(notification.getCreatedAt().toString())
                 .read(notification.getIsRead())

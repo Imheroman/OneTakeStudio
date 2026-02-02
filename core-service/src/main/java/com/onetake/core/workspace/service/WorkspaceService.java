@@ -2,6 +2,8 @@ package com.onetake.core.workspace.service;
 
 import com.onetake.core.destination.repository.ConnectedDestinationRepository;
 import com.onetake.core.studio.entity.Studio;
+import com.onetake.core.studio.entity.StudioMember;
+import com.onetake.core.studio.repository.StudioMemberRepository;
 import com.onetake.core.studio.repository.StudioRepository;
 import com.onetake.core.user.entity.User;
 import com.onetake.core.user.exception.UserNotFoundException;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -20,6 +23,7 @@ import java.util.List;
 public class WorkspaceService {
 
     private final StudioRepository studioRepository;
+    private final StudioMemberRepository studioMemberRepository;
     private final ConnectedDestinationRepository connectedDestinationRepository;
     private final UserRepository userRepository;
 
@@ -29,11 +33,18 @@ public class WorkspaceService {
     public RecentStudioListResponse getRecentStudios(String userId) {
         User user = findUserByUserId(userId);
 
-        List<Studio> studios = studioRepository.findByOwnerId(user.getId());
+        // 사용자가 멤버로 있는 모든 스튜디오 조회 (HOST, MANAGER, GUEST 모두 포함)
+        List<StudioMember> memberships = studioMemberRepository.findByUserId(user.getId());
 
-        List<RecentStudioResponse> studioList = studios.stream()
+        List<RecentStudioResponse> studioList = memberships.stream()
+                .map(member -> {
+                    Studio studio = studioRepository.findById(member.getStudioId()).orElse(null);
+                    if (studio == null) return null;
+                    return RecentStudioResponse.from(studio, member.getRole());
+                })
+                .filter(response -> response != null)
+                .sorted(Comparator.comparing(RecentStudioResponse::getDate).reversed())
                 .limit(RECENT_STUDIO_LIMIT)
-                .map(RecentStudioResponse::from)
                 .toList();
 
         return new RecentStudioListResponse(studioList);

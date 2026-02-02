@@ -1,6 +1,7 @@
 package com.onetake.core.studio.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -44,7 +45,8 @@ public class EditLockResponse {
     /**
      * 현재 사용자가 락 보유 여부
      */
-    private boolean isMyLock;
+    @JsonProperty("isMyLock")
+    private boolean myLock;
 
     /**
      * 락 없음 응답
@@ -52,7 +54,7 @@ public class EditLockResponse {
     public static EditLockResponse notLocked() {
         return EditLockResponse.builder()
                 .locked(false)
-                .isMyLock(false)
+                .myLock(false)
                 .build();
     }
 
@@ -68,7 +70,7 @@ public class EditLockResponse {
                 .lockedByNickname(lockedByNickname)
                 .acquiredAt(acquiredAt)
                 .expiresAt(expiresAt)
-                .isMyLock(lockedByUserId.equals(currentUserId))
+                .myLock(lockedByUserId.equals(currentUserId))
                 .build();
     }
 }

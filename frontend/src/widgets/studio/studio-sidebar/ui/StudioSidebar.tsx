@@ -28,6 +28,7 @@ import { getChatHistory } from "@/shared/api/studio-chat";
 import type { BannerItem } from "../panels/StudioBannerPanel";
 import type { AssetItem } from "../panels/StudioAssetPanel";
 import type { StudioStyleState } from "../panels/StudioStylePanel";
+import type { OnlineMember } from "@/hooks/studio";
 
 const TABS = [
   { id: "destinations", icon: Share2, label: "연동 채널" },
@@ -64,6 +65,8 @@ interface StudioSidebarProps {
   getPreviewStream?: () => MediaStream | null;
   /** 녹화 저장 위치 설정 */
   recordingStorage?: "LOCAL" | "CLOUD";
+  /** 현재 접속 중인 멤버 목록 */
+  onlineMembers?: OnlineMember[];
 }
 
 export function StudioSidebar({
@@ -78,6 +81,7 @@ export function StudioSidebar({
   onStyleChange,
   getPreviewStream,
   recordingStorage = "LOCAL",
+  onlineMembers = [],
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -241,6 +245,7 @@ export function StudioSidebar({
                 onClose={closePanel}
                 onInviteClick={() => setInviteOpen(true)}
                 refreshTrigger={refreshMembersTrigger}
+                onlineMembers={onlineMembers}
               />
             )}
             {activeTab === "private" && (

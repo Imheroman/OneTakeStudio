@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Edit, Lock, Unlock, Loader2, Radio, Square, Circle } from "lucide-react";
+import { Clock, Edit, Loader2, Radio, Square, Circle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { IconButton } from "@/shared/common";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
@@ -23,6 +23,7 @@ import {
   mapDestinationListToChannels,
 } from "@/entities/channel/model";
 import { Logo } from "@/shared/ui/logo";
+import { EditLockIndicator } from "@/widgets/studio/edit-lock-indicator";
 
 interface StudioHeaderProps {
   studioTitle: string;
@@ -40,6 +41,15 @@ interface StudioHeaderProps {
   publishError?: string | null;
   isEditMode?: boolean;
   onEditModeToggle?: () => void;
+  // 편집 락 관련
+  isLockLoading?: boolean;
+  hasLock?: boolean;
+  isLockedByOther?: boolean;
+  lockedByNickname?: string | null;
+  onAcquireLock?: () => void;
+  onReleaseLock?: () => void;
+  onForceReleaseLock?: () => void;
+  isStateSyncConnected?: boolean;
 }
 
 interface DestinationItem {
@@ -65,6 +75,15 @@ export function StudioHeader({
   publishError,
   isEditMode = true,
   onEditModeToggle,
+  // 편집 락 관련
+  isLockLoading = false,
+  hasLock = false,
+  isLockedByOther = false,
+  lockedByNickname = null,
+  onAcquireLock,
+  onReleaseLock,
+  onForceReleaseLock,
+  isStateSyncConnected = true,
 }: StudioHeaderProps) {
   const { user } = useAuthStore();
   const [elapsedTime, setElapsedTime] = useState("00:00:00");
@@ -218,29 +237,19 @@ export function StudioHeader({
 
         {/* 오른쪽: 액션 버튼들 */}
         <div className="flex items-center gap-3 shrink-0">
-          {onEditModeToggle && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onEditModeToggle}
-              className={cn(
-                "text-gray-300 hover:text-white hover:bg-gray-800",
-                !isEditMode && "text-amber-400"
-              )}
-              title={isEditMode ? "라이브 모드로 전환 (잠금)" : "편집 모드로 전환"}
-            >
-              {isEditMode ? (
-                <>
-                  <Lock className="h-4 w-4 mr-2" />
-                  잠금
-                </>
-              ) : (
-                <>
-                  <Unlock className="h-4 w-4 mr-2" />
-                  편집
-                </>
-              )}
-            </Button>
+          {/* 편집 락 인디케이터 */}
+          {onAcquireLock && onReleaseLock && (
+            <EditLockIndicator
+              isLoading={isLockLoading}
+              hasLock={hasLock}
+              isLockedByOther={isLockedByOther}
+              lockedByNickname={lockedByNickname}
+              onAcquire={onAcquireLock}
+              onRelease={onReleaseLock}
+              canForceRelease={true}
+              onForceRelease={onForceReleaseLock}
+              isConnected={isStateSyncConnected}
+            />
           )}
 
           {onEdit && (

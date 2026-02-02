@@ -1,6 +1,7 @@
 package com.onetake.core.studio.controller;
 
 import com.onetake.common.dto.ApiResponse;
+import com.onetake.core.notification.service.NotificationService;
 import com.onetake.core.security.CurrentUser;
 import com.onetake.core.security.CustomUserDetails;
 import com.onetake.core.studio.dto.ReceivedInviteResponse;
@@ -20,6 +21,7 @@ import java.util.List;
 public class InviteController {
 
     private final StudioMemberService studioMemberService;
+    private final NotificationService notificationService;
 
     @GetMapping("/received")
     public ResponseEntity<ApiResponse<List<ReceivedInviteResponse>>> getReceivedInvites(
@@ -39,6 +41,9 @@ public class InviteController {
         log.debug("초대 수락 요청: inviteId={}", inviteId);
         StudioMemberResponse member = studioMemberService.acceptInvite(userDetails.getUserId(), inviteId);
 
+        // 초대 관련 알림 삭제
+        notificationService.deleteByReferenceId(inviteId);
+
         return ResponseEntity.ok(ApiResponse.success("초대를 수락했습니다", member));
     }
 
@@ -49,6 +54,9 @@ public class InviteController {
 
         log.debug("초대 거절 요청: inviteId={}", inviteId);
         studioMemberService.rejectInvite(userDetails.getUserId(), inviteId);
+
+        // 초대 관련 알림 삭제
+        notificationService.deleteByReferenceId(inviteId);
 
         return ResponseEntity.ok(ApiResponse.success("초대를 거절했습니다"));
     }

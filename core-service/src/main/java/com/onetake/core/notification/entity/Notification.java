@@ -70,6 +70,17 @@ public class Notification {
                 .build();
     }
 
+    public static Notification createStudioInvite(User target, String inviterNickname, String studioName, String inviteId) {
+        return Notification.builder()
+                .user(target)
+                .type(NotificationType.STUDIO_INVITE)
+                .title("스튜디오 초대")
+                .message(inviterNickname + "님이 '" + studioName + "' 스튜디오에 초대했습니다.")
+                .referenceId(inviteId)
+                .isRead(false)
+                .build();
+    }
+
     public enum NotificationType {
         FRIEND_REQUEST,
         STUDIO_INVITE,

@@ -68,7 +68,7 @@ export async function kickStudioMember(
 export async function updateMemberRole(
   studioId: string | number,
   memberId: number,
-  role: "ADMIN" | "MEMBER",
+  role: "MANAGER" | "GUEST",
 ): Promise<StudioMemberResponse> {
   const ApiResponseMemberSchema = z.object({
     resultCode: z.string().optional(),
@@ -88,11 +88,20 @@ export async function updateMemberRole(
 export async function getStudioInvites(
   studioId: string | number,
 ): Promise<InviteResponse[]> {
-  const res = await apiClient.get(
-    `/api/studios/${studioId}/invites`,
-    ApiResponseInviteListSchema,
-  );
-  return Array.isArray(res.data) ? res.data : [];
+  try {
+    const res = await apiClient.get(
+      `/api/studios/${studioId}/invites`,
+      ApiResponseInviteListSchema,
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  } catch (error: unknown) {
+    // 403 에러는 GUEST 권한으로 조회 불가 - 빈 배열 반환 (정상 동작)
+    const axiosError = error as { response?: { status?: number } };
+    if (axiosError?.response?.status === 403) {
+      return [];
+    }
+    throw error;
+  }
 }
 
 /** 초대 취소 — DELETE /api/studios/{studioId}/invites/{inviteId} */
