@@ -9,7 +9,7 @@ import type { NotificationWithActions } from "@/widgets/workspace/notification-p
 import { NotificationListResponseSchema } from "@/entities/notification/model";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
+import { useWorkspaceThemeStore, useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { apiClient } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
 
@@ -125,7 +125,8 @@ export default function MainLayout({
   const allNotifications = [...shortsNotifications, ...apiNotifications];
 
   const theme = useWorkspaceThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   if (isStudioPage) {
     return <>{children}</>;

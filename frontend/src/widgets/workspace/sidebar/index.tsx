@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   Home,
-  BarChart2,
+  Archive,
   Radio,
   Users,
   Database,
@@ -13,11 +13,10 @@ import {
   ListChecks,
   PanelLeftClose,
   PanelLeft,
-  Mail,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
+import { useWorkspaceThemeStore, useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -25,13 +24,13 @@ export function Sidebar() {
   const { user, logout } = useAuthStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const theme = useWorkspaceThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
   const workspaceLink = user?.userId ? `/workspace/${user.userId}` : "/login";
 
   const menus = [
-    { name: "Home", href: workspaceLink, icon: Home },
-    { name: "받은 초대", href: "/invites", icon: Mail },
-    { name: "내 보관함", href: "/library", icon: BarChart2 },
+    { name: "대시보드", href: workspaceLink, icon: Home },
+    { name: "내 보관함", href: "/library", icon: Archive },
     { name: "채널 관리", href: "/channels", icon: Radio },
     { name: "팀 관리", href: "/members", icon: Users },
     { name: "저장 공간", href: "/storage", icon: Database },

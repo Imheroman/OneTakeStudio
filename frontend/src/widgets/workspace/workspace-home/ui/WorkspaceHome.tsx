@@ -15,7 +15,7 @@ import {
 import { ActionCard, PageHeader } from "@/shared/common";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
-import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 
 interface WorkspaceHomeProps {
@@ -24,8 +24,8 @@ interface WorkspaceHomeProps {
 }
 
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
-  const theme = useWorkspaceThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
   const {
     recentStudios,
     dashboardStats,

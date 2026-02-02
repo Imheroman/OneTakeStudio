@@ -2,7 +2,7 @@
 
 import { X, Bell } from "lucide-react";
 import { Button } from "@/shared/ui/button";
-import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 import type { Notification } from "@/entities/notification/model";
 
@@ -26,8 +26,8 @@ export function NotificationPanel({
   onAccept,
   onDecline,
 }: NotificationPanelProps) {
-  const theme = useWorkspaceThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   return (
     <div

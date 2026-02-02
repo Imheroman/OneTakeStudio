@@ -3,13 +3,18 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, User, Settings, LogOut } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useShortsStore } from "@/stores/useShortsStore";
-import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
-import { Button } from "@/shared/ui/button";
-import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
+import { useWorkspaceThemeStore, useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import { Avatar, AvatarImage, AvatarFallback } from "@/shared/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { IconButton } from "@/shared/common";
 import { Logo } from "@/shared/ui/logo";
 import { WorkspaceThemeToggle } from "@/widgets/workspace/workspace-theme-toggle";
@@ -21,12 +26,11 @@ export function WorkspaceTopNav() {
   const router = useRouter();
   const { user, logout, isLoggedIn } = useAuthStore();
   const theme = useWorkspaceThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
-  // 알림 패널 상태 (Zustand)
-  const { isOpen: isNotificationOpen, open: openNotifications } = useNotificationStore();
-
-  // 쇼츠 알림 상태 (배지 개수 계산용)
+  const { isOpen: isNotificationOpen, open: openNotifications } =
+    useNotificationStore();
   const { notifications: shortsNotifications } = useShortsStore();
 
   const [notificationCount, setNotificationCount] = useState(0);
@@ -44,13 +48,12 @@ export function WorkspaceTopNav() {
     }
   }, [isLoggedIn]);
 
-  // 초기 로드 및 알림 패널이 닫힐 때 카운트 새로고침
   useEffect(() => {
     fetchNotificationCount();
   }, [fetchNotificationCount, isNotificationOpen]);
 
-  // 배지: API 알림 + 쇼츠 알림 합산
   const totalCount = notificationCount + shortsNotifications.length;
+  const workspaceLink = user?.userId ? `/workspace/${user.userId}` : "/";
 
   return (
     <header
@@ -69,22 +72,6 @@ export function WorkspaceTopNav() {
 
       <div className="flex items-center gap-4">
         <WorkspaceThemeToggle isDark={isDark} />
-        <Button
-          variant="ghost"
-          size="lg"
-          className={cn(
-            "font-semibold text-base",
-            isDark
-              ? "text-gray-300 hover:text-white hover:bg-gray-800"
-              : "text-gray-800 hover:bg-gray-100"
-          )}
-          onClick={() => {
-            logout();
-            router.push("/login");
-          }}
-        >
-          LOGOUT
-        </Button>
 
         <IconButton
           icon={
@@ -98,23 +85,65 @@ export function WorkspaceTopNav() {
           size="lg"
         />
 
-        <IconButton
-          icon={
-            <Avatar size="lg">
-              <AvatarFallback
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "relative inline-flex items-center justify-center rounded-full transition-colors size-12 shrink-0",
+                isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+              )}
+              aria-label="프로필 메뉴"
+            >
+              <Avatar
+                size="lg"
                 className={cn(
-                  "font-bold text-base",
-                  isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-700"
+                  "ring-2 shrink-0",
+                  isDark ? "ring-gray-600" : "ring-gray-300"
                 )}
               >
-                {user?.nickname?.[0] ?? "U"}
-              </AvatarFallback>
-            </Avatar>
-          }
-          label="Profile"
-          href="/mypage"
-          size="lg"
-        />
+                <AvatarImage src={user?.profileImageUrl ?? undefined} />
+                <AvatarFallback
+                  className={cn(
+                    "font-bold text-base",
+                    isDark
+                      ? "bg-gray-700 text-gray-300"
+                      : "bg-gray-100 text-gray-700"
+                  )}
+                >
+                  {user?.nickname?.[0] ?? "U"}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[200px]">
+            <DropdownMenuItem asChild>
+              <Link href="/mypage" className="flex items-center gap-2 cursor-pointer">
+                <User className="h-4 w-4 shrink-0" />
+                마이페이지
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={workspaceLink}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Settings className="h-4 w-4 shrink-0" />
+                워크스페이스 세팅
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400 cursor-pointer"
+              onSelect={() => {
+                logout();
+                router.push("/login");
+              }}
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              로그아웃
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
