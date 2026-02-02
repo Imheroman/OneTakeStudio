@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Source } from "@/entities/studio/model";
 import {
   setPreferredVideoDeviceId,
@@ -139,7 +139,8 @@ export function useSourceStreams(
       streamsMapRef.current.get(sourceId),
     []
   );
-  const streamIds = Array.from(streamsMap.keys());
+  /** bannerRemainingSeconds 등 부모 리렌더 시 새 배열 생성 방지 → PreviewArea 불필요 리렌더/깜빡임 방지 */
+  const streamIds = useMemo(() => Array.from(streamsMap.keys()), [streamsMap]);
 
   return { streamsMap, getStream, streamIds };
 }

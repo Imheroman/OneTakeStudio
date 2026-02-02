@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import React, {
   useEffect,
   useRef,
   useState,
@@ -113,14 +113,14 @@ interface PreviewAreaProps {
   styleState?: StudioStyleState | null;
 }
 
-/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. 항상 프레임 안에만 표시(contain 우선). */
+/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. scheduleBatchDraw로 프레임당 1회만 그리기 요청. */
 function VideoSourceNode({
   sourceId,
   video,
   boxWidth,
   boxHeight,
   fit,
-  layerRef,
+  scheduleBatchDraw,
   isVisible,
 }: {
   sourceId: string;
@@ -128,7 +128,7 @@ function VideoSourceNode({
   boxWidth: number;
   boxHeight: number;
   fit: SourceFitMode;
-  layerRef: React.RefObject<Konva.Layer | null>;
+  scheduleBatchDraw: () => void;
   isVisible: boolean;
 }) {
   const imageRef = useRef<Konva.Image>(null);
@@ -158,20 +158,20 @@ function VideoSourceNode({
   const rect = computeSourceFitRect(fit, boxWidth, boxHeight, sourceW, sourceH);
 
   useLayoutEffect(() => {
-    if (!video || !layerRef.current || !isVisible) return;
+    if (!video || !isVisible) return;
     let rafId: number;
 
     const tick = () => {
       const img = imageRef.current;
       if (img && video.readyState >= 2) {
         img.image(video);
-        layerRef.current?.batchDraw();
+        scheduleBatchDraw();
       }
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [video, layerRef, isVisible]);
+  }, [video, scheduleBatchDraw, isVisible]);
 
   if (!isVisible) return null;
   return (
@@ -218,18 +218,18 @@ function ImageSourceNode({
   );
 }
 
-/** 배너 하단 바 + 티커(가로 스크롤) 텍스트 — 시간 기반 일정 속도, 즉시 표시, seamless 반복 */
+/** 배너 하단 바 + 티커(가로 스크롤) 텍스트 — 시간 기반 일정 속도, scheduleBatchDraw로 프레임당 1회만 그리기. */
 function BannerOverlayNode({
   banner,
   stageWidth,
   stageHeight,
-  layerRef,
+  scheduleBatchDraw,
   brandColor,
 }: {
   banner: BannerItem;
   stageWidth: number;
   stageHeight: number;
-  layerRef: React.RefObject<Konva.Layer | null>;
+  scheduleBatchDraw: () => void;
   brandColor: string;
 }) {
   const BANNER_HEIGHT = 48;
@@ -241,7 +241,7 @@ function BannerOverlayNode({
   const [tickerX, setTickerX] = useState(0);
 
   useLayoutEffect(() => {
-    if (!banner.isTicker || !layerRef.current) return;
+    if (!banner.isTicker) return;
     const now = performance.now() / 1000;
     startTimeRef.current = now;
     startXRef.current = stageWidth;
@@ -260,26 +260,31 @@ function BannerOverlayNode({
         x = stageWidth;
       }
       setTickerX(x);
-      layerRef.current?.batchDraw();
+      scheduleBatchDraw();
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [banner.isTicker, banner.text, stageWidth, layerRef]);
+  }, [banner.isTicker, banner.text, stageWidth, scheduleBatchDraw]);
+
+  const BANNER_INSET_LEFT = -2;
+  const BANNER_INSET_RIGHT = 2;
+  const bannerX = BANNER_INSET_LEFT;
+  const bannerW = stageWidth - BANNER_INSET_LEFT - BANNER_INSET_RIGHT;
 
   return (
     <>
       <Rect
-        x={0}
+        x={bannerX}
         y={y}
-        width={stageWidth}
+        width={bannerW}
         height={BANNER_HEIGHT}
         fill={brandColor || "#4f46e5"}
         listening={false}
       />
       {banner.isTicker ? (
         <Group
-          clip={{ x: 0, y, width: stageWidth, height: BANNER_HEIGHT }}
+          clip={{ x: bannerX, y, width: bannerW, height: BANNER_HEIGHT }}
           listening={false}
         >
           <Text
@@ -294,9 +299,9 @@ function BannerOverlayNode({
         </Group>
       ) : (
         <Text
-          x={16}
+          x={bannerX + 16}
           y={y + BANNER_HEIGHT / 2 - 10}
-          width={stageWidth - 32}
+          width={bannerW - 32}
           text={banner.text}
           fontSize={18}
           fontFamily="Arial"
@@ -400,7 +405,7 @@ function AssetOverlayNode({
   );
 }
 
-export function PreviewArea({
+function PreviewAreaInner({
   className,
   layout = "full",
   sources = [],
@@ -432,6 +437,26 @@ export function PreviewArea({
   const [sourceElements, setSourceElements] = useState<
     Map<string, HTMLVideoElement | HTMLImageElement>
   >(new Map());
+
+  const batchDrawScheduledRef = useRef(false);
+  const scheduleBatchDraw = useCallback(() => {
+    if (batchDrawScheduledRef.current) return;
+    batchDrawScheduledRef.current = true;
+    requestAnimationFrame(() => {
+      layerRef.current?.batchDraw();
+      batchDrawScheduledRef.current = false;
+    });
+  }, []);
+
+  const captureBatchDrawScheduledRef = useRef(false);
+  const scheduleCaptureBatchDraw = useCallback(() => {
+    if (captureBatchDrawScheduledRef.current) return;
+    captureBatchDrawScheduledRef.current = true;
+    requestAnimationFrame(() => {
+      captureLayerRef.current?.batchDraw();
+      captureBatchDrawScheduledRef.current = false;
+    });
+  }, []);
 
   /** 줌 시 DPR만 갱신. containerSize는 ResizeObserver에서만 갱신해 충돌 방지. Stage key 제거로 리마운트 없이 RAF 유지. */
   const VIEWPORT_DEBOUNCE_MS = 120;
@@ -489,8 +514,10 @@ export function PreviewArea({
   const displayScale = hasContainerSize
     ? Math.min(displayWidth / stageWidth, displayHeight / stageHeight)
     : 1;
-  const displayOffsetX = (displayWidth - stageWidth * displayScale) / 2;
-  const displayOffsetY = (displayHeight - stageHeight * displayScale) / 2;
+  const displayOffsetX = Math.floor(
+    (displayWidth - stageWidth * displayScale) / 2
+  );
+  const displayOffsetY = 0;
 
   const displaySources = sources.filter((s) => s.isVisible);
   /** 1=맨 앞(상단), 숫자 커질수록 뒤: 낮은 zIndex 먼저 그려서 높은 zIndex가 위에 오도록 */
@@ -903,7 +930,7 @@ export function PreviewArea({
                         boxWidth={transform.width}
                         boxHeight={transform.height}
                         fit="contain"
-                        layerRef={layerRef}
+                        scheduleBatchDraw={scheduleBatchDraw}
                         isVisible={source.isVisible}
                       />
                     ) : (
@@ -970,7 +997,7 @@ export function PreviewArea({
                 banner={activeBanner}
                 stageWidth={stageWidth}
                 stageHeight={stageHeight}
-                layerRef={layerRef}
+                scheduleBatchDraw={scheduleBatchDraw}
                 brandColor={styleState?.brandColor ?? "#4f46e5"}
               />
             )}
@@ -1068,7 +1095,7 @@ export function PreviewArea({
                       boxWidth={transform.width}
                       boxHeight={transform.height}
                       fit="contain"
-                      layerRef={captureLayerRef}
+                      scheduleBatchDraw={scheduleCaptureBatchDraw}
                       isVisible={source.isVisible}
                     />
                   ) : (
@@ -1114,7 +1141,7 @@ export function PreviewArea({
               banner={activeBanner}
               stageWidth={stageWidth}
               stageHeight={stageHeight}
-              layerRef={captureLayerRef}
+              scheduleBatchDraw={scheduleCaptureBatchDraw}
               brandColor={styleState?.brandColor ?? "#4f46e5"}
             />
           )}
@@ -1136,3 +1163,5 @@ export function PreviewArea({
     </div>
   );
 }
+
+export const PreviewArea = React.memo(PreviewAreaInner);
