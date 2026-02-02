@@ -7,3 +7,10 @@ export {
   type UseAdaptivePerformanceOptions,
 } from "./useAdaptivePerformance";
 export { useLiveKit, type UseLiveKitOptions, type UseLiveKitReturn } from "./useLiveKit";
+export { useEditLock, type UseEditLockOptions, type UseEditLockReturn } from "./useEditLock";
+export {
+  useStudioStateSync,
+  type UseStudioStateSyncOptions,
+  type StudioStateMessage,
+  type StudioStateType,
+} from "./useStudioStateSync";
