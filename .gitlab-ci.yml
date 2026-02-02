@@ -223,5 +223,6 @@ deploy-frontend:
   rules:
     # main, master 브랜치이면서 'frontend' 폴더 내부에 변경이 있을 때만 실행
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "fe-dev" || $CI_COMMIT_BRANCH == "INFRA/infra"  # TODO: infra 추후 제거
-      changes:
-        - frontend/**/* ```
+      # TODO: 빌드 완료 후 제거 필요
+#      changes:
+#        - frontend/**/* ```
