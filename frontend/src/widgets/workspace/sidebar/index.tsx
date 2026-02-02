@@ -13,6 +13,7 @@ import {
   ListChecks,
   PanelLeftClose,
   PanelLeft,
+  Search,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -45,18 +46,18 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "h-screen border-r flex flex-col sticky top-0 z-50 transition-all duration-300 ease-in-out shadow-sm",
+        "h-screen border-r flex flex-col sticky top-0 z-50 transition-all duration-300 ease-in-out glass-panel",
         isDark
-          ? "bg-gray-900 border-gray-800"
-          : "bg-white border-gray-200",
+          ? "bg-gray-900/80 dark:bg-gray-900/70 border-gray-700/50"
+          : "bg-white/80 border-gray-200/80",
         isExpanded ? "w-64" : "w-20",
       )}
     >
-      <div className="flex items-center justify-start px-3 pt-5 pb-3 shrink-0">
+      <div className="flex items-center gap-2 px-3 pt-5 pb-3 shrink-0">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "flex items-center justify-center w-12 h-12 rounded-lg transition-colors duration-200",
+            "flex items-center justify-center w-12 h-12 shrink-0 rounded-lg transition-colors duration-200",
             isDark
               ? "bg-transparent hover:bg-gray-800 active:bg-gray-700"
               : "bg-transparent hover:bg-gray-100 active:bg-gray-200"
@@ -73,6 +74,25 @@ export function Sidebar() {
             />
           )}
         </button>
+        {isExpanded && (
+          <div
+            className={cn(
+              "flex flex-1 items-center gap-2 rounded-full border px-3 py-2 text-sm min-w-0",
+              isDark
+                ? "bg-gray-800/60 border-gray-700 text-gray-300 placeholder:text-gray-500"
+                : "bg-gray-100/80 border-gray-200 text-gray-700 placeholder:text-gray-400"
+            )}
+          >
+            <Search className="w-4 h-4 shrink-0 opacity-60" />
+            <input
+              type="text"
+              placeholder="Ctrl + K"
+              className="flex-1 min-w-0 bg-transparent border-none outline-none"
+              readOnly
+              aria-label="검색 (Ctrl + K)"
+            />
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
@@ -84,8 +104,8 @@ export function Sidebar() {
               "flex items-center p-3 rounded-lg transition-all group relative h-12 overflow-hidden",
               pathname === menu.href
                 ? isDark
-                  ? "bg-gray-800 text-indigo-300"
-                  : "bg-indigo-50 text-indigo-600"
+                  ? "bg-onetake-point/20 text-indigo-300"
+                  : "bg-onetake-point/10 text-onetake-point"
                 : isDark
                   ? "text-gray-400 hover:bg-gray-800 hover:text-white"
                   : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",

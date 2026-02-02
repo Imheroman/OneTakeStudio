@@ -1,7 +1,13 @@
 /**
  * Studio 엔티티 모델 export
+ * FSD Phase 2: 멤버·초대 타입은 shared DTO 재사용
  */
-// 타입 export (zod 스키마에서 추론)
+export type {
+  StudioMemberResponseDto as StudioMemberResponse,
+  InviteMemberRequestDto as InviteMemberRequest,
+  InviteResponseDto as InviteResponse,
+} from "@/shared/api/dto/studio";
+
 export type {
   Studio,
   StudioDetail,
@@ -20,9 +26,6 @@ export type {
   SceneResponse,
   CreateSceneRequest,
   UpdateSceneRequest,
-  StudioMemberResponse,
-  InviteMemberRequest,
-  InviteResponse,
 } from "./schemas";
 
 // 스키마 export
@@ -44,7 +47,10 @@ export {
   PlatformSchema,
   LayoutTypeSchema,
   SourceTypeSchema,
+} from "./schemas";
+
+export {
   StudioMemberResponseSchema,
   InviteMemberRequestSchema,
   InviteResponseSchema,
-} from "./schemas";
+} from "@/shared/api/dto/studio";

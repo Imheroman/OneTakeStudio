@@ -15,11 +15,11 @@ const SEGMENTS: {
   {
     value: "system",
     icon: Monitor,
-    label: "오토 모드",
-    description: "시스템 테마를 따릅니다.",
+    label: "시스템",
+    description: "OS 테마를 따릅니다.",
   },
-  { value: "light", icon: Sun, label: "라이트 모드" },
-  { value: "dark", icon: Moon, label: "다크 모드" },
+  { value: "light", icon: Sun, label: "라이트" },
+  { value: "dark", icon: Moon, label: "다크" },
 ];
 
 interface WorkspaceThemeToggleProps {
@@ -64,8 +64,8 @@ export function WorkspaceThemeToggle({
                 isActive ? "rounded-full" : "rounded-md",
                 isActive
                   ? isDark
-                    ? "bg-gray-700 text-indigo-400 shadow"
-                    : "bg-white text-indigo-600 shadow-md"
+                    ? "bg-gray-700 text-indigo-300 shadow"
+                    : "bg-white text-onetake-point shadow-md"
                   : isDark
                     ? "text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
                     : "text-gray-500 hover:text-gray-700 hover:bg-gray-300/60"

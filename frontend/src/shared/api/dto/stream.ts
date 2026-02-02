@@ -1,5 +1,6 @@
 /**
- * Stream 엔티티 zod 스키마 (LiveKit 스트림 세션)
+ * 스튜디오 스트림 API 전용 DTO (LiveKit, Gateway: /api/streams/**)
+ * FSD: shared/api는 entities 미참조.
  */
 import { z } from "zod";
 
@@ -8,7 +9,6 @@ export const StreamJoinRequestSchema = z.object({
   participantName: z.string().min(1, "참가자 이름은 필수입니다"),
   metadata: z.string().optional(),
 });
-export type StreamJoinRequest = z.infer<typeof StreamJoinRequestSchema>;
 
 export const StreamTokenResponseSchema = z.object({
   token: z.string(),
@@ -16,7 +16,6 @@ export const StreamTokenResponseSchema = z.object({
   participantIdentity: z.string(),
   livekitUrl: z.string(),
 });
-export type StreamTokenResponse = z.infer<typeof StreamTokenResponseSchema>;
 
 export const ApiResponseStreamTokenSchema = z.object({
   success: z.boolean(),
@@ -34,10 +33,13 @@ export const StreamSessionResponseSchema = z.object({
   startedAt: z.string().nullable().optional(),
   endedAt: z.string().nullable().optional(),
 });
-export type StreamSessionResponse = z.infer<typeof StreamSessionResponseSchema>;
 
 export const ApiResponseStreamSessionSchema = z.object({
   success: z.boolean(),
   message: z.string().nullable().optional(),
   data: StreamSessionResponseSchema,
 });
+
+export type StreamJoinRequestDto = z.infer<typeof StreamJoinRequestSchema>;
+export type StreamTokenResponseDto = z.infer<typeof StreamTokenResponseSchema>;
+export type StreamSessionResponseDto = z.infer<typeof StreamSessionResponseSchema>;

@@ -21,21 +21,19 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   const userId = decodeURIComponent(id);
   const idInvalid = !isValidWorkspaceId(id);
 
-  // 비로그인 시 로그인 페이지로
+  // 인증 실패 시 로그인으로(replace). URL(id) 잘못된 경우 보정.
   useEffect(() => {
     if (!hasHydrated) return;
     if (!isLoggedIn || !accessToken) {
       router.replace("/login");
       return;
     }
-    // URL id가 undefined 등 잘못된 경우: 스토어에 userId가 있으면 올바른 URL로 교정
-    if (idInvalid && user?.userId) {
+    if (!idInvalid) return;
+    if (user?.userId) {
       router.replace(`/workspace/${user.userId}`);
+      return;
     }
-    // 로그인됐지만 userId가 아직 없고 URL도 잘못된 경우 → 랜딩으로 (데이터 로드 후 랜딩에서 워크스페이스로 리다이렉트)
-    if (idInvalid && isLoggedIn && !user?.userId) {
-      router.replace("/");
-    }
+    router.replace("/");
   }, [hasHydrated, isLoggedIn, accessToken, idInvalid, user?.userId, router]);
 
   if (!hasHydrated) {

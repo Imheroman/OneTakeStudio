@@ -97,7 +97,7 @@ export default function MainLayout({
 
     const isAuthenticated = checkAuth();
     if (!isAuthenticated) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname || "/workspace")}`);
+      router.replace(`/login?redirect=${encodeURIComponent(pathname || "/workspace")}`);
     }
   }, [hasHydrated, checkAuth, router, pathname]);
 
@@ -136,27 +136,37 @@ export default function MainLayout({
     <div
       className={cn(
         "flex h-screen w-full transition-colors duration-300",
-        isDark ? "dark bg-gray-900 text-white" : "bg-white text-gray-900"
+        isDark
+          ? "dark bg-[#0c0c0f] text-white"
+          : "bg-[#f4f4f8] text-gray-900"
       )}
       data-theme={theme}
     >
       <Sidebar />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <WorkspaceTopNav />
-        <main className="flex-1 overflow-auto p-8 transition-colors duration-300 bg-background text-foreground">
-          {children}
-        </main>
-      </div>
 
-      {showNotifications && (
-        <NotificationPanel
-          notifications={allNotifications}
-          onClose={closeNotifications}
-          onAccept={() => {}}
-          onDecline={() => {}}
-        />
-      )}
+        <div className="flex-1 flex min-w-0 min-h-0">
+          <main className="flex-1 overflow-auto p-8 transition-colors duration-300 bg-transparent text-foreground min-w-0">
+            {children}
+          </main>
+
+          <div
+            className={cn(
+              "shrink-0 overflow-hidden transition-[width] duration-300 ease-out",
+              showNotifications ? "w-96" : "w-0"
+            )}
+          >
+            <NotificationPanel
+              notifications={allNotifications}
+              onClose={closeNotifications}
+              onAccept={() => {}}
+              onDecline={() => {}}
+            />
+          </div>
+        </div>
+      </div>
 
       <ShortsResultModal />
     </div>

@@ -1,16 +1,17 @@
 /**
  * 스튜디오 멤버 API
- * 백엔드 ApiResponse<T> 형식: { resultCode?, success, message?, data }
+ * FSD: shared는 entities 미참조. dto/studio 사용.
  */
 import { z } from "zod";
 import { apiClient } from "./client";
 import {
   StudioMemberResponseSchema,
+  InviteMemberRequestSchema,
   InviteResponseSchema,
-  type StudioMemberResponse,
-  type InviteMemberRequest,
-  type InviteResponse,
-} from "@/entities/studio/model";
+  type StudioMemberResponseDto,
+  type InviteMemberRequestDto,
+  type InviteResponseDto,
+} from "./dto/studio";
 
 const ApiResponseMembersSchema = z.object({
   resultCode: z.string().optional(),
@@ -35,7 +36,7 @@ const ApiResponseInviteListSchema = z.object({
 
 export async function getStudioMembers(
   studioId: string | number,
-): Promise<StudioMemberResponse[]> {
+): Promise<StudioMemberResponseDto[]> {
   const res = await apiClient.get(
     `/api/studios/${studioId}/members`,
     ApiResponseMembersSchema,
@@ -45,8 +46,8 @@ export async function getStudioMembers(
 
 export async function inviteStudioMember(
   studioId: string | number,
-  body: InviteMemberRequest,
-): Promise<InviteResponse> {
+  body: InviteMemberRequestDto,
+): Promise<InviteResponseDto> {
   const res = await apiClient.post(
     `/api/studios/${studioId}/members/invite`,
     ApiResponseInviteSchema,
@@ -69,7 +70,7 @@ export async function updateMemberRole(
   studioId: string | number,
   memberId: number,
   role: "ADMIN" | "MEMBER",
-): Promise<StudioMemberResponse> {
+): Promise<StudioMemberResponseDto> {
   const ApiResponseMemberSchema = z.object({
     resultCode: z.string().optional(),
     success: z.boolean(),
@@ -84,10 +85,9 @@ export async function updateMemberRole(
   return res.data;
 }
 
-/** 스튜디오 초대 대기 목록 — GET /api/studios/{studioId}/invites */
 export async function getStudioInvites(
   studioId: string | number,
-): Promise<InviteResponse[]> {
+): Promise<InviteResponseDto[]> {
   const res = await apiClient.get(
     `/api/studios/${studioId}/invites`,
     ApiResponseInviteListSchema,
@@ -95,7 +95,6 @@ export async function getStudioInvites(
   return Array.isArray(res.data) ? res.data : [];
 }
 
-/** 초대 취소 — DELETE /api/studios/{studioId}/invites/{inviteId} */
 export async function cancelStudioInvite(
   studioId: string | number,
   inviteId: string,

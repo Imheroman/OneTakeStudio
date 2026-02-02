@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, User, Settings, LogOut } from "lucide-react";
+import { Bell, User, Settings, LogOut, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useShortsStore } from "@/stores/useShortsStore";
@@ -29,7 +29,7 @@ export function WorkspaceTopNav() {
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
 
-  const { isOpen: isNotificationOpen, open: openNotifications } =
+  const { isOpen: isNotificationOpen, toggle: toggleNotifications } =
     useNotificationStore();
   const { notifications: shortsNotifications } = useShortsStore();
 
@@ -58,10 +58,10 @@ export function WorkspaceTopNav() {
   return (
     <header
       className={cn(
-        "h-20 border-b flex items-center justify-between px-4 sticky top-0 z-40 transition-colors duration-300",
+        "h-16 border-b flex items-center justify-between px-4 sticky top-0 z-40 transition-colors duration-300 glass-panel",
         isDark
-          ? "bg-gray-900 border-gray-800"
-          : "bg-white border-gray-200"
+          ? "bg-gray-900/80 border-gray-700/50"
+          : "bg-white/80 border-gray-200/80"
       )}
     >
       <Logo
@@ -76,13 +76,24 @@ export function WorkspaceTopNav() {
         <IconButton
           icon={
             <Bell
-              className={cn("h-6 w-6", isDark ? "text-gray-400" : "text-gray-700")}
+              className={cn(
+                "h-6 w-6",
+                isNotificationOpen
+                  ? "text-onetake-point"
+                  : isDark
+                    ? "text-gray-400"
+                    : "text-gray-700"
+              )}
             />
           }
           label="알림"
           badge={totalCount > 0 ? totalCount : undefined}
-          onClick={openNotifications}
+          onClick={toggleNotifications}
           size="lg"
+          className={cn(
+            isNotificationOpen &&
+              (isDark ? "bg-onetake-point/20" : "bg-onetake-point/10")
+          )}
         />
 
         <DropdownMenu>
@@ -90,7 +101,7 @@ export function WorkspaceTopNav() {
             <button
               type="button"
               className={cn(
-                "relative inline-flex items-center justify-center rounded-full transition-colors size-12 shrink-0",
+                "group relative inline-flex items-center gap-1 rounded-full py-1 pr-1.5 pl-1 transition-colors shrink-0",
                 isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
               )}
               aria-label="프로필 메뉴"
@@ -114,9 +125,24 @@ export function WorkspaceTopNav() {
                   {user?.nickname?.[0] ?? "U"}
                 </AvatarFallback>
               </Avatar>
+              <ChevronDown
+                className={cn(
+                  "w-4 h-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180",
+                  isDark ? "text-gray-400" : "text-gray-500"
+                )}
+                aria-hidden
+              />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[200px]">
+            <div
+              className={cn(
+                "px-2 py-2 border-b text-sm font-medium truncate",
+                isDark ? "border-gray-700 text-gray-200" : "border-gray-100 text-gray-800"
+              )}
+            >
+              {user?.nickname ?? "사용자"}
+            </div>
             <DropdownMenuItem asChild>
               <Link href="/mypage" className="flex items-center gap-2 cursor-pointer">
                 <User className="h-4 w-4 shrink-0" />

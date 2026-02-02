@@ -20,6 +20,10 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+/**
+ * app 레이어: 인증 상태에 따른 라우팅·토큰 만료 체크·쿠키 동기화.
+ * FSD: app에서 stores 사용 허용.
+ */
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
   const pathname = usePathname();

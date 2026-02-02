@@ -32,7 +32,7 @@ export function NotificationPanel({
   return (
     <div
       className={cn(
-        "fixed right-0 top-0 h-full w-96 border-l shadow-xl z-50 flex flex-col transition-colors",
+        "h-full min-w-96 w-96 border-l shadow-xl flex flex-col transition-colors",
         isDark
           ? "bg-gray-900 border-gray-800"
           : "bg-white border-gray-200"

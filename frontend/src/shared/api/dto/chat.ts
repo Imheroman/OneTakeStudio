@@ -1,5 +1,6 @@
 /**
- * Chat 엔티티 zod 스키마 (백엔드 회신 기준)
+ * 채팅 API 전용 DTO
+ * FSD: shared/api는 entities 미참조.
  */
 import { z } from "zod";
 
@@ -53,7 +54,7 @@ export const ApiResponseChatMessageArraySchema = z.object({
   data: z.array(ChatMessageSchema),
 });
 
-export type ChatPlatform = z.infer<typeof ChatPlatformSchema>;
-export type ChatMessageType = z.infer<typeof ChatMessageTypeSchema>;
-export type ChatMessage = z.infer<typeof ChatMessageSchema>;
-export type ChatSendRequest = z.infer<typeof ChatSendRequestSchema>;
+export type ChatPlatformDto = z.infer<typeof ChatPlatformSchema>;
+export type ChatMessageTypeDto = z.infer<typeof ChatMessageTypeSchema>;
+export type ChatMessageDto = z.infer<typeof ChatMessageSchema>;
+export type ChatSendRequestDto = z.infer<typeof ChatSendRequestSchema>;

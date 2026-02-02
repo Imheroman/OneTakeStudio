@@ -82,7 +82,7 @@ export function ActionCard({
           </p>
         </div>
         <Link href={href} onClick={onClick}>
-          <Button className="bg-indigo-600 hover:bg-indigo-700 px-8 py-2 h-auto text-base">
+          <Button className="bg-onetake-point hover:bg-onetake-point/90 px-8 py-2 h-auto text-base">
             {actionLabel}
           </Button>
         </Link>

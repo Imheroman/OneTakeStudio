@@ -1,5 +1,6 @@
 /**
- * Recording 엔티티 zod 스키마 (백엔드 회신 기준)
+ * 스튜디오 녹화 API 전용 DTO (Gateway: /api/recordings/**)
+ * FSD: shared/api는 entities 미참조.
  */
 import { z } from "zod";
 
@@ -12,7 +13,6 @@ export const RecordingStatusSchema = z.enum([
   "COMPLETED",
   "FAILED",
 ]);
-export type RecordingStatus = z.infer<typeof RecordingStatusSchema>;
 
 export const RecordingResponseSchema = z.object({
   recordingId: z.string(),
@@ -28,7 +28,6 @@ export const RecordingResponseSchema = z.object({
   createdAt: z.string().nullable().optional(),
   errorMessage: z.string().nullable().optional(),
 });
-export type RecordingResponse = z.infer<typeof RecordingResponseSchema>;
 
 export const RecordingStartRequestSchema = z.object({
   studioId: z.number(),
@@ -36,7 +35,6 @@ export const RecordingStartRequestSchema = z.object({
   quality: z.string().optional(),
   audioOnly: z.boolean().optional(),
 });
-export type RecordingStartRequest = z.infer<typeof RecordingStartRequestSchema>;
 
 export const ApiResponseRecordingSchema = z.object({
   success: z.boolean(),
@@ -44,21 +42,18 @@ export const ApiResponseRecordingSchema = z.object({
   data: RecordingResponseSchema,
 });
 
-export const ApiResponseRecordingListSchema = z.object({
+export const ApiResponseRecordingArraySchema = z.object({
   success: z.boolean(),
-  message: z.string().optional(),
+  message: z.string().nullable().optional(),
   data: z.array(RecordingResponseSchema),
 });
 
-/** active 조회 시 진행 중인 녹화가 없으면 data: null */
 export const ApiResponseRecordingNullableSchema = z.object({
   success: z.boolean(),
   message: z.string().nullable().optional(),
   data: RecordingResponseSchema.nullable(),
 });
 
-export const ApiResponseRecordingArraySchema = z.object({
-  success: z.boolean(),
-  message: z.string().nullable().optional(),
-  data: z.array(RecordingResponseSchema),
-});
+export type RecordingStatusDto = z.infer<typeof RecordingStatusSchema>;
+export type RecordingResponseDto = z.infer<typeof RecordingResponseSchema>;
+export type RecordingStartRequestDto = z.infer<typeof RecordingStartRequestSchema>;
