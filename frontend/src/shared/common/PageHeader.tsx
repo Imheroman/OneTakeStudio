@@ -6,6 +6,10 @@ interface PageHeaderProps {
   description?: string;
   action?: ReactNode;
   className?: string;
+  /** 제목(h1)에 적용할 클래스. 테마 대응 시 사용 */
+  titleClassName?: string;
+  /** 설명(p)에 적용할 클래스. 테마 대응 시 사용 */
+  descriptionClassName?: string;
 }
 
 export function PageHeader({
@@ -13,6 +17,8 @@ export function PageHeader({
   description,
   action,
   className,
+  titleClassName,
+  descriptionClassName,
 }: PageHeaderProps) {
   return (
     <div
@@ -22,11 +28,23 @@ export function PageHeader({
       )}
     >
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+        <h1
+          className={cn(
+            "text-3xl font-bold tracking-tight",
+            titleClassName ?? "text-gray-900"
+          )}
+        >
           {title}
         </h1>
         {description && (
-          <p className="text-gray-500">{description}</p>
+          <p
+            className={cn(
+              "text-sm",
+              descriptionClassName ?? "text-gray-500"
+            )}
+          >
+            {description}
+          </p>
         )}
       </div>
       {action && <div>{action}</div>}

@@ -15,6 +15,8 @@ import {
 import { ActionCard, PageHeader } from "@/shared/common";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
+import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
+import { cn } from "@/shared/lib/utils";
 
 interface WorkspaceHomeProps {
   userId: string;
@@ -22,6 +24,8 @@ interface WorkspaceHomeProps {
 }
 
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
+  const theme = useWorkspaceThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
   const {
     recentStudios,
     dashboardStats,
@@ -37,14 +41,18 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
       <PageHeader
         title={
           <>
-            <span className="text-indigo-600">{userName ?? userId}</span>님,
-            반가워요!
+            <span className={cn("font-semibold", isDark ? "text-indigo-400" : "text-indigo-600")}>
+              {userName ?? userId}
+            </span>
+            님, 반가워요!
           </>
         }
         description="오늘도 당신만의 멋진 방송을 만들어보세요."
+        titleClassName={isDark ? "text-gray-100" : "text-gray-900"}
+        descriptionClassName={isDark ? "text-gray-400" : "text-gray-500"}
       />
       {dashboardStats != null && (
-        <p className="text-sm text-gray-500 -mt-4">
+        <p className={cn("text-sm -mt-4", isDark ? "text-gray-400" : "text-gray-500")}>
           스튜디오 {dashboardStats.totalStudioCount}개
           · 연결된 송출 채널 {dashboardStats.connectedDestinationCount}개
         </p>
@@ -52,9 +60,10 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ActionCard
+          dark={isDark}
           title="Start Live Streaming"
           description="Go live instantly with our professional streaming tools"
-          icon={<Radio className="h-8 w-8 text-gray-600" />}
+          icon={<Radio className="h-8 w-8" />}
           href="#"
           actionLabel="Start Streaming"
           onClick={(e) => {
@@ -63,9 +72,10 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
           }}
         />
         <ActionCard
+          dark={isDark}
           title="Start Recording"
           description="Record high-quality content for later publishing"
-          icon={<Video className="h-8 w-8 text-gray-600" />}
+          icon={<Video className="h-8 w-8" />}
           href="#"
           actionLabel="Start Recording"
           onClick={(e) => {
@@ -81,17 +91,48 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
         initialType={createDialogType}
       />
 
-      <Card className="border-gray-200">
+      <Card
+        className={cn(
+          isDark ? "border-gray-700 bg-gray-800/50" : "border-gray-200"
+        )}
+      >
         <CardContent className="p-6">
-          <h3 className="text-xl font-bold mb-6">Recent Studios</h3>
-          <div className="rounded-md border border-gray-100">
+          <h3
+            className={cn(
+              "text-xl font-bold mb-6",
+              isDark ? "text-gray-100" : "text-gray-900"
+            )}
+          >
+            Recent Studios
+          </h3>
+          <div
+            className={cn(
+              "rounded-md border",
+              isDark ? "border-gray-700" : "border-gray-100"
+            )}
+          >
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-transparent bg-gray-50/50">
-                  <TableHead className="w-[50%] text-gray-600 font-semibold">
+                <TableRow
+                  className={cn(
+                    "hover:bg-transparent",
+                    isDark ? "bg-gray-800" : "bg-gray-50/50"
+                  )}
+                >
+                  <TableHead
+                    className={cn(
+                      "w-[50%] font-semibold",
+                      isDark ? "text-gray-400" : "text-gray-600"
+                    )}
+                  >
                     Title
                   </TableHead>
-                  <TableHead className="text-gray-600 font-semibold">
+                  <TableHead
+                    className={cn(
+                      "font-semibold",
+                      isDark ? "text-gray-400" : "text-gray-600"
+                    )}
+                  >
                     Last Modified
                   </TableHead>
                   <TableHead className="text-right" />
@@ -102,7 +143,10 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
                   <TableRow>
                     <TableCell
                       colSpan={3}
-                      className="text-center text-gray-500 py-8"
+                      className={cn(
+                        "text-center py-8",
+                        isDark ? "text-gray-400" : "text-gray-500"
+                      )}
                     >
                       로딩 중...
                     </TableCell>
@@ -111,7 +155,10 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
                   <TableRow>
                     <TableCell
                       colSpan={3}
-                      className="text-center text-gray-500 py-8"
+                      className={cn(
+                        "text-center py-8",
+                        isDark ? "text-gray-400" : "text-gray-500"
+                      )}
                     >
                       최근 스튜디오가 없습니다.
                     </TableCell>
@@ -120,12 +167,26 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
                   recentStudios.map((studio) => (
                     <TableRow
                       key={studio.id}
-                      className="hover:bg-gray-50/80 transition-colors"
+                      className={cn(
+                        "transition-colors",
+                        isDark
+                          ? "hover:bg-gray-700/50"
+                          : "hover:bg-gray-50/80"
+                      )}
                     >
-                      <TableCell className="font-medium text-gray-700 py-4">
+                      <TableCell
+                        className={cn(
+                          "font-medium py-4",
+                          isDark ? "text-gray-200" : "text-gray-700"
+                        )}
+                      >
                         {studio.title}
                       </TableCell>
-                      <TableCell className="text-gray-500">{studio.date}</TableCell>
+                      <TableCell
+                        className={isDark ? "text-gray-400" : "text-gray-500"}
+                      >
+                        {studio.date}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Link href={`/studio/${studio.id}`}>
                           <Button

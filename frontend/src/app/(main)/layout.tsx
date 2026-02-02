@@ -13,12 +13,9 @@ import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
 import { apiClient } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
 
-// 쇼츠 관련 Import
 import { useShortsPolling } from "@/features/shorts/useShortsPolling";
 import { ShortsResultModal } from "@/widgets/shorts/shorts-result-modal";
 import { useShortsStore } from "@/stores/useShortsStore";
-
-// 간단한 응답 스키마
 import { z } from "zod";
 const MessageResponseSchema = z.object({
   message: z.string().optional(),
@@ -35,20 +32,14 @@ export default function MainLayout({
   const { isOpen: showNotifications, close: closeNotifications } =
     useNotificationStore();
 
-  // 1. 기존 API 알림 데이터
   const [apiNotifications, setApiNotifications] = useState<
     NotificationWithActions[]
   >([]);
-
-  // 2. 쇼츠 스토어 데이터
   const { notifications: shortsMsgs, openResultModal } = useShortsStore();
 
-  // 폴링 시작 (백그라운드 감지)
   useShortsPolling();
-
   const isStudioPage = pathname?.startsWith("/studio");
 
-  // 알림 목록 조회
   const fetchNotifications = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
@@ -69,7 +60,6 @@ export default function MainLayout({
                         MessageResponseSchema,
                         {},
                       );
-                      // 알림 목록에서 제거
                       setApiNotifications((prev) =>
                         prev.filter((n) => n.id !== notif.id),
                       );
@@ -85,7 +75,6 @@ export default function MainLayout({
                         MessageResponseSchema,
                         {},
                       );
-                      // 알림 목록에서 제거
                       setApiNotifications((prev) =>
                         prev.filter((n) => n.id !== notif.id),
                       );
@@ -103,7 +92,6 @@ export default function MainLayout({
     }
   }, [isLoggedIn]);
 
-  // 인증 상태 체크 (토큰 만료 확인)
   useEffect(() => {
     if (!hasHydrated) return;
 
@@ -117,7 +105,6 @@ export default function MainLayout({
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // 쇼츠 알림 메시지를 Notification 포맷으로 변환
   const shortsNotifications: NotificationWithActions[] = shortsMsgs.map(
     (msg, index) => ({
       id: `shorts-${index}-${Date.now()}`,
@@ -135,7 +122,6 @@ export default function MainLayout({
     }),
   );
 
-  // 두 리스트 합치기 (최신 쇼츠 알림이 위로 오게)
   const allNotifications = [...shortsNotifications, ...apiNotifications];
 
   const theme = useWorkspaceThemeStore((s) => s.theme);
@@ -149,7 +135,7 @@ export default function MainLayout({
     <div
       className={cn(
         "flex h-screen w-full transition-colors duration-300",
-        isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
+        isDark ? "dark bg-gray-900 text-white" : "bg-white text-gray-900"
       )}
       data-theme={theme}
     >
@@ -157,32 +143,20 @@ export default function MainLayout({
 
       <div className="flex-1 flex flex-col min-w-0">
         <WorkspaceTopNav />
-        <main
-          className={cn(
-            "flex-1 overflow-auto p-8 transition-colors duration-300",
-            isDark ? "bg-gray-900" : "bg-white"
-          )}
-        >
+        <main className="flex-1 overflow-auto p-8 transition-colors duration-300 bg-background text-foreground">
           {children}
         </main>
       </div>
 
-      {/* 알림 패널 */}
       {showNotifications && (
         <NotificationPanel
           notifications={allNotifications}
           onClose={closeNotifications}
-          onAccept={(id) => {
-            // actions.accept()가 실행되므로 여기서는 추가 로직 불필요
-            // 쇼츠 알림만 처리 (API 알림은 accept 함수 내에서 처리)
-          }}
-          onDecline={(id) => {
-            // actions.decline()가 실행되므로 여기서는 추가 로직 불필요
-          }}
+          onAccept={() => {}}
+          onDecline={() => {}}
         />
       )}
 
-      {/* 쇼츠 결과 모달 (전역 배치) */}
       <ShortsResultModal />
     </div>
   );

@@ -27,8 +27,8 @@ export function useVideoLibrary() {
     fetchVideos();
   }, [fetchVideos]);
 
-  const handleMoreClick = (video: Video) => {
-    console.log("More clicked:", video);
+  const handleMoreClick = (_video: Video) => {
+    // 추후 메뉴(다운로드/클립 등) 확장 시 사용
   };
 
   return {

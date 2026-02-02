@@ -53,17 +53,14 @@ export function Sidebar() {
         isExpanded ? "w-64" : "w-20",
       )}
     >
-      <div
-        className={cn(
-          "h-14 flex items-start justify-start px-3 pt-5 border-b overflow-hidden transition-colors duration-300",
-          isDark ? "border-gray-800" : "border-gray-100"
-        )}
-      >
+      <div className="flex items-center justify-start px-3 pt-5 pb-3 shrink-0">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "flex items-center justify-center w-12 h-12 p-3 rounded-lg transition-colors duration-200 shrink-0",
-            isDark ? "hover:bg-gray-800" : "hover:bg-gray-100"
+            "flex items-center justify-center w-12 h-12 rounded-lg transition-colors duration-200",
+            isDark
+              ? "bg-transparent hover:bg-gray-800 active:bg-gray-700"
+              : "bg-transparent hover:bg-gray-100 active:bg-gray-200"
           )}
           aria-label={isExpanded ? "사이드바 닫기" : "사이드바 열기"}
         >

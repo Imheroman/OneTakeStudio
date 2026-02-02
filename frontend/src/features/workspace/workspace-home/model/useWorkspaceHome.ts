@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDashboard } from "@/shared/api/workspace";
-import type { RecentStudio } from "@/entities/studio/model";
+import { getDashboard, type RecentStudioItem } from "@/shared/api/workspace";
 
 export function useWorkspaceHome(userId: string) {
-  const [recentStudios, setRecentStudios] = useState<RecentStudio[]>([]);
+  const [recentStudios, setRecentStudios] = useState<RecentStudioItem[]>([]);
   const [dashboardStats, setDashboardStats] = useState<{
     connectedDestinationCount: number;
     totalStudioCount: number;

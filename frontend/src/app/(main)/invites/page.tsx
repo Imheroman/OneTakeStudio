@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
 import { useRouter } from "next/navigation";
 import {
   getReceivedInvites,
@@ -19,6 +20,7 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 import { Mail, Loader2, Check, X, Video } from "lucide-react";
+import { cn } from "@/shared/lib/utils";
 
 function formatDate(s: string) {
   if (!s) return "—";
@@ -38,6 +40,8 @@ function formatDate(s: string) {
 
 export default function InvitesPage() {
   const { isLoggedIn, hasHydrated } = useAuthStore();
+  const theme = useWorkspaceThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
   const router = useRouter();
   const [invites, setInvites] = useState<ReceivedInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,42 +99,67 @@ export default function InvitesPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-          <Mail className="h-8 w-8 text-indigo-600" />
+        <h1
+          className={cn(
+            "text-3xl font-bold tracking-tight flex items-center gap-2",
+            isDark ? "text-gray-100" : "text-gray-900"
+          )}
+        >
+          <Mail className={cn("h-8 w-8", isDark ? "text-indigo-400" : "text-indigo-600")} />
           받은 초대
         </h1>
-        <p className="text-gray-500 mt-1">
+        <p className={cn("mt-1", isDark ? "text-gray-400" : "text-gray-500")}>
           스튜디오 초대를 수락하거나 거절할 수 있습니다.
         </p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12 text-gray-500">
+        <div
+          className={cn(
+            "flex items-center justify-center py-12",
+            isDark ? "text-gray-400" : "text-gray-500"
+          )}
+        >
           <Loader2 className="h-8 w-8 animate-spin mr-2" />
           로딩 중...
         </div>
       ) : invites.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-gray-500">
-            <Mail className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+        <Card className={cn(isDark && "border-gray-700 bg-gray-800/50")}>
+          <CardContent
+            className={cn(
+              "py-12 text-center",
+              isDark ? "text-gray-400" : "text-gray-500"
+            )}
+          >
+            <Mail className={cn("h-12 w-12 mx-auto mb-3", isDark ? "text-gray-500" : "text-gray-300")} />
             <p>받은 초대가 없습니다.</p>
           </CardContent>
         </Card>
       ) : (
         <ul className="space-y-4">
           {invites.map((inv) => (
-            <Card key={inv.inviteId}>
+            <Card
+              key={inv.inviteId}
+              className={cn(isDark && "border-gray-700 bg-gray-800/50")}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="text-lg truncate">
+                    <CardTitle
+                      className={cn(
+                        "text-lg truncate",
+                        isDark ? "text-gray-100" : "text-gray-900"
+                      )}
+                    >
                       {inv.studioName}
                     </CardTitle>
-                    <CardDescription className="mt-1">
+                    <CardDescription
+                      className={cn("mt-1", isDark && "text-gray-400")}
+                    >
                       {inv.inviterNickname ?? inv.inviterEmail ?? "알 수 없음"}
                       님이 {inv.role} 역할로 초대했습니다.
                     </CardDescription>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className={cn("text-xs mt-1", isDark ? "text-gray-500" : "text-gray-400")}>
                       만료: {formatDate(inv.expiresAt)}
                     </p>
                   </div>
@@ -139,7 +168,12 @@ export default function InvitesPage() {
                       size="sm"
                       variant="outline"
                       asChild
-                      className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                      className={cn(
+                        "text-indigo-600",
+                        isDark
+                          ? "border-indigo-600 text-indigo-400 hover:bg-indigo-900/30"
+                          : "border-indigo-200 hover:bg-indigo-50"
+                      )}
                     >
                       <Link href={`/studio/${inv.studioId}`}>
                         <Video className="h-4 w-4 mr-1" />
@@ -166,7 +200,11 @@ export default function InvitesPage() {
                       variant="outline"
                       disabled={actingId === inv.inviteId}
                       onClick={() => handleReject(inv)}
-                      className="text-gray-600 hover:bg-gray-100"
+                      className={cn(
+                        isDark
+                          ? "text-gray-400 border-gray-600 hover:bg-gray-700"
+                          : "text-gray-600 hover:bg-gray-100"
+                      )}
                     >
                       <X className="h-4 w-4 mr-1" />
                       거절
