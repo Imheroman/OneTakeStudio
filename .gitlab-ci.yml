@@ -205,3 +205,23 @@ deploy-media:
       changes:
         - infra/apps/media/**/*
         - infra/k8s/apps/media/**/* # k8s 설정 변경 감지 (추가 권장)
+
+# ─────────────────────────────────────────────
+# Frontend Vercel 배포 (추가됨)
+# ─────────────────────────────────────────────
+deploy-frontend:
+  stage: deploy
+  image: node:20 # Vercel CLI 실행을 위한 Node 환경
+  script:
+    - npm install --global vercel
+    - cd frontend
+
+    # Vercel 배포 명령
+    - vercel pull --yes --environment=production --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN
+    - vercel build --prod --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN
+    - vercel deploy --prod --prebuilt --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN
+  rules:
+    # main, master 브랜치이면서 'frontend' 폴더 내부에 변경이 있을 때만 실행
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "fe-dev"
+      changes:
+        - frontend/**/* ```
