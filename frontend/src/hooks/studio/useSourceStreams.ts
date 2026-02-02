@@ -28,9 +28,7 @@ export function useSourceStreams(
       (s.type === "video" && isVideoEnabled) ||
       s.type === "audio" ||
       (s.type === "screen" && isVideoEnabled);
-    const sourceIds = new Set(
-      sources.filter(needStream).map((s) => s.id)
-    );
+    const sourceIds = new Set(sources.filter(needStream).map((s) => s.id));
     sourceIdsRef.current = sourceIds;
     const sourceById = new Map(sources.map((s) => [s.id, s]));
 
@@ -81,8 +79,17 @@ export function useSourceStreams(
       const constraints: MediaStreamConstraints = {};
       if (source.type === "video") {
         constraints.video = source.deviceId
-          ? { deviceId: { ideal: source.deviceId }, width: { ideal: 1920, min: 640 }, height: { ideal: 1080, min: 480 }, frameRate: { ideal: 30 } }
-          : { width: { ideal: 1920, min: 640 }, height: { ideal: 1080, min: 480 }, frameRate: { ideal: 30 } };
+          ? {
+              deviceId: { ideal: source.deviceId },
+              width: { ideal: 1920, min: 640 },
+              height: { ideal: 1080, min: 480 },
+              frameRate: { ideal: 30 },
+            }
+          : {
+              width: { ideal: 1920, min: 640 },
+              height: { ideal: 1080, min: 480 },
+              frameRate: { ideal: 30 },
+            };
         constraints.audio = isAudioEnabled;
       } else if (source.type === "audio") {
         constraints.audio = source.deviceId
@@ -126,9 +133,11 @@ export function useSourceStreams(
     };
   }, []);
 
+  /** streamsMapRef 사용으로 stale closure 방지 - 스트림이 비동기 로드된 후에도 최신 맵 참조 */
   const getStream = useCallback(
-    (sourceId: string): MediaStream | undefined => streamsMap.get(sourceId),
-    [streamsMap]
+    (sourceId: string): MediaStream | undefined =>
+      streamsMapRef.current.get(sourceId),
+    []
   );
   const streamIds = Array.from(streamsMap.keys());
 

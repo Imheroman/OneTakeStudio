@@ -60,7 +60,7 @@ function snapPosition(
   width: number,
   height: number,
   stageWidth: number,
-  stageHeight: number,
+  stageHeight: number
 ): { x: number; y: number } {
   let nx = x;
   let ny = y;
@@ -83,7 +83,7 @@ function snapPosition(
 
 function snapSize(
   width: number,
-  height: number,
+  height: number
 ): { width: number; height: number } {
   return {
     width: Math.max(1, snapToGrid(width, SNAP_GRID)),
@@ -105,7 +105,7 @@ interface PreviewAreaProps {
   sourceTransforms?: Record<string, SourceTransform>;
   setSourceTransform?: (
     sourceId: string,
-    partial: Partial<SourceTransform>,
+    partial: Partial<SourceTransform>
   ) => void;
   onBringSourceToFront?: (sourceId: string) => void;
   activeBanner?: BannerItem | null;
@@ -218,7 +218,7 @@ function ImageSourceNode({
   );
 }
 
-/** 배너 하단 바 + 티커(가로 스크롤) 텍스트 — 티커 시 전체 영역을 가로로 이동 */
+/** 배너 하단 바 + 티커(가로 스크롤) 텍스트 — 시간 기반 일정 속도, 즉시 표시, seamless 반복 */
 function BannerOverlayNode({
   banner,
   stageWidth,
@@ -233,26 +233,39 @@ function BannerOverlayNode({
   brandColor: string;
 }) {
   const BANNER_HEIGHT = 48;
+  const TICKER_SPEED = 80; // px/s (일정 속도)
+  const CHAR_WIDTH_EST = 11; // Arial 18px 대략
   const y = stageHeight - BANNER_HEIGHT;
-  const tickerOffsetRef = useRef(stageWidth);
-  const [tickerX, setTickerX] = useState(stageWidth);
+  const startTimeRef = useRef(0);
+  const startXRef = useRef(0);
+  const [tickerX, setTickerX] = useState(0);
 
   useLayoutEffect(() => {
     if (!banner.isTicker || !layerRef.current) return;
-    tickerOffsetRef.current = stageWidth;
+    const now = performance.now() / 1000;
+    startTimeRef.current = now;
+    startXRef.current = stageWidth;
     setTickerX(stageWidth);
+
     let rafId: number;
     const tick = () => {
-      tickerOffsetRef.current -= 1.2;
-      if (tickerOffsetRef.current < -stageWidth * 2)
-        tickerOffsetRef.current = stageWidth;
-      setTickerX(tickerOffsetRef.current);
+      const t = performance.now() / 1000;
+      const elapsed = t - startTimeRef.current;
+      const textWidth = Math.max(100, banner.text.length * CHAR_WIDTH_EST);
+      let x = startXRef.current - elapsed * TICKER_SPEED;
+
+      if (x < -textWidth) {
+        startTimeRef.current = t;
+        startXRef.current = stageWidth;
+        x = stageWidth;
+      }
+      setTickerX(x);
       layerRef.current?.batchDraw();
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [banner.isTicker, stageWidth, layerRef]);
+  }, [banner.isTicker, banner.text, stageWidth, layerRef]);
 
   return (
     <>
@@ -407,6 +420,7 @@ export function PreviewArea({
 }: PreviewAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<Konva.Layer>(null);
+  const captureLayerRef = useRef<Konva.Layer>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef<Map<string, Konva.Group>>(new Map());
   const assetGroupRef = useRef<Konva.Group>(null);
@@ -460,7 +474,7 @@ export function PreviewArea({
       width: 200,
       height: 60,
     }),
-    [stageWidth],
+    [stageWidth]
   );
   const [assetTransform, setAssetTransform] = useState(defaultAssetTransform);
 
@@ -468,26 +482,28 @@ export function PreviewArea({
     if (activeAsset) setAssetTransform(defaultAssetTransform());
   }, [activeAsset?.id, defaultAssetTransform]);
 
-  const scale =
-    containerSize.width > 0 && containerSize.height > 0
-      ? Math.min(
-          containerSize.width / stageWidth,
-          containerSize.height / stageHeight,
-        )
-      : 1;
+  /** 프리뷰 표시용: 비율 유지, 레터박스 허용. 컨테이너 크기 미측정 시 논리 해상도 사용 */
+  const hasContainerSize = containerSize.width > 0 && containerSize.height > 0;
+  const displayWidth = hasContainerSize ? containerSize.width : stageWidth;
+  const displayHeight = hasContainerSize ? containerSize.height : stageHeight;
+  const displayScale = hasContainerSize
+    ? Math.min(displayWidth / stageWidth, displayHeight / stageHeight)
+    : 1;
+  const displayOffsetX = (displayWidth - stageWidth * displayScale) / 2;
+  const displayOffsetY = (displayHeight - stageHeight * displayScale) / 2;
 
   const displaySources = sources.filter((s) => s.isVisible);
   /** 1=맨 앞(상단), 숫자 커질수록 뒤: 낮은 zIndex 먼저 그려서 높은 zIndex가 위에 오도록 */
   const sortedSources = [...displaySources].sort(
     (a, b) =>
       (sourceTransforms[a.id]?.zIndex ?? 0) -
-      (sourceTransforms[b.id]?.zIndex ?? 0),
+      (sourceTransforms[b.id]?.zIndex ?? 0)
   );
   const arranged = arrangeSourcesInLayout(
     layout,
     sortedSources.map((s, i) => ({ source: s, index: i })),
     stageWidth,
-    stageHeight,
+    stageHeight
   );
 
   const getTransform = useCallback(
@@ -511,27 +527,40 @@ export function PreviewArea({
         zIndex: index,
       };
     },
-    [sourceTransforms, arranged, stageWidth, stageHeight],
+    [sourceTransforms, arranged, stageWidth, stageHeight]
   );
 
+  const hasSources = sources.length > 0 && sources.some((s) => s.isVisible);
+
+  /** hasSources가 true일 때만 containerRef가 마운트됨. 의존성에 포함해 컨테이너가 렌더된 후 ResizeObserver 설정 */
   useEffect(() => {
+    if (!hasSources) return;
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
-      const rect = el.getBoundingClientRect();
-      setContainerSize({
-        width: Math.floor(rect.width),
-        height: Math.floor(rect.height),
-      });
-    });
+    const updateSize = () => {
+      const w = Math.floor(el.clientWidth);
+      const h = Math.floor(el.clientHeight);
+      setContainerSize((prev) =>
+        prev.width === w && prev.height === h ? prev : { width: w, height: h }
+      );
+    };
+    const ro = new ResizeObserver(updateSize);
     ro.observe(el);
-    const rect = el.getBoundingClientRect();
-    setContainerSize({
-      width: Math.floor(rect.width),
-      height: Math.floor(rect.height),
-    });
+    updateSize();
     return () => ro.disconnect();
-  }, []);
+  }, [hasSources]);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const w = Math.floor(el.clientWidth);
+    const h = Math.floor(el.clientHeight);
+    if (w > 0 && h > 0) {
+      setContainerSize((prev) =>
+        prev.width === w && prev.height === h ? prev : { width: w, height: h }
+      );
+    }
+  }, [hasSources]);
 
   useEffect(() => {
     if (selectedId === "overlay-asset") {
@@ -549,7 +578,7 @@ export function PreviewArea({
   useEffect(() => {
     if (!getPreviewStreamRef) return;
     getPreviewStreamRef.current = () => {
-      const layer = layerRef.current;
+      const layer = captureLayerRef.current;
       if (!layer) return null;
       const canvas = (layer.getCanvas() as { _canvas?: HTMLCanvasElement })
         ?._canvas;
@@ -568,7 +597,7 @@ export function PreviewArea({
 
     const addElement = (
       sourceId: string,
-      element: HTMLVideoElement | HTMLImageElement,
+      element: HTMLVideoElement | HTMLImageElement
     ) => {
       if (cancelled) return;
       setSourceElements((prev) => new Map(prev).set(sourceId, element));
@@ -681,20 +710,18 @@ export function PreviewArea({
     return () => {
       cancelled = true;
       streamsMap.current.forEach((stream) =>
-        stream.getTracks().forEach((t) => t.stop()),
+        stream.getTracks().forEach((t) => t.stop())
       );
       streamsMap.current.clear();
     };
-  }, [sources, availableStreamIds, isAudioEnabled, getSourceStream]);
-
-  const hasSources = sources.length > 0 && sources.some((s) => s.isVisible);
+  }, [sources, availableStreamIds, getSourceStream]);
 
   if (!hasSources) {
     return (
       <div
         className={cn(
           "bg-black rounded-lg border border-gray-700 h-full w-full relative overflow-hidden flex flex-col items-center justify-center text-gray-500",
-          className,
+          className
         )}
       >
         <span
@@ -702,7 +729,7 @@ export function PreviewArea({
             "absolute top-2 left-2 z-10 px-2.5 py-1 rounded text-xs font-semibold uppercase tracking-wide",
             isEditMode
               ? "bg-amber-500/90 text-amber-950"
-              : "bg-red-600 text-white",
+              : "bg-red-600 text-white"
           )}
         >
           {isEditMode ? resolution : `Live ${resolution}`}
@@ -719,7 +746,7 @@ export function PreviewArea({
       ref={containerRef}
       className={cn(
         "bg-black rounded-lg border border-gray-700 h-full w-full relative overflow-hidden",
-        className,
+        className
       )}
     >
       <span
@@ -727,260 +754,385 @@ export function PreviewArea({
           "absolute top-2 left-2 z-10 px-2.5 py-1 rounded text-xs font-semibold uppercase tracking-wide",
           isEditMode
             ? "bg-amber-500/90 text-amber-950"
-            : "bg-red-600 text-white",
+            : "bg-red-600 text-white"
         )}
       >
         {isEditMode ? resolution : `Live ${resolution}`}
       </span>
-      <div
-        style={{
-          width: stageWidth * scale,
-          height: stageHeight * scale,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        className="absolute inset-0 m-auto"
-      >
-        <div
-          style={{
-            width: stageWidth,
-            height: stageHeight,
-            transform: `scale(${scale})`,
-            transformOrigin: "0 0",
-            willChange: "transform",
-          }}
-        >
-          <Stage
-            ref={stageRef}
-            width={stageWidth}
-            height={stageHeight}
-            pixelRatio={effectivePixelRatio}
-            onClick={(e) => {
-              const stage = e.target.getStage();
-              const layer = layerRef.current;
-              let node: Konva.Node | null = e.target;
-              while (node && node.getParent() !== layer) {
-                if (
-                  node.getClassName?.() === "Group" &&
-                  (node as Konva.Group).id?.() === "overlay-asset"
-                ) {
-                  setSelectedId("overlay-asset");
-                  return;
-                }
-                node = node.getParent();
-              }
-              const group = node?.getClassName() === "Group" ? node : null;
-              const id = group?.id();
-              if (!id || !sortedSources.some((s) => s.id === id)) {
-                setSelectedId(null);
-                return;
-              }
-              setSelectedId(id);
+      {/* 표시용 Stage: 컨테이너 크기, 비율 유지(레터박스) */}
+      <Stage
+        ref={stageRef}
+        width={Math.max(1, displayWidth)}
+        height={Math.max(1, displayHeight)}
+        pixelRatio={effectivePixelRatio}
+        className="absolute inset-0"
+        style={{ left: 0, top: 0 }}
+        onClick={(e) => {
+          const layer = layerRef.current;
+          let node: Konva.Node | null = e.target;
+          while (node && node.getParent() !== layer) {
+            if (
+              node.getClassName?.() === "Group" &&
+              (node as Konva.Group).id?.() === "overlay-asset"
+            ) {
+              setSelectedId("overlay-asset");
+              return;
+            }
+            const gid = (node as Konva.Group).id?.();
+            if (gid && sortedSources.some((s) => s.id === gid)) {
+              setSelectedId(gid);
               if (isEditMode && onBringSourceToFront) {
-                onBringSourceToFront(id);
+                onBringSourceToFront(gid);
               }
-            }}
+              return;
+            }
+            node = node.getParent();
+          }
+          setSelectedId(null);
+        }}
+      >
+        <Layer ref={layerRef}>
+          <Group
+            scaleX={displayScale}
+            scaleY={displayScale}
+            x={displayOffsetX}
+            y={displayOffsetY}
           >
-            <Layer ref={layerRef}>
+            <Rect
+              x={0}
+              y={0}
+              width={stageWidth}
+              height={stageHeight}
+              fill="black"
+            />
+            {!isVideoEnabled && (
               <Rect
                 x={0}
                 y={0}
                 width={stageWidth}
                 height={stageHeight}
-                fill="black"
+                fill="#1a1a1a"
+                listening={false}
               />
-              {!isVideoEnabled && (
-                <Rect
-                  x={0}
-                  y={0}
-                  width={stageWidth}
-                  height={stageHeight}
-                  fill="#1a1a1a"
-                  listening={false}
-                />
-              )}
-              {sortedSources.map((source, index) => {
-                const transform = getTransform(source.id, index);
-                const el = sourceElements.get(source.id);
-                return (
-                  <Group
-                    key={source.id}
-                    id={source.id}
-                    ref={(node) => {
-                      if (node) nodeRefs.current.set(source.id, node);
-                    }}
-                    x={transform.x}
-                    y={transform.y}
-                    clip={
-                      styleState?.theme === "bubble" && source.type === "video"
-                        ? undefined
-                        : {
-                            x: 0,
-                            y: 0,
-                            width: transform.width,
-                            height: transform.height,
-                          }
-                    }
-                    clipFunc={
-                      styleState?.theme === "bubble" && source.type === "video"
-                        ? (ctx) => {
-                            const w = transform.width;
-                            const h = transform.height;
-                            const r = Math.min(w, h) / 2;
-                            ctx.beginPath();
-                            ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);
-                            ctx.closePath();
-                            ctx.clip();
-                          }
-                        : undefined
-                    }
-                    draggable={isEditMode}
-                    onDragEnd={(e) => {
-                      const node = e.target;
-                      const tx = node.x();
-                      const ty = node.y();
-                      const snapped = snapPosition(
-                        tx,
-                        ty,
-                        transform.width,
-                        transform.height,
-                        stageWidth,
-                        stageHeight,
-                      );
-                      setSourceTransform?.(source.id, {
-                        x: snapped.x,
-                        y: snapped.y,
-                      });
-                    }}
-                    onTransformEnd={(e) => {
-                      const node = e.target as Konva.Group;
-                      const rect = node.getClientRect();
-                      const snappedPos = snapPosition(
-                        rect.x,
-                        rect.y,
-                        rect.width,
-                        rect.height,
-                        stageWidth,
-                        stageHeight,
-                      );
-                      const snappedSize = snapSize(rect.width, rect.height);
-                      setSourceTransform?.(source.id, {
-                        x: snappedPos.x,
-                        y: snappedPos.y,
-                        width: snappedSize.width,
-                        height: snappedSize.height,
-                      });
-                      node.scaleX(1);
-                      node.scaleY(1);
-                      node.position({ x: snappedPos.x, y: snappedPos.y });
-                      node.getChildren().forEach((child) => {
-                        child.width(snappedSize.width);
-                        child.height(snappedSize.height);
-                      });
-                    }}
-                  >
-                    {source.type === "video" || source.type === "screen" ? (
-                      el && el instanceof HTMLVideoElement ? (
-                        <VideoSourceNode
-                          sourceId={source.id}
-                          video={el}
-                          boxWidth={transform.width}
-                          boxHeight={transform.height}
-                          fit="contain"
-                          layerRef={layerRef}
-                          isVisible={source.isVisible}
-                        />
-                      ) : (
-                        <Rect
-                          width={transform.width}
-                          height={transform.height}
-                          fill="#1a1a1a"
-                          stroke="#333"
-                          strokeWidth={2}
-                        />
-                      )
-                    ) : source.type === "image" ? (
-                      el && el instanceof HTMLImageElement ? (
-                        <ImageSourceNode
-                          image={el}
-                          boxWidth={transform.width}
-                          boxHeight={transform.height}
-                          fit="contain"
-                          listening={true}
-                        />
-                      ) : (
-                        <Rect
-                          width={transform.width}
-                          height={transform.height}
-                          fill="#1a1a1a"
-                          stroke="#333"
-                          strokeWidth={2}
-                        />
-                      )
+            )}
+            {sortedSources.map((source, index) => {
+              const transform = getTransform(source.id, index);
+              const el = sourceElements.get(source.id);
+              return (
+                <Group
+                  key={source.id}
+                  id={source.id}
+                  ref={(node) => {
+                    if (node) nodeRefs.current.set(source.id, node);
+                  }}
+                  x={transform.x}
+                  y={transform.y}
+                  clip={
+                    styleState?.theme === "bubble" && source.type === "video"
+                      ? undefined
+                      : {
+                          x: 0,
+                          y: 0,
+                          width: transform.width,
+                          height: transform.height,
+                        }
+                  }
+                  clipFunc={
+                    styleState?.theme === "bubble" && source.type === "video"
+                      ? (ctx) => {
+                          const w = transform.width;
+                          const h = transform.height;
+                          const r = Math.min(w, h) / 2;
+                          ctx.beginPath();
+                          ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);
+                          ctx.closePath();
+                          ctx.clip();
+                        }
+                      : undefined
+                  }
+                  draggable={isEditMode}
+                  onDragEnd={(e) => {
+                    const node = e.target;
+                    const tx = node.x();
+                    const ty = node.y();
+                    const snapped = snapPosition(
+                      tx,
+                      ty,
+                      transform.width,
+                      transform.height,
+                      stageWidth,
+                      stageHeight
+                    );
+                    setSourceTransform?.(source.id, {
+                      x: snapped.x,
+                      y: snapped.y,
+                    });
+                  }}
+                  onTransformEnd={(e) => {
+                    const node = e.target as Konva.Group;
+                    const rect = node.getClientRect();
+                    const snappedPos = snapPosition(
+                      rect.x,
+                      rect.y,
+                      rect.width,
+                      rect.height,
+                      stageWidth,
+                      stageHeight
+                    );
+                    const snappedSize = snapSize(rect.width, rect.height);
+                    setSourceTransform?.(source.id, {
+                      x: snappedPos.x,
+                      y: snappedPos.y,
+                      width: snappedSize.width,
+                      height: snappedSize.height,
+                    });
+                    node.scaleX(1);
+                    node.scaleY(1);
+                    node.position({ x: snappedPos.x, y: snappedPos.y });
+                    node.getChildren().forEach((child) => {
+                      child.width(snappedSize.width);
+                      child.height(snappedSize.height);
+                    });
+                  }}
+                >
+                  {source.type === "video" || source.type === "screen" ? (
+                    el && el instanceof HTMLVideoElement ? (
+                      <VideoSourceNode
+                        sourceId={source.id}
+                        video={el}
+                        boxWidth={transform.width}
+                        boxHeight={transform.height}
+                        fit="contain"
+                        layerRef={layerRef}
+                        isVisible={source.isVisible}
+                      />
                     ) : (
                       <Rect
                         width={transform.width}
                         height={transform.height}
-                        fill="rgba(100,100,200,0.5)"
+                        fill="#1a1a1a"
+                        stroke="#333"
+                        strokeWidth={2}
+                      />
+                    )
+                  ) : source.type === "image" ? (
+                    el && el instanceof HTMLImageElement ? (
+                      <ImageSourceNode
+                        image={el}
+                        boxWidth={transform.width}
+                        boxHeight={transform.height}
+                        fit="contain"
                         listening={true}
                       />
-                    )}
-                    {isEditMode && (
-                      <>
-                        <Rect
-                          x={2}
-                          y={2}
-                          width={22}
-                          height={20}
-                          fill="rgba(0,0,0,0.7)"
-                          listening={false}
-                        />
-                        <Text
-                          x={6}
-                          y={4}
-                          text={String(sortedSources.length - index)}
-                          fontSize={13}
-                          fontFamily="Arial"
-                          fill="white"
-                          listening={false}
-                        />
-                      </>
-                    )}
-                  </Group>
-                );
-              })}
-              {activeBanner && (
-                <BannerOverlayNode
-                  banner={activeBanner}
-                  stageWidth={stageWidth}
-                  stageHeight={stageHeight}
-                  layerRef={layerRef}
-                  brandColor={styleState?.brandColor ?? "#4f46e5"}
-                />
-              )}
-              {activeAsset && (
-                <AssetOverlayNode
-                  asset={activeAsset}
-                  stageWidth={stageWidth}
-                  stageHeight={stageHeight}
-                  brandColor={styleState?.brandColor ?? "#4f46e5"}
-                  transform={assetTransform}
-                  isEditMode={isEditMode}
-                  groupRef={assetGroupRef}
-                  onDragEnd={(x, y) =>
-                    setAssetTransform((prev) => ({ ...prev, x, y }))
-                  }
-                  onTransformEnd={(x, y, width, height) =>
-                    setAssetTransform({ x, y, width, height })
-                  }
-                />
-              )}
-              {isEditMode && <Transformer ref={trRef} />}
-            </Layer>
-          </Stage>
-        </div>
-      </div>
+                    ) : (
+                      <Rect
+                        width={transform.width}
+                        height={transform.height}
+                        fill="#1a1a1a"
+                        stroke="#333"
+                        strokeWidth={2}
+                      />
+                    )
+                  ) : (
+                    <Rect
+                      width={transform.width}
+                      height={transform.height}
+                      fill="rgba(100,100,200,0.5)"
+                      listening={true}
+                    />
+                  )}
+                  {isEditMode && (
+                    <>
+                      <Rect
+                        x={2}
+                        y={2}
+                        width={22}
+                        height={20}
+                        fill="rgba(0,0,0,0.7)"
+                        listening={false}
+                      />
+                      <Text
+                        x={6}
+                        y={4}
+                        text={String(sortedSources.length - index)}
+                        fontSize={13}
+                        fontFamily="Arial"
+                        fill="white"
+                        listening={false}
+                      />
+                    </>
+                  )}
+                </Group>
+              );
+            })}
+            {activeBanner && (
+              <BannerOverlayNode
+                banner={activeBanner}
+                stageWidth={stageWidth}
+                stageHeight={stageHeight}
+                layerRef={layerRef}
+                brandColor={styleState?.brandColor ?? "#4f46e5"}
+              />
+            )}
+            {activeAsset && (
+              <AssetOverlayNode
+                asset={activeAsset}
+                stageWidth={stageWidth}
+                stageHeight={stageHeight}
+                brandColor={styleState?.brandColor ?? "#4f46e5"}
+                transform={assetTransform}
+                isEditMode={isEditMode}
+                groupRef={assetGroupRef}
+                onDragEnd={(x, y) =>
+                  setAssetTransform((prev) => ({ ...prev, x, y }))
+                }
+                onTransformEnd={(x, y, width, height) =>
+                  setAssetTransform({ x, y, width, height })
+                }
+              />
+            )}
+            {isEditMode && <Transformer ref={trRef} />}
+          </Group>
+        </Layer>
+      </Stage>
+
+      {/* 송출/녹화용 Stage: 720p/1080p 고정 해상도, 화면 밖에 숨김 */}
+      <Stage
+        width={stageWidth}
+        height={stageHeight}
+        pixelRatio={1}
+        style={{
+          position: "absolute",
+          left: -9999,
+          top: 0,
+          pointerEvents: "none",
+          visibility: "hidden" as const,
+        }}
+      >
+        <Layer ref={captureLayerRef}>
+          <Rect
+            x={0}
+            y={0}
+            width={stageWidth}
+            height={stageHeight}
+            fill="black"
+          />
+          {!isVideoEnabled && (
+            <Rect
+              x={0}
+              y={0}
+              width={stageWidth}
+              height={stageHeight}
+              fill="#1a1a1a"
+              listening={false}
+            />
+          )}
+          {sortedSources.map((source, index) => {
+            const transform = getTransform(source.id, index);
+            const el = sourceElements.get(source.id);
+            return (
+              <Group
+                key={`capture-${source.id}`}
+                x={transform.x}
+                y={transform.y}
+                clip={
+                  styleState?.theme === "bubble" && source.type === "video"
+                    ? undefined
+                    : {
+                        x: 0,
+                        y: 0,
+                        width: transform.width,
+                        height: transform.height,
+                      }
+                }
+                clipFunc={
+                  styleState?.theme === "bubble" && source.type === "video"
+                    ? (ctx) => {
+                        const w = transform.width;
+                        const h = transform.height;
+                        const r = Math.min(w, h) / 2;
+                        ctx.beginPath();
+                        ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);
+                        ctx.closePath();
+                        ctx.clip();
+                      }
+                    : undefined
+                }
+                listening={false}
+              >
+                {source.type === "video" || source.type === "screen" ? (
+                  el && el instanceof HTMLVideoElement ? (
+                    <VideoSourceNode
+                      sourceId={`capture-${source.id}`}
+                      video={el}
+                      boxWidth={transform.width}
+                      boxHeight={transform.height}
+                      fit="contain"
+                      layerRef={captureLayerRef}
+                      isVisible={source.isVisible}
+                    />
+                  ) : (
+                    <Rect
+                      width={transform.width}
+                      height={transform.height}
+                      fill="#1a1a1a"
+                      stroke="#333"
+                      strokeWidth={2}
+                    />
+                  )
+                ) : source.type === "image" ? (
+                  el && el instanceof HTMLImageElement ? (
+                    <ImageSourceNode
+                      image={el}
+                      boxWidth={transform.width}
+                      boxHeight={transform.height}
+                      fit="contain"
+                      listening={false}
+                    />
+                  ) : (
+                    <Rect
+                      width={transform.width}
+                      height={transform.height}
+                      fill="#1a1a1a"
+                      stroke="#333"
+                      strokeWidth={2}
+                    />
+                  )
+                ) : (
+                  <Rect
+                    width={transform.width}
+                    height={transform.height}
+                    fill="rgba(100,100,200,0.5)"
+                    listening={false}
+                  />
+                )}
+              </Group>
+            );
+          })}
+          {activeBanner && (
+            <BannerOverlayNode
+              banner={activeBanner}
+              stageWidth={stageWidth}
+              stageHeight={stageHeight}
+              layerRef={captureLayerRef}
+              brandColor={styleState?.brandColor ?? "#4f46e5"}
+            />
+          )}
+          {activeAsset && (
+            <AssetOverlayNode
+              asset={activeAsset}
+              stageWidth={stageWidth}
+              stageHeight={stageHeight}
+              brandColor={styleState?.brandColor ?? "#4f46e5"}
+              transform={assetTransform}
+              isEditMode={false}
+              groupRef={{ current: null }}
+              onDragEnd={() => {}}
+              onTransformEnd={() => {}}
+            />
+          )}
+        </Layer>
+      </Stage>
     </div>
   );
 }

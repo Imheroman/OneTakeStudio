@@ -758,6 +758,7 @@ export function useStudioMain(
     const stream = getStream?.() ?? null;
     if (!stream || stream.getVideoTracks().length === 0) {
       console.warn("로컬 녹화: 캔버스 스트림을 사용할 수 없습니다.");
+      alert("녹화할 수 있는 화면이 없습니다. 먼저 소스를 추가해주세요.");
       return;
     }
     try {

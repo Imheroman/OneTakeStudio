@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Camera, Mic, Settings, LogOut, Circle, ChevronDown } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import { VolumeMixerBar } from "./VolumeMixerBar";
 
 export type PreviewResolution = "720p" | "1080p";
 
@@ -12,7 +13,10 @@ interface ControlBarProps {
   onResolutionChange?: (resolution: PreviewResolution) => void;
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
+  /** 마이크 단일 레벨 (레거시, levelHistory 우선) */
   audioLevel?: number;
+  /** 음량 믹스바용 레벨 히스토리 [최신...과거] */
+  levelHistory?: number[];
   onVideoToggle: () => void;
   onAudioToggle: () => void;
   onSettings: () => void;
@@ -31,6 +35,7 @@ export function ControlBar({
   isVideoEnabled,
   isAudioEnabled,
   audioLevel = 0,
+  levelHistory,
   onVideoToggle,
   onAudioToggle,
   onSettings,
@@ -127,13 +132,13 @@ export function ControlBar({
         <Camera className="h-5 w-5" />
       </Button>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
           onClick={onAudioToggle}
           className={cn(
-            "h-12 w-12",
+            "h-12 w-12 shrink-0",
             isAudioEnabled
               ? "bg-indigo-600 text-white hover:bg-indigo-700"
               : "bg-gray-700 text-gray-400 hover:bg-gray-600",
@@ -141,17 +146,11 @@ export function ControlBar({
         >
           <Mic className="h-5 w-5" />
         </Button>
-        {isAudioEnabled && (
-          <div
-            className="h-10 w-2 rounded-full bg-gray-700 overflow-hidden flex flex-col justify-end"
-            title="마이크 레벨"
-          >
-            <div
-              className="w-full bg-indigo-500 transition-all duration-75 rounded-full"
-              style={{ height: `${Math.round(audioLevel * 100)}%` }}
-            />
-          </div>
-        )}
+        <VolumeMixerBar
+          levelHistory={levelHistory ?? (isAudioEnabled ? Array(24).fill(audioLevel) : Array(24).fill(0))}
+          isActive={isAudioEnabled}
+          className="min-w-[180px] w-48 shrink-0"
+        />
       </div>
 
       {(onStartLocalRecording ?? onStartCloudRecording ?? onStopLocalRecording ?? onStopCloudRecording) && (

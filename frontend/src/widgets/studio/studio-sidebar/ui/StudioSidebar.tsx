@@ -55,6 +55,8 @@ interface StudioSidebarProps {
   /** 스튜디오 내 연동 채널 목록 (StreamYard 스타일) */
   connectedDestinations?: ConnectedDestinationItem[];
   activeBanner?: BannerItem | null;
+  /** 타이머 설정된 배너의 남은 초 (배너 오버레이·리스트 표시용) */
+  bannerRemainingSeconds?: number | null;
   onSelectBanner?: (banner: BannerItem | null) => void;
   activeAsset?: AssetItem | null;
   onSelectAsset?: (asset: AssetItem | null) => void;
@@ -64,6 +66,10 @@ interface StudioSidebarProps {
   getPreviewStream?: () => MediaStream | null;
   /** 녹화 저장 위치 설정 */
   recordingStorage?: "LOCAL" | "CLOUD";
+  /** 녹화 상태 (하단바와 연동) */
+  isRecordingLocal?: boolean;
+  onStartLocalRecording?: () => void;
+  onStopLocalRecording?: () => void;
 }
 
 export function StudioSidebar({
@@ -71,6 +77,7 @@ export function StudioSidebar({
   className,
   connectedDestinations = [],
   activeBanner = null,
+  bannerRemainingSeconds = null,
   onSelectBanner,
   activeAsset = null,
   onSelectAsset,
@@ -78,17 +85,26 @@ export function StudioSidebar({
   onStyleChange,
   getPreviewStream,
   recordingStorage = "LOCAL",
+  isRecordingLocal = false,
+  onStartLocalRecording,
+  onStopLocalRecording,
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [refreshMembersTrigger, setRefreshMembersTrigger] = useState(0);
 
   const studioIdNum = Number(studioId) || 0;
-  const unreadCount = usePrivateChatStore((state) => state.unreadCounts[studioIdNum] ?? 0);
-  const lastSeenId = usePrivateChatStore((state) => state.lastSeenMessageIds[studioIdNum]);
+  const unreadCount = usePrivateChatStore(
+    (state) => state.unreadCounts[studioIdNum] ?? 0
+  );
+  const lastSeenId = usePrivateChatStore(
+    (state) => state.lastSeenMessageIds[studioIdNum]
+  );
   const markAsRead = usePrivateChatStore((state) => state.markAsRead);
   const setUnreadCount = usePrivateChatStore((state) => state.setUnreadCount);
-  const setLastSeenMessageId = usePrivateChatStore((state) => state.setLastSeenMessageId);
+  const setLastSeenMessageId = usePrivateChatStore(
+    (state) => state.setLastSeenMessageId
+  );
 
   // 프라이빗 메시지 폴링 (프라이빗 패널이 열려있지 않을 때만)
   useEffect(() => {
@@ -97,7 +113,9 @@ export function StudioSidebar({
     const checkNewPrivateMessages = async () => {
       try {
         const messages = await getChatHistory(studioIdNum);
-        const privateMessages = messages.filter((m) => m.platform === "INTERNAL");
+        const privateMessages = messages.filter(
+          (m) => m.platform === "INTERNAL"
+        );
 
         if (privateMessages.length === 0) return;
 
@@ -115,7 +133,8 @@ export function StudioSidebar({
           const lastSeenIndex = privateMessages.findIndex(
             (m) => m.messageId === lastSeenId
           );
-          const newCount = lastSeenIndex === -1 ? privateMessages.length : lastSeenIndex;
+          const newCount =
+            lastSeenIndex === -1 ? privateMessages.length : lastSeenIndex;
           if (newCount > 0) {
             setUnreadCount(studioIdNum, newCount);
           }
@@ -129,7 +148,13 @@ export function StudioSidebar({
     const interval = setInterval(checkNewPrivateMessages, 5000); // 5초마다 체크
 
     return () => clearInterval(interval);
-  }, [studioIdNum, activeTab, lastSeenId, setUnreadCount, setLastSeenMessageId]);
+  }, [
+    studioIdNum,
+    activeTab,
+    lastSeenId,
+    setUnreadCount,
+    setLastSeenMessageId,
+  ]);
 
   // 프라이빗 패널 열면 lastSeenId 업데이트
   useEffect(() => {
@@ -138,7 +163,9 @@ export function StudioSidebar({
     const updateLastSeen = async () => {
       try {
         const messages = await getChatHistory(studioIdNum);
-        const privateMessages = messages.filter((m) => m.platform === "INTERNAL");
+        const privateMessages = messages.filter(
+          (m) => m.platform === "INTERNAL"
+        );
         if (privateMessages.length > 0) {
           setLastSeenMessageId(studioIdNum, privateMessages[0].messageId);
         }
@@ -164,13 +191,13 @@ export function StudioSidebar({
     <>
       <aside
         className={cn(
-          "flex bg-gray-900 border-l border-gray-800 shrink-0",
+          "flex flex-row-reverse bg-gray-900 border-l border-gray-800 shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
           activeTab ? "w-[25rem]" : "w-16",
-          className,
+          className
         )}
       >
-        {/* 탭 아이콘 열 */}
-        <div className="w-16 flex flex-col items-center py-4 gap-3 border-r border-gray-800 shrink-0">
+        {/* 탭 아이콘 열: 오른쪽 벽에 고정 */}
+        <div className="w-16 flex flex-col items-center py-4 gap-3 shrink-0">
           {TABS.map((tab) => (
             <div key={tab.id} className="relative">
               <IconButton
@@ -178,7 +205,7 @@ export function StudioSidebar({
                 label={tab.label}
                 className={cn(
                   "hover:bg-gray-800",
-                  activeTab === tab.id && "bg-gray-800 text-white",
+                  activeTab === tab.id && "bg-gray-800 text-white"
                 )}
                 onClick={() => handleTabClick(tab.id)}
               />
@@ -192,9 +219,9 @@ export function StudioSidebar({
           ))}
         </div>
 
-        {/* 패널 영역: 넉넉한 너비로 전송 버튼 등이 잘리지 않도록 */}
-          {activeTab && (
-          <div className="w-80 min-w-80 flex flex-col p-3 min-h-0 overflow-auto bg-gray-900">
+        {/* 패널 영역: 아이콘 왼쪽으로 확장 */}
+        {activeTab && (
+          <div className="w-80 min-w-80 flex flex-col p-3 min-h-0 overflow-auto bg-gray-900 border-r border-gray-800 shrink-0">
             {activeTab === "destinations" && (
               <StudioDestinationsPanel
                 destinations={connectedDestinations}
@@ -214,6 +241,7 @@ export function StudioSidebar({
                 onClose={closePanel}
                 onSelectBanner={onSelectBanner}
                 selectedBannerId={activeBanner?.id ?? null}
+                bannerRemainingSeconds={bannerRemainingSeconds}
               />
             )}
             {activeTab === "assets" && (
@@ -254,7 +282,9 @@ export function StudioSidebar({
               <StudioRecordingPanel
                 studioId={studioIdNum}
                 onClose={closePanel}
-                getPreviewStream={getPreviewStream}
+                isRecordingLocal={isRecordingLocal}
+                onStartLocalRecording={onStartLocalRecording}
+                onStopLocalRecording={onStopLocalRecording}
                 recordingStorage={recordingStorage}
               />
             )}
