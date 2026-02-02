@@ -3,7 +3,7 @@
  * 개발 환경에서 프리뷰 기능을 테스트하기 위한 헬퍼 함수
  */
 
-import type { Source } from "@/entities/studio/model";
+import type { Source } from "./types";
 
 /**
  * 테스트용 이미지 소스 생성

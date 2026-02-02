@@ -1,1 +1,1 @@
-export { FavoriteManagement } from "./ui/FavoriteManagement";
+export { useFavoriteManagement } from "./model/useFavoriteManagement";

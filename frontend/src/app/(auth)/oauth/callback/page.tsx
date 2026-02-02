@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { apiClient } from "@/shared/api/client";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 
-export default function OAuthLoginCallbackPage() {
+function OAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useAuthStore((state) => state.login);
@@ -92,15 +92,23 @@ export default function OAuthLoginCallbackPage() {
           setStatus("success");
           setMessage("로그인 성공! 워크스페이스로 이동합니다.");
 
-          // 잠시 후 리다이렉트
+          const userId = user?.userId;
+          if (!userId) {
+            setStatus("error");
+            setMessage("사용자 정보를 불러올 수 없습니다.");
+            return;
+          }
+          // 잠시 후 리다이렉트 (userId 확정 후에만 이동)
           setTimeout(() => {
-            router.push(`/workspace/${user.userId}`);
+            router.push(`/workspace/${userId}`);
           }, 1000);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("OAuth 콜백 처리 실패:", error);
         setStatus("error");
-        setMessage(error.message || "로그인 중 오류가 발생했습니다.");
+        setMessage(
+          error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다."
+        );
       }
     };
 
@@ -142,5 +150,26 @@ export default function OAuthLoginCallbackPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function OAuthLoginCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
+          <Card className="w-full max-w-md">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mb-4" />
+                <p className="text-gray-600">로그인 처리 중...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
+      <OAuthCallbackContent />
+    </Suspense>
   );
 }

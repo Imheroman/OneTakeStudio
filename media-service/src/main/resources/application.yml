@@ -2,12 +2,12 @@ spring:
   application:
     name: media-service
 
-  # PostgreSQL Database
+  # MySQL Database
   datasource:
-    url: jdbc:postgresql://localhost:5432/media_db
+    url: jdbc:mysql://localhost:3306/media_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
     username: media_user
     password: media_password
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   # JPA
   jpa:
@@ -17,7 +17,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false
 
   # Redis (Streams 포함)
@@ -45,15 +45,22 @@ livekit:
   host: http://localhost:7880
   api:
     key: devkey
-    secret: secret
+    # LiveKit 서버와 동일 (최소 32자)
+    secret: devkey-secret-for-livekit-min-32-chars
+  egress:
+    output-path: /recordings/
 
-# AWS S3
-aws:
-  s3:
-    bucket: onetakestudio-media
-    region: ap-northeast-2
-  access-key-id: ${AWS_ACCESS_KEY_ID:your-access-key}
-  secret-access-key: ${AWS_SECRET_ACCESS_KEY:your-secret-key}
+# Core Service (송출 채널 정보 조회)
+core:
+  service:
+    url: http://localhost:8080
+
+# Recording Storage
+# Docker Egress는 /recordings에 저장 → 로컬 ./recordings 폴더와 볼륨 연결됨
+recording:
+  storage:
+    base-path: ${RECORDING_BASE_PATH:./recordings}
+    base-url: ${RECORDING_BASE_URL:http://localhost:8082/api/media/record/files}
 
 # Logging
 logging:

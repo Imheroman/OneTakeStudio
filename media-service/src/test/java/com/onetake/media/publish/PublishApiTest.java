@@ -63,7 +63,7 @@ class PublishApiTest {
                 .build();
 
         // when & then
-        mockMvc.perform(post("/api/v1/media/publish")
+        mockMvc.perform(post("/api/media/publish")
                         .header("X-User-Id", testUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -85,7 +85,7 @@ class PublishApiTest {
                 .build();
 
         // when & then
-        mockMvc.perform(post("/api/v1/media/publish")
+        mockMvc.perform(post("/api/media/publish")
                         .header("X-User-Id", testUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -103,13 +103,13 @@ class PublishApiTest {
                 .destinationIds(List.of(1L))
                 .build();
 
-        mockMvc.perform(post("/api/v1/media/publish")
+        mockMvc.perform(post("/api/media/publish")
                 .header("X-User-Id", testUserId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(startRequest)));
 
         // when & then - 송출 중지
-        mockMvc.perform(post("/api/v1/media/publish/stop")
+        mockMvc.perform(post("/api/media/publish/stop")
                         .param("studioId", testStudioId.toString()))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -126,13 +126,13 @@ class PublishApiTest {
                 .destinationIds(List.of(1L))
                 .build();
 
-        mockMvc.perform(post("/api/v1/media/publish")
+        mockMvc.perform(post("/api/media/publish")
                 .header("X-User-Id", testUserId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(startRequest)));
 
         // when & then - 상태 조회
-        mockMvc.perform(get("/api/v1/media/publish/status")
+        mockMvc.perform(get("/api/media/publish/status")
                         .param("studioId", testStudioId.toString()))
                 .andDo(print())
                 .andExpect(status().isOk())

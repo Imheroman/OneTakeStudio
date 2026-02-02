@@ -5,5 +5,6 @@
 
 export * from "./types";
 export * from "./layout";
+export * from "./fit";
 export * from "./renderer";
 export * from "./offscreen";

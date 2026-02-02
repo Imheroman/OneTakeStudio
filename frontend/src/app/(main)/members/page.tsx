@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRouter } from "next/navigation";
-import { FavoriteManagement } from "@/features/favorites/favorite-management";
+import { FavoriteManagement } from "@/widgets/favorites/favorite-management";
 
 export default function MembersPage() {
   const { isLoggedIn, hasHydrated } = useAuthStore();

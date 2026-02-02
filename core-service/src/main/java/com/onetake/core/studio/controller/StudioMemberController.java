@@ -69,4 +69,15 @@ public class StudioMemberController {
 
         return ResponseEntity.ok(ApiResponse.success("멤버 역할 변경 성공", member));
     }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> leaveStudio(
+            @CurrentUser CustomUserDetails userDetails,
+            @PathVariable Long studioId) {
+
+        log.debug("스튜디오 탈퇴 요청: studioId={}", studioId);
+        studioMemberService.leaveStudio(userDetails.getUserId(), studioId);
+
+        return ResponseEntity.ok(ApiResponse.success("스튜디오에서 탈퇴했습니다"));
+    }
 }

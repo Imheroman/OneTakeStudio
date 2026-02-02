@@ -38,18 +38,16 @@
     <description>OneTakeStudio MSA Backend Services</description>
     
     <modules>
-        <module>eureka-server</module>
-        <module>gateway-service</module>
-        <module>config-service</module>
+        <module>common</module>
         <module>core-service</module>
         <module>media-service</module>
-        <module>common</module>
+        <module>eureka-server</module>
+        <module>api-gateway</module>
     </modules>
-    
+
     <properties>
         <java.version>21</java.version>
-        <spring-cloud.version>2024.0.0</spring-cloud.version>
-        <jwt.version>4.4.0</jwt.version>
+        <spring-cloud.version>2025.0.0</spring-cloud.version>
     </properties>
     
     <dependencyManagement>
@@ -110,9 +108,9 @@ public class EurekaServerApplication {
 
 ---
 
-### Gateway Service (API Gateway)
+### API Gateway
 
-#### gateway-service/pom.xml
+#### api-gateway/pom.xml
 ```xml
 <dependencies>
     <dependency>
@@ -124,9 +122,9 @@ public class EurekaServerApplication {
         <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
     </dependency>
     <dependency>
-        <groupId>com.auth0</groupId>
-        <artifactId>java-jwt</artifactId>
-        <version>4.4.0</version>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>0.12.5</version>
     </dependency>
 </dependencies>
 ```
@@ -134,54 +132,59 @@ public class EurekaServerApplication {
 #### application.yml
 ```yaml
 server:
-  port: 8000
+  port: 60000
 
 spring:
   application:
-    name: gateway-service
+    name: api-gateway
   cloud:
     gateway:
-      routes:
-        # Core Service
-        - id: core-auth
-          uri: lb://CORE-SERVICE
-          predicates:
-            - Path=/api/auth/**
-          filters:
-            - RewritePath=/api/auth/(?<segment>.*), /auth/$\{segment}
-        
-        - id: core-users
-          uri: lb://CORE-SERVICE
-          predicates:
-            - Path=/api/users/**
-          filters:
-            - RewritePath=/api/users/(?<segment>.*), /users/$\{segment}
-            - name: JwtAuthenticationFilter
-        
-        - id: core-studios
-          uri: lb://CORE-SERVICE
-          predicates:
-            - Path=/api/studios/**
-          filters:
-            - RewritePath=/api/studios/(?<segment>.*), /studios/$\{segment}
-            - name: JwtAuthenticationFilter
-        
-        # Media Service
-        - id: media-streaming
-          uri: lb://MEDIA-SERVICE
-          predicates:
-            - Path=/api/media/streaming/**
-          filters:
-            - RewritePath=/api/media/streaming/(?<segment>.*), /streaming/$\{segment}
-            - name: JwtAuthenticationFilter
-        
-        - id: media-recordings
-          uri: lb://MEDIA-SERVICE
-          predicates:
-            - Path=/api/media/recordings/**
-          filters:
-            - RewritePath=/api/media/recordings/(?<segment>.*), /recordings/$\{segment}
-            - name: JwtAuthenticationFilter
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            # Core Service Routes
+            - id: core-service
+              uri: lb://core-service
+              predicates:
+                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard
+              filters:
+                - StripPrefix=0
+
+            # Media Service Routes
+            - id: media-service
+              uri: lb://media-service
+              predicates:
+                - Path=/api/v1/media/**
+              filters:
+                - StripPrefix=0
+
+            # Media Service - Stream Routes
+            - id: media-service-stream
+              uri: lb://media-service
+              predicates:
+                - Path=/api/streams/**
+              filters:
+                - RewritePath=/api/streams/(?<segment>.*), /api/v1/media/stream/${segment}
+
+            # Media Service - Recording Routes
+            - id: media-service-recording
+              uri: lb://media-service
+              predicates:
+                - Path=/api/recordings/**
+              filters:
+                - RewritePath=/api/recordings/(?<segment>.*), /api/v1/media/record/${segment}
+
+            # Media Service - Publish Routes
+            - id: media-service-publish
+              uri: lb://media-service
+              predicates:
+                - Path=/api/publish/**
+              filters:
+                - RewritePath=/api/publish/(?<segment>.*), /api/v1/media/publish/${segment}
 
 eureka:
   client:

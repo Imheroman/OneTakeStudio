@@ -77,4 +77,27 @@ public class StudioController {
 
         return ResponseEntity.ok(ApiResponse.success("스튜디오 삭제 성공"));
     }
+
+    // ==================== Note ====================
+
+    @GetMapping("/{studioId}/note")
+    public ResponseEntity<ApiResponse<NoteResponse>> getNote(
+            @PathVariable Long studioId) {
+
+        log.debug("스튜디오 노트 조회: studioId={}", studioId);
+        NoteResponse note = studioService.getNote(studioId);
+
+        return ResponseEntity.ok(ApiResponse.success("노트 조회 성공", note));
+    }
+
+    @PutMapping("/{studioId}/note")
+    public ResponseEntity<ApiResponse<NoteResponse>> updateNote(
+            @PathVariable Long studioId,
+            @RequestBody NoteRequest request) {
+
+        log.debug("스튜디오 노트 업데이트: studioId={}", studioId);
+        NoteResponse note = studioService.updateNote(studioId, request.getContent());
+
+        return ResponseEntity.ok(ApiResponse.success("노트 저장 성공", note));
+    }
 }

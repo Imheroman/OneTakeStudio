@@ -10,23 +10,32 @@ import {
   Users,
   Database,
   LogOut,
+  ListChecks,
+  PanelLeftClose,
+  PanelLeft,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [isHovered, setIsHovered] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const theme = useWorkspaceThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
   const workspaceLink = user?.userId ? `/workspace/${user.userId}` : "/login";
 
   const menus = [
     { name: "Home", href: workspaceLink, icon: Home },
-    { name: "Library", href: "/library", icon: BarChart2 },
-    { name: "Channels", href: "/channels", icon: Radio },
-    { name: "Members", href: "/members", icon: Users },
-    { name: "Storage", href: "/storage", icon: Database },
+    { name: "받은 초대", href: "/invites", icon: Mail },
+    { name: "내 보관함", href: "/library", icon: BarChart2 },
+    { name: "채널 관리", href: "/channels", icon: Radio },
+    { name: "팀 관리", href: "/members", icon: Users },
+    { name: "저장 공간", href: "/storage", icon: Database },
+    { name: "Features", href: "/features", icon: ListChecks },
   ];
 
   const handleLogout = () => {
@@ -37,29 +46,34 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "h-screen bg-white border-r border-gray-200 flex flex-col sticky top-0 z-50 transition-all duration-300 ease-in-out shadow-sm",
-        isHovered ? "w-64" : "w-20",
+        "h-screen border-r flex flex-col sticky top-0 z-50 transition-all duration-300 ease-in-out shadow-sm",
+        isDark
+          ? "bg-gray-900 border-gray-800"
+          : "bg-white border-gray-200",
+        isExpanded ? "w-64" : "w-20",
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="h-16 flex items-center justify-center border-b border-gray-100 overflow-hidden relative">
-        <h1
+      <div className="flex items-center justify-start px-3 pt-5 pb-3 shrink-0">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "font-bold text-indigo-600 text-2xl transition-all duration-300 whitespace-nowrap absolute",
-            isHovered ? "opacity-100 scale-100" : "opacity-0 scale-90",
+            "flex items-center justify-center w-12 h-12 rounded-lg transition-colors duration-200",
+            isDark
+              ? "bg-transparent hover:bg-gray-800 active:bg-gray-700"
+              : "bg-transparent hover:bg-gray-100 active:bg-gray-200"
           )}
+          aria-label={isExpanded ? "사이드바 닫기" : "사이드바 열기"}
         >
-          OneTake
-        </h1>
-        <span
-          className={cn(
-            "text-xl font-bold text-indigo-600 transition-all duration-300 absolute",
-            !isHovered ? "opacity-100 scale-100" : "opacity-0 scale-90",
+          {isExpanded ? (
+            <PanelLeftClose
+              className={cn("w-[28px] h-[28px]", isDark ? "text-gray-400" : "text-gray-600")}
+            />
+          ) : (
+            <PanelLeft
+              className={cn("w-[28px] h-[28px]", isDark ? "text-gray-400" : "text-gray-600")}
+            />
           )}
-        >
-          O
-        </span>
+        </button>
       </div>
 
       <nav className="flex-1 py-6 flex flex-col gap-2 px-3">
@@ -70,8 +84,12 @@ export function Sidebar() {
             className={cn(
               "flex items-center p-3 rounded-lg transition-all group relative h-12 overflow-hidden",
               pathname === menu.href
-                ? "bg-indigo-50 text-indigo-600"
-                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
+                ? isDark
+                  ? "bg-gray-800 text-indigo-300"
+                  : "bg-indigo-50 text-indigo-600"
+                : isDark
+                  ? "text-gray-400 hover:bg-gray-800 hover:text-white"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
             )}
           >
             <div className="min-w-[24px] flex justify-center items-center">
@@ -80,15 +98,20 @@ export function Sidebar() {
             <span
               className={cn(
                 "ml-4 font-medium whitespace-nowrap transition-all duration-300",
-                isHovered
+                isExpanded
                   ? "opacity-100 translate-x-0"
                   : "opacity-0 -translate-x-2",
               )}
             >
               {menu.name}
             </span>
-            {!isHovered && (
-              <div className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-nowrap shadow-md">
+            {!isExpanded && (
+              <div
+                className={cn(
+                  "absolute left-14 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-nowrap shadow-md",
+                  isDark ? "bg-gray-800 text-white" : "bg-gray-900 text-white"
+                )}
+              >
                 {menu.name}
               </div>
             )}
@@ -96,10 +119,20 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-gray-100">
+      <div
+        className={cn(
+          "p-4 border-t transition-colors duration-300",
+          isDark ? "border-gray-800" : "border-gray-100"
+        )}
+      >
         <button
           onClick={handleLogout}
-          className="flex items-center w-full p-2 h-12 text-gray-500 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors overflow-hidden group relative"
+          className={cn(
+            "flex items-center w-full p-2 h-12 rounded-lg transition-colors overflow-hidden group relative",
+            isDark
+              ? "text-gray-400 hover:bg-gray-800 hover:text-red-400"
+              : "text-gray-500 hover:bg-red-50 hover:text-red-500"
+          )}
         >
           <div className="min-w-[24px] flex justify-center items-center">
             <LogOut size={24} />
@@ -107,15 +140,20 @@ export function Sidebar() {
           <span
             className={cn(
               "ml-4 font-medium whitespace-nowrap transition-all duration-300",
-              isHovered
+              isExpanded
                 ? "opacity-100 translate-x-0"
                 : "opacity-0 -translate-x-2",
             )}
           >
             Logout
           </span>
-          {!isHovered && (
-            <div className="absolute left-14 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-nowrap shadow-md">
+          {!isExpanded && (
+            <div
+              className={cn(
+                "absolute left-14 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-nowrap shadow-md",
+                isDark ? "bg-gray-800 text-white" : "bg-gray-900 text-white"
+              )}
+            >
               Logout
             </div>
           )}

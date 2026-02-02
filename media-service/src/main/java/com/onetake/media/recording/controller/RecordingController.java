@@ -3,20 +3,25 @@ package com.onetake.media.recording.controller;
 import com.onetake.media.global.common.ApiResponse;
 import com.onetake.media.recording.dto.RecordingResponse;
 import com.onetake.media.recording.dto.RecordingStartRequest;
+import com.onetake.media.recording.service.LocalStorageService;
 import com.onetake.media.recording.service.RecordingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/media/record")
+@RequestMapping("/api/media/record")
 @RequiredArgsConstructor
 public class RecordingController {
 
     private final RecordingService recordingService;
+    private final LocalStorageService localStorageService;
 
     @PostMapping("/start")
     public ResponseEntity<ApiResponse<RecordingResponse>> startRecording(
@@ -66,5 +71,19 @@ public class RecordingController {
             @PathVariable Long studioId) {
         List<RecordingResponse> response = recordingService.getRecordingsByStudio(studioId);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * 녹화 파일 다운로드/스트리밍
+     */
+    @GetMapping("/files/{fileName}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
+        Resource resource = localStorageService.loadFileAsResource(fileName);
+        String contentType = localStorageService.getContentType(fileName);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"")
+                .body(resource);
     }
 }

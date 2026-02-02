@@ -2,6 +2,7 @@ package com.onetake.media.stream.service;
 
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
+import com.onetake.media.settings.service.MediaSettingsService;
 import com.onetake.media.stream.dto.IceServerResponse;
 import com.onetake.media.stream.dto.StreamSessionResponse;
 import com.onetake.media.stream.dto.StreamTokenRequest;
@@ -12,10 +13,16 @@ import com.onetake.media.stream.repository.StreamSessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -25,6 +32,8 @@ public class StreamService {
 
     private final StreamSessionRepository streamSessionRepository;
     private final LiveKitService liveKitService;
+    private final MediaSettingsService mediaSettingsService;
+    private final PlatformTransactionManager transactionManager;
 
     @Value("${livekit.turn.urls:}")
     private List<String> turnUrls;
@@ -39,19 +48,32 @@ public class StreamService {
     public StreamTokenResponse joinStream(Long userId, StreamTokenRequest request) {
         String roomName = "studio-" + request.getStudioId();
 
-        // 기존 활성 세션이 있는지 확인
-        streamSessionRepository.findByStudioIdAndStatus(request.getStudioId(), SessionStatus.ACTIVE)
-                .ifPresent(session -> {
-                    // 같은 사용자가 다시 참여하는 경우 허용
-                    if (!session.getUserId().equals(userId)) {
-                        log.info("User {} joining existing active session for studio {}", userId, request.getStudioId());
-                    }
-                });
-
-        // LiveKit 토큰 생성
+        // LiveKit 토큰 생성 (participantIdentity 필요)
         StreamTokenResponse tokenResponse = liveKitService.generateToken(userId, request);
 
-        // 세션 저장
+        // room_name 유니크: 이미 해당 스튜디오 세션이 있으면 재사용 (중복 삽입 방지)
+        Optional<StreamSession> existing = streamSessionRepository.findByRoomName(roomName);
+        if (existing.isPresent()) {
+            StreamSession session = existing.get();
+            session.reuseForNewParticipant(userId, tokenResponse.getParticipantIdentity(), request.getMetadata());
+            streamSessionRepository.save(session);
+            mediaSettingsService.initializeSessionState(userId, request.getStudioId(), session.getId());
+            log.info("Reused stream session for studio {} (roomName={})", request.getStudioId(), roomName);
+            return tokenResponse;
+        }
+
+        // 새 세션 저장 직전 이중 확인 (동시 요청 레이스 시 다른 요청이 이미 insert 했을 수 있음)
+        Optional<StreamSession> existingAgain = streamSessionRepository.findByRoomName(roomName);
+        if (existingAgain.isPresent()) {
+            StreamSession session = existingAgain.get();
+            session.reuseForNewParticipant(userId, tokenResponse.getParticipantIdentity(), request.getMetadata());
+            streamSessionRepository.save(session);
+            mediaSettingsService.initializeSessionState(userId, request.getStudioId(), session.getId());
+            log.info("Reused stream session (race) for studio {} (roomName={})", request.getStudioId(), roomName);
+            return tokenResponse;
+        }
+
+        // 새 세션 저장 (중복 키 시 재조회 후 재사용)
         StreamSession session = StreamSession.builder()
                 .studioId(request.getStudioId())
                 .userId(userId)
@@ -61,12 +83,35 @@ public class StreamService {
                 .metadata(request.getMetadata())
                 .build();
 
-        streamSessionRepository.save(session);
-
-        log.info("Stream session created: studioId={}, userId={}, roomName={}",
-                request.getStudioId(), userId, roomName);
-
-        return tokenResponse;
+        try {
+            StreamSession savedSession = streamSessionRepository.save(session);
+            mediaSettingsService.initializeSessionState(userId, request.getStudioId(), savedSession.getId());
+            log.info("Stream session created: studioId={}, userId={}, roomName={}",
+                    request.getStudioId(), userId, roomName);
+            return tokenResponse;
+        } catch (DataIntegrityViolationException e) {
+            // 동시 요청 등으로 중복 키 발생 시 새 트랜잭션에서 기존 행 재사용 후 토큰 반환
+            String participantIdentity = tokenResponse.getParticipantIdentity();
+            Long studioId = request.getStudioId();
+            String metadata = request.getMetadata();
+            DefaultTransactionDefinition def = new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            TransactionStatus txStatus = transactionManager.getTransaction(def);
+            try {
+                streamSessionRepository.findByRoomName(roomName)
+                        .ifPresent(s -> {
+                            s.reuseForNewParticipant(userId, participantIdentity, metadata);
+                            streamSessionRepository.save(s);
+                            mediaSettingsService.initializeSessionState(userId, studioId, s.getId());
+                        });
+                transactionManager.commit(txStatus);
+            } catch (Exception ex) {
+                transactionManager.rollback(txStatus);
+                log.warn("Reuse after duplicate key failed for roomName={}", roomName, ex);
+            }
+            log.info("Stream session reused after duplicate key for studio {} (roomName={})",
+                    request.getStudioId(), roomName);
+            return tokenResponse;
+        }
     }
 
     @Transactional
@@ -83,13 +128,17 @@ public class StreamService {
 
     @Transactional
     public void leaveStream(Long studioId, Long userId) {
-        streamSessionRepository.findByStudioIdAndStatus(studioId, SessionStatus.ACTIVE)
-                .filter(session -> session.getUserId().equals(userId))
+        // CONNECTING 또는 ACTIVE 상태인 세션 모두 처리
+        streamSessionRepository.findByStudioIdAndUserIdAndStatusIn(
+                studioId, userId, List.of(SessionStatus.CONNECTING, SessionStatus.ACTIVE))
                 .ifPresent(session -> {
                     session.disconnect();
                     liveKitService.removeParticipant(session.getRoomName(), session.getParticipantIdentity());
                     log.info("User {} left stream for studio {}", userId, studioId);
                 });
+
+        // 미디어 상태 자동 종료 (세션 유무와 무관하게 실행)
+        mediaSettingsService.terminateSessionState(studioId, userId);
     }
 
     @Transactional

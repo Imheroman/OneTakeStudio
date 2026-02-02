@@ -7,6 +7,10 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
+import {
+  getHttpErrorStatus,
+  getHttpErrorMessage,
+} from "@/shared/lib/error-utils";
 import { useState } from "react";
 import { AuthResponseSchema } from "@/entities/user/model";
 
@@ -29,6 +33,7 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 import { Loader2 } from "lucide-react";
+import { Logo } from "@/shared/ui/logo";
 
 const formSchema = z.object({
   email: z.string().email({ message: "올바른 이메일 형식을 입력해주세요." }),
@@ -94,12 +99,14 @@ export function LoginForm() {
         };
 
         login(userData, accessToken);
-        router.push(`/workspace/${user.userId}`);
+        if (user?.userId) {
+          router.push(`/workspace/${user.userId}`);
+        }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("로그인 에러:", error);
-      const status = error?.response?.status;
-      
+      const status = getHttpErrorStatus(error);
+
       if (status === 503) {
         setErrorMsg(
           "서비스를 사용할 수 없습니다 (503).\n" +
@@ -119,7 +126,7 @@ export function LoginForm() {
       }
       
       setErrorMsg(
-        error.response?.data?.message || "이메일 또는 비밀번호를 확인해주세요.",
+        getHttpErrorMessage(error, "이메일 또는 비밀번호를 확인해주세요.")
       );
     } finally {
       setIsSubmitting(false);
@@ -144,10 +151,10 @@ export function LoginForm() {
 
   return (
     <Card className="w-full max-w-md border-0 shadow-xl bg-white rounded-2xl">
+      <div className="flex justify-center pt-1 pb-1">
+        <Logo href="/" size="lg" />
+      </div>
       <CardHeader className="space-y-1 text-center pb-6">
-        <h1 className="text-3xl font-black text-indigo-600 tracking-tighter mb-2">
-          OneTake
-        </h1>
         <CardTitle className="text-xl font-bold text-gray-900">로그인</CardTitle>
         <CardDescription className="text-gray-500">
           서비스 이용을 위해 이메일과 비밀번호를 입력해주세요.
@@ -230,7 +237,7 @@ export function LoginForm() {
             type="button"
             variant="outline"
             onClick={() => handleOAuthLogin("google")}
-            className="h-11 font-medium text-gray-600 hover:bg-gray-50 border-gray-200"
+            className="google-oauth-hover h-11 font-medium text-gray-600 border-gray-200 transition-colors"
           >
             Google
           </Button>

@@ -1,1 +1,1 @@
-export { ChannelManagement } from "./ui/ChannelManagement";
+export { useChannelManagement } from "./model/useChannelManagement";

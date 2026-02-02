@@ -1,12 +1,12 @@
-import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
+import axios, { AxiosInstance, AxiosError } from "axios";
 import { z, ZodTypeAny } from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 // 1. MSA 백엔드 주소 설정
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
-// 2. Axios 인스턴스 생성
-const axiosInstance = axios.create({
+// 2. Axios 인스턴스 생성 (토큰 인터셉터는 app 레이어에서 등록)
+export const axiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
   headers: {
@@ -83,8 +83,13 @@ export const apiClient = {
       })
       .catch((error: any) => {
         // 네트워크 에러 처리
-        if (error.code === "ERR_NETWORK" || error.message?.includes("Network Error")) {
-          const networkError = new Error("네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.");
+        if (
+          error.code === "ERR_NETWORK" ||
+          error.message?.includes("Network Error")
+        ) {
+          const networkError = new Error(
+            "네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.",
+          );
           (networkError as any).isNetworkError = true;
           throw networkError;
         }
@@ -189,20 +194,28 @@ export const apiClient = {
         }
       });
   },
+
+  /**
+   * FormData 업로드 (multipart/form-data, Content-Type 자동 설정)
+   */
+  postForm: (
+    url: string,
+    formData: FormData,
+    config?: any,
+  ): Promise<unknown> => {
+    return axiosInstance
+      .post(url, formData, {
+        ...config,
+        headers: {
+          ...config?.headers,
+          "Content-Type": undefined, // 브라우저가 boundary 포함 multipart/form-data 설정
+        },
+      })
+      .then((res) => res.data);
+  },
 };
 
-// 3. 요청 인터셉터: 모든 요청에 토큰 주입
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const accessToken = useAuthStore.getState().accessToken;
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
-
+// 3. 요청 인터셉터는 app 레이어(ApiAuthProvider)에서 등록
 // 4. 응답 인터셉터: 공통 에러 핸들링
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -210,8 +223,14 @@ axiosInstance.interceptors.response.use(
     const status = error.response?.status;
 
     if (status === 401) {
-      // 토큰 만료 시 로그인 페이지 리다이렉트 처리
-      console.error("인증이 만료되었습니다. 다시 로그인해주세요.");
+      // 토큰 만료 시 로그아웃 처리 및 로그인 페이지로 리다이렉트
+      console.error("[Auth] 인증이 만료되었습니다. 로그아웃 처리합니다.");
+      useAuthStore.getState().logout();
+
+      // 브라우저 환경에서만 리다이렉트
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
     }
 
     return Promise.reject(error);

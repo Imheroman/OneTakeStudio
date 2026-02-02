@@ -20,6 +20,7 @@ public enum ErrorCode {
     STREAM_ALREADY_ACTIVE(HttpStatus.CONFLICT, "S002", "이미 활성화된 스트림이 있습니다"),
     STREAM_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S003", "스트림 연결에 실패했습니다"),
     LIVEKIT_TOKEN_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S004", "LiveKit 토큰 생성에 실패했습니다"),
+    LIVEKIT_ROOM_NOT_FOUND(HttpStatus.BAD_REQUEST, "S005", "LiveKit room이 존재하지 않습니다. 스튜디오에 먼저 입장해주세요"),
 
     // Recording
     RECORDING_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "녹화를 찾을 수 없습니다"),
@@ -41,9 +42,21 @@ public enum ErrorCode {
     SCREEN_SHARE_ALREADY_ACTIVE(HttpStatus.CONFLICT, "SS002", "이미 화면 공유가 진행 중입니다"),
     SCREEN_SHARE_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "SS003", "활성화된 화면 공유가 없습니다"),
 
-    // S3
-    S3_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 업로드에 실패했습니다"),
-    S3_DOWNLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "F002", "파일 다운로드에 실패했습니다");
+    // File Storage
+    FILE_STORAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 저장에 실패했습니다"),
+    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "F002", "파일을 찾을 수 없습니다"),
+    FILE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "F003", "파일 접근이 거부되었습니다"),
+
+    // Media Settings
+    MEDIA_SETTINGS_NOT_FOUND(HttpStatus.NOT_FOUND, "MS001", "미디어 설정을 찾을 수 없습니다"),
+    MEDIA_STATE_NOT_FOUND(HttpStatus.NOT_FOUND, "MS002", "미디어 상태를 찾을 수 없습니다"),
+    MEDIA_STATE_ALREADY_EXISTS(HttpStatus.CONFLICT, "MS003", "이미 활성화된 미디어 상태가 있습니다"),
+    MEDIA_DEVICE_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "MS004", "사용할 수 없는 미디어 장치입니다"),
+
+    // Viewer Metrics
+    VIEWER_METRICS_NOT_FOUND(HttpStatus.NOT_FOUND, "V001", "시청 지표를 찾을 수 없습니다"),
+    VIEWER_COLLECTION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "V002", "이미 시청자 수집이 진행 중입니다"),
+    VIEWER_COLLECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "V003", "시청자 수집에 실패했습니다");
 
     private final HttpStatus status;
     private final String code;

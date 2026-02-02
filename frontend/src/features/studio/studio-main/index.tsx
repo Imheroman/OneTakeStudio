@@ -1,1 +1,2 @@
-export { StudioMain } from "./ui/StudioMain";
+export { useStudioMain } from "./model/useStudioMain";
+export type { GetPreviewStreamRef, SourceTransform } from "./model/useStudioMain";

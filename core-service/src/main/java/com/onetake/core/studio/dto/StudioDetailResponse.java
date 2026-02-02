@@ -21,6 +21,7 @@ public class StudioDetailResponse {
     private String thumbnail;
     private String template;
     private String status;
+    private String recordingStorage; // LOCAL 또는 CLOUD
     private String joinUrl;
     private List<StudioMemberResponse> members;
     private List<SceneResponse> scenes;
@@ -35,6 +36,7 @@ public class StudioDetailResponse {
                 .thumbnail(studio.getThumbnail())
                 .template(studio.getTemplate())
                 .status(studio.getStatus().name().toLowerCase())
+                .recordingStorage(studio.getRecordingStorage() != null ? studio.getRecordingStorage().name() : "LOCAL")
                 .joinUrl("https://studio.example.com/join/" + studio.getStudioId())
                 .members(members)
                 .scenes(scenes)
@@ -51,6 +53,7 @@ public class StudioDetailResponse {
                 .thumbnail(studio.getThumbnail())
                 .template(studio.getTemplate())
                 .status(studio.getStatus().name().toLowerCase())
+                .recordingStorage(studio.getRecordingStorage() != null ? studio.getRecordingStorage().name() : "LOCAL")
                 .joinUrl("https://studio.example.com/join/" + studio.getStudioId())
                 .createdAt(studio.getCreatedAt())
                 .updatedAt(studio.getUpdatedAt())

@@ -3,7 +3,7 @@
 import { useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { StudioMain } from "@/features/studio/studio-main";
+import { StudioMain } from "@/widgets/studio/studio-main";
 
 interface StudioPageProps {
   params: Promise<{ id: string }>;

@@ -1,6 +1,7 @@
 package com.onetake.media.global.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,6 +51,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .badRequest()
                 .body(ErrorResponse.of(ErrorCode.INVALID_INPUT_VALUE, fieldErrors));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    protected ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("DataIntegrityViolation: {}", e.getMessage());
+        String message = e.getMessage() != null && e.getMessage().contains("Duplicate entry")
+                ? "이미 해당 스튜디오의 스트림 세션이 존재합니다. 잠시 후 다시 시도하거나 방송 종료 후 재시도해 주세요."
+                : "데이터 제약 위반이 발생했습니다.";
+        return ResponseEntity
+                .status(ErrorCode.STREAM_ALREADY_ACTIVE.getStatus())
+                .body(ErrorResponse.of(ErrorCode.STREAM_ALREADY_ACTIVE, message));
     }
 
     @ExceptionHandler(Exception.class)

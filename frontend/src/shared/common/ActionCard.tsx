@@ -12,13 +12,24 @@ interface ActionCardProps {
   actionLabel?: string;
   className?: string;
   iconBg?: "indigo" | "gray" | "blue";
+  /** 다크 모드일 때 카드/텍스트 스타일 적용 */
+  dark?: boolean;
   onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 const iconBgClasses = {
-  indigo: "bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100",
-  gray: "bg-gray-100 text-gray-600 group-hover:bg-gray-200",
-  blue: "bg-blue-50 text-blue-700 group-hover:bg-blue-100",
+  indigo: {
+    light: "bg-indigo-50 text-indigo-700 group-hover:bg-indigo-100",
+    dark: "bg-indigo-900/50 text-indigo-300 group-hover:bg-indigo-800/50",
+  },
+  gray: {
+    light: "bg-gray-100 text-gray-600 group-hover:bg-gray-200",
+    dark: "bg-gray-700 text-gray-300 group-hover:bg-gray-600",
+  },
+  blue: {
+    light: "bg-blue-50 text-blue-700 group-hover:bg-blue-100",
+    dark: "bg-blue-900/50 text-blue-300 group-hover:bg-blue-800/50",
+  },
 };
 
 export function ActionCard({
@@ -29,12 +40,17 @@ export function ActionCard({
   actionLabel = "Start",
   className,
   iconBg = "gray",
+  dark = false,
   onClick,
 }: ActionCardProps) {
+  const iconBgSet = iconBgClasses[iconBg][dark ? "dark" : "light"];
   return (
     <Card
       className={cn(
-        "hover:shadow-lg transition-all border-gray-200 group",
+        "hover:shadow-lg transition-all group",
+        dark
+          ? "border-gray-700 bg-gray-800/50 hover:bg-gray-800/70"
+          : "border-gray-200",
         className
       )}
     >
@@ -42,14 +58,26 @@ export function ActionCard({
         <div
           className={cn(
             "h-16 w-16 rounded-full flex items-center justify-center transition-colors",
-            iconBgClasses[iconBg]
+            iconBgSet
           )}
         >
           {icon}
         </div>
         <div>
-          <h2 className="text-xl font-bold mb-2">{title}</h2>
-          <p className="text-gray-500 text-sm max-w-xs mx-auto">
+          <h2
+            className={cn(
+              "text-xl font-bold mb-2",
+              dark ? "text-gray-100" : "text-gray-900"
+            )}
+          >
+            {title}
+          </h2>
+          <p
+            className={cn(
+              "text-sm max-w-xs mx-auto",
+              dark ? "text-gray-400" : "text-gray-500"
+            )}
+          >
             {description}
           </p>
         </div>

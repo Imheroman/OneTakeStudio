@@ -20,5 +20,9 @@ public interface ConnectedDestinationRepository extends JpaRepository<ConnectedD
 
     boolean existsByUserIdAndPlatformAndChannelId(Long userId, String platform, String channelId);
 
+    boolean existsByUserIdAndPlatformAndChannelIdAndIsActiveTrue(Long userId, String platform, String channelId);
+
+    Optional<ConnectedDestination> findOneByUserIdAndPlatformAndChannelIdAndIsActiveTrue(Long userId, String platform, String channelId);
+
     List<ConnectedDestination> findByIdInAndIsActiveTrue(List<Long> ids);
 }

@@ -44,10 +44,18 @@ public class Studio {
     @Column(length = 50)
     private String template;
 
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     @Builder.Default
     private StudioStatus status = StudioStatus.READY;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recording_storage", length = 20)
+    @Builder.Default
+    private RecordingStorage recordingStorage = RecordingStorage.LOCAL;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -83,5 +91,9 @@ public class Studio {
 
     public void endStreaming() {
         this.status = StudioStatus.ENDED;
+    }
+
+    public void updateNote(String note) {
+        this.note = note;
     }
 }

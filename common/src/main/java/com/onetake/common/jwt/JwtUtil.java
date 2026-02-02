@@ -6,6 +6,7 @@ import io.jsonwebtoken.security.Keys;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 public class JwtUtil {
 
@@ -25,6 +26,7 @@ public class JwtUtil {
 
     public String generateAccessToken(String userId, String email, String nickname, Long internalId) {
         var builder = Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId)
                 .claim("email", email)
                 .claim("nickname", nickname)
@@ -41,6 +43,7 @@ public class JwtUtil {
 
     public String generateRefreshToken(String userId) {
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(userId)
                 .claim("type", "refresh")
                 .issuedAt(new Date())
@@ -92,5 +95,13 @@ public class JwtUtil {
 
     public Long getInternalId(String token) {
         return parseToken(token).get("iid", Long.class);
+    }
+
+    public String getJti(String token) {
+        return parseToken(token).getId();
+    }
+
+    public Date getExpiration(String token) {
+        return parseToken(token).getExpiration();
     }
 }
