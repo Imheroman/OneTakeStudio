@@ -88,16 +88,16 @@ build-core:
   stage: build
   image: gradle:8-jdk21
   script:
-    - cd infra/apps/core
+    - cd core-service
     - gradle build -x test --no-daemon
   artifacts:
     paths:
-      - infra/apps/core/build/libs/*.jar
+      - core-service/build/libs/*.jar
     expire_in: 1 hour
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - infra/apps/core/**/*
+        - core-service/**/*
 
 build-media:
   stage: build
@@ -129,7 +129,7 @@ docker-core:
     - apk add --no-cache aws-cli
     - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
   script:
-    - docker build -t $CORE_IMAGE:$CI_COMMIT_SHORT_SHA -t $CORE_IMAGE:latest -f infra/apps/core/Dockerfile infra/apps/core
+    - docker build -t $CORE_IMAGE:$CI_COMMIT_SHORT_SHA -t $CORE_IMAGE:latest -f core-service/Dockerfile core-service
     - docker push $CORE_IMAGE:$CI_COMMIT_SHORT_SHA
     - docker push $CORE_IMAGE:latest
   needs:
@@ -138,7 +138,7 @@ docker-core:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - infra/apps/core/**/*
+        - core-service/**/*
 
 docker-media:
   stage: docker
@@ -184,7 +184,7 @@ deploy-core:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - infra/apps/core/**/* # 소스 코드 변경 감지
+        - core-service/**/* # 소스 코드 변경 감지
         - infra/k8s/apps/core/**/* # k8s 설정 변경 감지 (추가 권장)
 
 deploy-media:
