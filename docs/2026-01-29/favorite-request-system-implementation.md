@@ -60,7 +60,7 @@ user/dto/UserSearchResponse.java
 #### Frontend
 ```
 src/
-├── middleware.ts                    # Next.js 인증 미들웨어
+├── proxy.ts                    # Next.js 인증 미들웨어
 ├── shared/
 │   ├── lib/jwt.ts                   # JWT 유틸리티
 │   └── providers/AuthProvider.tsx   # 인증 Provider
@@ -148,7 +148,7 @@ if (existingRequest.isPresent()) {
 **해결**:
 1. `jwt.ts` - JWT 파싱 및 만료 체크 유틸리티 추가
 2. `useAuthStore.ts` - `checkAuth()`, `isAuthenticated()` 메서드 추가
-3. `middleware.ts` - 서버사이드 인증 체크 (쿠키 기반)
+3. `proxy.ts` - 서버사이드 인증 체크 (쿠키 기반)
 4. `AuthProvider.tsx` - 주기적 토큰 만료 체크
 5. `client.ts` - 401 응답 시 자동 로그아웃
 
