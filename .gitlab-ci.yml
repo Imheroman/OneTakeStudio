@@ -218,15 +218,20 @@ deploy-core:
   script:
     - |
       sed -i "s|image: .*|image: $CORE_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/k8s/apps/core/deployment.yaml
-      kubectl apply -f infra/k8s/apps/core/configmap.yaml -n core
-      kubectl apply -f infra/k8s/apps/core/deployment.yaml -n core
+      kubectl apply -f infra/k8s/apps/core/namespace.yaml
+      kubectl apply -f infra/k8s/apps/core/configmap.yaml
+      kubectl apply -f infra/k8s/apps/core/deployment.yaml
+      kubectl apply -f infra/k8s/apps/core/service.yaml
+      kubectl apply -f infra/k8s/apps/core/hpa.yaml
+      kubectl apply -f infra/k8s/apps/core/ingress.yaml
       kubectl rollout status deployment/api-server -n core --timeout=300s
   needs:
     - job: docker-core
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - infra/k8s/apps/core/**/* # k8s 설정 변경 감지 (추가 권장)
+        - core-service/**/*
+        - infra/k8s/apps/core/**/*
 
 deploy-media:
   stage: deploy
@@ -239,10 +244,14 @@ deploy-media:
   script:
     - |
       sed -i "s|image: .*|image: $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/k8s/apps/media/deployment.yaml
-      kubectl apply -f infra/k8s/apps/media/configmap.yaml -n media
-      kubectl apply -f infra/k8s/apps/media/deployment.yaml -n media
-      kubectl apply -f infra/k8s/apps/media/service.yaml -n media
-      kubectl rollout status media-service -n media --timeout=300s
+      kubectl apply -f infra/k8s/apps/media/namespace.yaml
+      kubectl apply -f infra/k8s/apps/media/configmap.yaml
+      kubectl apply -f infra/k8s/apps/media/deployment.yaml
+      kubectl apply -f infra/k8s/apps/media/service.yaml
+      kubectl apply -f infra/k8s/apps/media/hpa.yaml
+      kubectl apply -f infra/k8s/apps/media/middleware.yaml
+      kubectl apply -f infra/k8s/apps/media/ingress.yaml
+      kubectl rollout status deployment/media-server -n media --timeout=300s
   needs:
     - job: docker-media
   rules:
