@@ -1,31 +1,49 @@
 # =====================================================
 # Production Configuration - media-service
+# 운영 환경에서 환경변수로 오버라이드
 # =====================================================
 
 spring:
+  datasource:
+    url: ${MEDIA_DB_URL}
+    username: ${MEDIA_DB_USERNAME}
+    password: ${MEDIA_DB_PASSWORD}
+
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+
+livekit:
+  host: ${LIVEKIT_HOST}
+  api:
+    key: ${LIVEKIT_API_KEY}
+    secret: ${LIVEKIT_API_SECRET}
+
+core:
+  service:
+    url: ${CORE_SERVICE_URL}
+
+recording:
+  storage:
+    base-path: ${RECORDING_BASE_PATH}
+    base-url: ${RECORDING_BASE_URL}
 
 logging:
   level:
     com.onetake.media: INFO
     org.hibernate.SQL: WARN
-
-# 운영 환경에서 필요한 환경변수 목록:
-# -----------------------------------------------------
-# DB_URL                - MySQL 연결 URL
-# DB_USERNAME           - DB 사용자명
-# DB_PASSWORD           - DB 비밀번호
-# REDIS_HOST            - Redis 호스트
-# REDIS_PORT            - Redis 포트
-# JWT_SECRET            - JWT 시크릿 키 (core-service와 동일)
-# EUREKA_URL            - Eureka 서버 URL
-# LIVEKIT_HOST          - LiveKit 서버 URL
-# LIVEKIT_API_KEY       - LiveKit API Key
-# LIVEKIT_API_SECRET    - LiveKit API Secret
-# CORE_SERVICE_URL      - Core 서비스 URL
-# RECORDING_BASE_PATH   - 녹화 파일 저장 경로
-# RECORDING_BASE_URL    - 녹화 파일 접근 URL
-# -----------------------------------------------------

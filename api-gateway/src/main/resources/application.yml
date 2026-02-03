@@ -1,9 +1,7 @@
 server:
-  port: ${SERVER_PORT:60000}
+  port: 60000
 
 spring:
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: api-gateway
   cloud:
@@ -93,13 +91,13 @@ spring:
 
 # JWT
 jwt:
-  secret: ${JWT_SECRET:b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=}
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
 
 # Eureka Client
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
@@ -118,5 +116,5 @@ management:
 # Logging
 logging:
   level:
-    org.springframework.cloud.gateway: ${LOG_LEVEL_GATEWAY:DEBUG}
+    org.springframework.cloud.gateway: DEBUG
     org.springframework.web: INFO
