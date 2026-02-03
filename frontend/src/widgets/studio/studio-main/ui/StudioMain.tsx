@@ -116,11 +116,70 @@ export function StudioMain({ studioId }: StudioMainProps) {
     selectedDestinationIds,
     setSelectedDestinationIds,
     publishError,
+    // 편집 락 관련
+    isLockLoading,
+    hasLock,
+    isLockedByOther,
+    lockedByNickname,
+    acquireLock,
+    releaseLock,
+    forceReleaseLock,
+    // 상태 동기화 관련
+    isStateSyncConnected,
+    onlineMembers,
+    // 실시간 미디어 공유 관련
+    isLiveKitConnected,
+    remoteSources,
+    publishedTracks,
   } = useStudioMain(studioId, { getPreviewStreamRef });
+
+  // 편집 모드 진입 시 락 획득 시도
+  const handleEditModeToggle = async () => {
+    if (!isEditMode) {
+      // 편집 모드로 진입하려면 락 획득 필요
+      if (!hasLock && !isLockedByOther) {
+        const acquired = await acquireLock();
+        if (acquired) {
+          setIsEditMode(true);
+        }
+      } else if (hasLock) {
+        // 이미 락을 가지고 있으면 편집 모드 진입
+        setIsEditMode(true);
+      }
+      // 다른 사람이 락을 가지고 있으면 진입 불가
+    } else {
+      // 편집 모드 종료 (락은 유지, 명시적으로 해제해야 함)
+      setIsEditMode(false);
+    }
+  };
+
+  // 락 획득 핸들러
+  const handleAcquireLock = async () => {
+    const acquired = await acquireLock();
+    if (acquired) {
+      setIsEditMode(true);
+    }
+  };
+
+  // 락 해제 핸들러
+  const handleReleaseLock = async () => {
+    await releaseLock();
+    setIsEditMode(false);
+  };
+
+  // 강제 해제 핸들러 (호스트 전용)
+  const handleForceReleaseLock = async () => {
+    if (confirm("다른 사용자의 편집 권한을 강제로 해제하시겠습니까?")) {
+      await forceReleaseLock();
+    }
+  };
+
+  // 실제 편집 가능 여부 (락을 가지고 있고 편집 모드일 때만)
+  const canEdit = isEditMode && hasLock && !isLockedByOther;
 
   const audioLevel = useAudioLevel(isAudioEnabled);
   const { getStream: getSourceStream, streamIds: availableStreamIds } =
-    useSourceStreams(sources, { isVideoEnabled, isAudioEnabled });
+    useSourceStreams(sources, { isVideoEnabled, isAudioEnabled, remoteSources, publishedTracks });
 
   if (isLoading) {
     return (
@@ -154,7 +213,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             onRemoveScene={handleRemoveScene}
             onRenameScene={(sceneId, name) => handleUpdateScene(sceneId, { name })}
             onSaveScene={handleSaveSceneLayout}
-            isEditMode={isEditMode}
+            isEditMode={canEdit}
           />
         </div>
       </aside>
@@ -174,7 +233,16 @@ export function StudioMain({ studioId }: StudioMainProps) {
           setSelectedDestinationIds={setSelectedDestinationIds}
           publishError={publishError}
           isEditMode={isEditMode}
-          onEditModeToggle={() => setIsEditMode((v) => !v)}
+          onEditModeToggle={handleEditModeToggle}
+          // 편집 락 관련
+          isLockLoading={isLockLoading}
+          hasLock={hasLock}
+          isLockedByOther={isLockedByOther}
+          lockedByNickname={lockedByNickname}
+          onAcquireLock={handleAcquireLock}
+          onReleaseLock={handleReleaseLock}
+          onForceReleaseLock={handleForceReleaseLock}
+          isStateSyncConnected={isStateSyncConnected}
         />
 
         {/* 콘텐츠: 전체 높이 사용. 하단 pb로 접힌 토글 네브에 퀵 레이아웃 바가 가리지 않도록 여백 */}
@@ -187,7 +255,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
               availableStreamIds={availableStreamIds}
               isVideoEnabled={isVideoEnabled}
               isAudioEnabled={isAudioEnabled}
-              isEditMode={isEditMode}
+              isEditMode={canEdit}
               resolution={previewResolution}
               getSourceStream={getSourceStream}
               getPreviewStreamRef={getPreviewStreamRef}
@@ -204,8 +272,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
             <StagingArea
               sources={sources}
               onStageSourceIds={onStageSourceIds}
-              canAddSource={canAddSource}
-              isEditMode={isEditMode}
+              canAddSource={canAddSource && canEdit}
+              isEditMode={canEdit}
               getSourceStream={getSourceStream}
               onReorder={handleReorderSources}
               onAddSource={handleAddSource}
@@ -284,6 +352,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
         onStyleChange={setStyleState}
         getPreviewStream={() => getPreviewStreamRef.current?.() ?? null}
         recordingStorage={(studio?.recordingStorage as "LOCAL" | "CLOUD") ?? "LOCAL"}
+        onlineMembers={onlineMembers}
       />
     </div>
   );

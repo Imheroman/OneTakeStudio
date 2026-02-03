@@ -39,8 +39,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String userId = jwtUtil.getUserId(token);  // UUID 문자열
             String email = jwtUtil.getEmail(token);
+            String nickname = jwtUtil.getNickname(token);
 
-            CustomUserDetails userDetails = new CustomUserDetails(userId, email);
+            CustomUserDetails userDetails = new CustomUserDetails(userId, email, nickname);
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, Collections.emptyList());

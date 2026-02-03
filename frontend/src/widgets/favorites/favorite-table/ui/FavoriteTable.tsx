@@ -47,28 +47,22 @@ export function FavoriteTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {favorites.map((favorite) => {
-          const deleteId =
-            favorite.id ?? favorite.userId ?? favorite.favoriteId ?? "";
-          return (
-            <TableRow key={deleteId || favorite.nickname}>
-              <TableCell className="font-medium">{favorite.email ?? "-"}</TableCell>
-              <TableCell>{favorite.nickname}</TableCell>
-              <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteId && onDelete(deleteId)}
-                  disabled={!deleteId}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  aria-label="즐겨찾기에서 제거"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          );
-        })}
+        {favorites.map((favorite) => (
+          <TableRow key={favorite.favoriteId ?? favorite.userId}>
+            <TableCell className="font-medium">{favorite.email ?? "-"}</TableCell>
+            <TableCell>{favorite.nickname}</TableCell>
+            <TableCell className="text-right">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDelete(favorite.favoriteId ?? favorite.userId ?? "")}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
       </TableBody>
     </Table>
   );

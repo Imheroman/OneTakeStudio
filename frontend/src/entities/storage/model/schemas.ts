@@ -5,28 +5,40 @@ import { z } from "zod";
 
 // 스토리지 파일 스키마
 export const StorageFileSchema = z.object({
-  id: z.union([z.string(), z.number()]), // MSW에서는 number, 실제 API는 string일 수 있음
-  title: z.string().optional(), // MSW에서는 title 사용
-  name: z.string().optional(), // 실제 API에서는 name 사용
-  date: z.string().optional(), // MSW에서는 date 사용
-  uploadedAt: z.string().optional(), // 실제 API에서는 uploadedAt 사용
-  size: z.union([z.string(), z.number()]).optional(), // MSW는 string, 실제는 number일 수 있음
-  type: z.string().optional(),
-  status: z.string().optional(), // MSW에서 사용
+  id: z.union([z.string(), z.number()]),
+  title: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
+  date: z.string().nullable().optional(),
+  uploadedAt: z.string().nullable().optional(),
+  size: z.union([z.string(), z.number()]).nullable().optional(),
+  sizeBytes: z.number().nullable().optional(),
+  type: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  thumbnailUrl: z.string().nullable().optional(),
 });
 
-// 스토리지 데이터 스키마
+// 스토리지 데이터 스키마 (백엔드 응답 호환)
 export const StorageDataSchema = z.object({
+  // GB 단위 (프론트엔드 UI용)
   total: z.number(),
   used: z.number(),
   available: z.number().optional(),
   videoUsage: z.number().optional(),
   assetUsage: z.number().optional(),
+  // bytes 단위 (상세 정보)
+  usedBytes: z.number().optional(),
+  limitBytes: z.number().optional(),
+  usedPercentage: z.number().optional(),
+  usedFormatted: z.string().optional(),
+  limitFormatted: z.string().optional(),
 });
 
 // 스토리지 파일 목록 응답 스키마
 export const StorageFilesResponseSchema = z.object({
   files: z.array(StorageFileSchema),
+  totalPages: z.number().optional(),
+  totalElements: z.number().optional(),
+  currentPage: z.number().optional(),
 });
 
 // 타입 추론

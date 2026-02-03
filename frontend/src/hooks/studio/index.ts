@@ -7,3 +7,19 @@ export {
   type UseAdaptivePerformanceOptions,
 } from "./useAdaptivePerformance";
 export { useLiveKit, type UseLiveKitOptions, type UseLiveKitReturn } from "./useLiveKit";
+export { useEditLock, type UseEditLockOptions, type UseEditLockReturn } from "./useEditLock";
+export type { EditLockResponse } from "@/shared/api/studio-edit-lock";
+export {
+  useStudioStateSync,
+  type UseStudioStateSyncOptions,
+  type StudioStateMessage,
+  type StudioStateType,
+  type OnlineMember,
+} from "./useStudioStateSync";
+export {
+  useStudioLiveKit,
+  type UseStudioLiveKitOptions,
+  type UseStudioLiveKitReturn,
+  type RemoteSource,
+  type LocalPublishedTrack,
+} from "./useStudioLiveKit";

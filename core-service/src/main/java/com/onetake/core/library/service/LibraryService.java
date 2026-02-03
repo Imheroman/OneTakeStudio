@@ -30,8 +30,8 @@ public class LibraryService {
     private final RecordingRepository recordingRepository;
     private final ClipRepository clipRepository;
 
-    @Value("${library.storage.limit-bytes:10737418240}")
-    private Long storageLimitBytes; // 기본 10GB
+    @Value("${library.storage.limit-bytes:32212254720}")
+    private Long storageLimitBytes; // 기본 30GB
 
     public RecordingListResponse getRecordings(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -176,9 +176,25 @@ public class LibraryService {
         Long recordingSize = recordingRepository.getTotalFileSizeByUserId(userId);
         Long clipSize = clipRepository.getTotalFileSizeByUserId(userId);
 
-        Long totalUsed = (recordingSize != null ? recordingSize : 0L) +
-                         (clipSize != null ? clipSize : 0L);
+        Long videoBytes = (recordingSize != null ? recordingSize : 0L) +
+                          (clipSize != null ? clipSize : 0L);
+        Long assetBytes = 0L; // 에셋 스토리지는 추후 구현
 
-        return StorageResponse.of(totalUsed, storageLimitBytes);
+        Long totalUsed = videoBytes + assetBytes;
+
+        return StorageResponse.of(totalUsed, storageLimitBytes, videoBytes, assetBytes);
+    }
+
+    /**
+     * 저장된 파일 목록 조회 (녹화 + 클립)
+     */
+    public StorageFilesResponse getStorageFiles(String userId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        // 녹화 파일 조회
+        Page<Recording> recordings = recordingRepository
+                .findByUserIdAndStatusNotOrderByCreatedAtDesc(userId, RecordingStatus.DELETED, pageable);
+
+        return StorageFilesResponse.from(recordings);
     }
 }

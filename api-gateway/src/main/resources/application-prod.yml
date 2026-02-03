@@ -1,0 +1,20 @@
+# =====================================================
+# Production Configuration - api-gateway
+# 운영 환경에서 환경변수로 오버라이드
+# =====================================================
+
+server:
+  port: ${SERVER_PORT}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: WARN
+    org.springframework.web: WARN
