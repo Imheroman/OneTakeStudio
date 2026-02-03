@@ -84,7 +84,33 @@ setup-secrets:
         --from-literal=OAUTH_NAVER_CLIENT_SECRET="$OAUTH_NAVER_CLIENT_SECRET" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # 5. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
+    # 5. Media Application Secret 생성
+    - |
+      kubectl create secret generic media-secret \
+        --namespace=media \
+        --from-literal=JWT_SECRET="$JWT_SECRET" \
+        --from-literal=LIVEKIT_API_KEY="devkey" \
+        --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 6. Redis Secret (media namespace)
+    - |
+      kubectl create secret generic redis-secret \
+        --namespace=media \
+        --from-literal=REDIS_PASSWORD="$REDIS_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 7. LiveKit namespace 및 Secret
+    - kubectl create namespace livekit --dry-run=client -o yaml | kubectl apply -f -
+    - |
+      kubectl create secret generic livekit-secret \
+        --namespace=livekit \
+        --from-literal=LIVEKIT_API_KEY="devkey" \
+        --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
+        --from-literal=LIVEKIT_KEYS="devkey: $LIVEKIT_API_SECRET" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 8. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
     # bitnami 이미지엔 aws cli가 없으므로, 현재는 기존 시크릿이 있다고 가정하거나
     # EC2 호스트에서 CronJob으로 갱신하는 것을 권장합니다.
     # 만약 파이프라인에서 매번 갱신하려면 aws-cli가 포함된 이미지를 써야 합니다.
@@ -212,16 +238,43 @@ deploy-media:
     - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
     - |
-      sed -i "s|image: .*|image: $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA|g" apps/media/deployment.yaml
-      kubectl apply -f apps/media/deployment.yaml -n media
-      kubectl rollout status deployment/api-server -n media --timeout=300s
+      sed -i "s|image: .*|image: $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/k8s/apps/media/deployment.yaml
+      kubectl apply -f infra/k8s/apps/media/configmap.yaml -n media
+      kubectl apply -f infra/k8s/apps/media/deployment.yaml -n media
+      kubectl apply -f infra/k8s/apps/media/service.yaml -n media
+      kubectl rollout status media-service -n media --timeout=300s
   needs:
     - job: docker-media
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - infra/apps/media/**/*
-        - infra/k8s/apps/media/**/* # k8s 설정 변경 감지 (추가 권장)
+        - media-service/**/*
+        - infra/k8s/apps/media/**/*
+
+deploy-livekit:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+    - |
+      kubectl apply -f infra/k8s/livekit/namespace.yaml
+      kubectl apply -f infra/k8s/livekit/pvc.yaml
+      kubectl apply -f infra/k8s/livekit/configmap.yaml
+      kubectl apply -f infra/k8s/livekit/server-deployment.yaml
+      kubectl apply -f infra/k8s/livekit/server-service.yaml
+      kubectl apply -f infra/k8s/livekit/egress-deployment.yaml
+      kubectl apply -f infra/k8s/livekit/ingress-deployment.yaml
+      kubectl apply -f infra/k8s/livekit/ingress.yaml
+      kubectl rollout status deployment/livekit-server -n livekit --timeout=300s
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        - infra/k8s/livekit/**/*
+      when: manual
 
 # ─────────────────────────────────────────────
 # Frontend Vercel 배포 (추가됨)
