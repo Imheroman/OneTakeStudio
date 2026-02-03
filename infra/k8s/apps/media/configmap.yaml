@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: media-config
+  namespace: media
+  labels:
+    app: media-server
+data:
+  REDIS_HOST: "redis.database.svc.cluster.local"
+  REDIS_PORT: "6379"
+  LIVEKIT_HOST: "livekit-server.livekit.svc.cluster.local:7880"
+  CORE_SERVICE_URL: "http://api-server.core.svc.cluster.local:8080"
+  RECORDING_BASE_PATH: "/recordings"
+  RECORDING_BASE_URL: "https://www.onetakestudio.duckdns.org/recordings"
