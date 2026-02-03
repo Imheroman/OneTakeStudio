@@ -186,6 +186,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     isLiveKitConnected,
     remoteSources,
     publishedTracks,
+    localPublishedStreamsRef,
   } = useStudioMain(studioId, { getPreviewStreamRef });
 
   // 편집 모드 진입 시 락 획득 시도
@@ -276,6 +277,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     isAudioEnabled,
     remoteSources,
     publishedTracks,
+    localPublishedStreamsRef,
   });
 
   const streamsWithAudio = useMemo(

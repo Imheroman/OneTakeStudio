@@ -71,8 +71,8 @@ public class LiveKitEgressService {
      */
     public String startRtmpStream(String roomName, List<String> rtmpUrls, VideoQuality videoQuality) {
         try {
-            // 비디오 품질 설정 (null이면 HIGH 사용)
-            VideoQuality quality = videoQuality != null ? videoQuality : VideoQuality.HIGH;
+            // 비디오 품질: null이면 MEDIUM(720p 2.5Mbps) — 프레임 드랍·딜레이 완화
+            VideoQuality quality = videoQuality != null ? videoQuality : VideoQuality.MEDIUM;
 
             log.info("Starting RTMP stream: room={}, destinations={}, quality={}",
                     roomName, rtmpUrls.size(), quality.getLabel());

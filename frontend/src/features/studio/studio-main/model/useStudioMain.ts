@@ -93,6 +93,8 @@ export function useStudioMain(
   >([]);
   const [publishError, setPublishError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
+  /** handleGoLive에서 새로 만든 room이면 End Live 시 disconnect, 기존 room이면 disconnect 안 함 */
+  const weCreatedRoomRef = useRef(false);
 
   const [sources, setSources] = useState<Source[]>([]);
   const [onStageSourceIds, setOnStageSourceIds] = useState<string[]>([]);
@@ -350,8 +352,10 @@ export function useStudioMain(
   // LiveKit 실시간 미디어 공유
   const {
     isConnected: isLiveKitConnected,
+    getRoom,
     remoteSources,
     publishedTracks,
+    localPublishedStreamsRef,
     publishVideoTrack,
     publishAudioTrack,
     publishScreenTrack,
@@ -801,17 +805,21 @@ export function useStudioMain(
         setIsGoingLive(true);
         setPublishError(null);
 
-        // 1. LiveKit 스트림 연결
-        if (
-          !roomRef.current ||
-          roomRef.current.state !== ConnectionState.Connected
-        ) {
+        // 1. LiveKit: 이미 연결된 room 재사용 (화면공유/웹캠 유지), 없으면 새로 연결
+        const existingRoom = getRoom();
+        const room =
+          existingRoom?.state === ConnectionState.Connected
+            ? existingRoom
+            : null;
+
+        if (!room) {
+          weCreatedRoomRef.current = true;
           const tokenResponse = await joinStream({
             studioId: sid,
             participantName: user?.nickname || "Host",
           });
 
-          const room = new Room({
+          const newRoom = new Room({
             adaptiveStream: true,
             dynacast: true,
             videoCaptureDefaults: {
@@ -819,57 +827,80 @@ export function useStudioMain(
             },
           });
 
-          room.on(RoomEvent.Disconnected, () => {
+          newRoom.on(RoomEvent.Disconnected, () => {
             setIsStreamConnected(false);
             console.log("Disconnected from LiveKit room");
           });
 
-          room.on(RoomEvent.ConnectionStateChanged, (state) => {
+          newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
             setIsStreamConnected(state === ConnectionState.Connected);
           });
 
-          await room.connect(tokenResponse.livekitUrl, tokenResponse.token);
+          await newRoom.connect(tokenResponse.livekitUrl, tokenResponse.token);
+          roomRef.current = newRoom;
+          setIsStreamConnected(true);
+          console.log("Connected to LiveKit room:", tokenResponse.roomName);
+        } else {
+          weCreatedRoomRef.current = false;
+          roomRef.current = room;
+        }
 
-          // Konva 캔버스 스트림에서 비디오 트랙 가져오기 (레이아웃 적용된 화면)
-          const canvasStream = getPreviewStreamRef?.current?.();
-          if (canvasStream) {
-            const videoTracks = canvasStream.getVideoTracks();
-            if (videoTracks.length > 0) {
-              await room.localParticipant.publishTrack(videoTracks[0], {
-                name: "canvas",
-                source: Track.Source.Camera,
-              });
-              console.log("Published Konva canvas video track");
-            }
-          } else {
-            // 캔버스 스트림이 없으면 기본 카메라 사용 (fallback)
-            console.warn("Canvas stream not available, falling back to camera");
-            const videoTrack = await createLocalTracks({
-              video: true,
-              audio: false,
-            });
-            for (const track of videoTrack) {
-              await room.localParticipant.publishTrack(track);
-            }
+        const roomToUse = room ?? roomRef.current;
+        if (!roomToUse) throw new Error("Room not available");
+
+        // 송출용으로 캔버스 1개만 보내기: 기존 비디오/화면공유 unpublish (캔버스에 이미 합성됨)
+        const displaySourceIds = sources
+          .filter((s) => onStageSourceIds.includes(s.id))
+          .map((s) => s.id);
+        for (const source of sources) {
+          if (
+            (source.type === "video" || source.type === "screen") &&
+            !source.isRemote &&
+            displaySourceIds.includes(source.id)
+          ) {
+            await unpublishTrack(source.id);
           }
+        }
 
-          // 오디오 트랙 별도로 가져오기 (마이크)
+        // Konva 캔버스 스트림 publish (레이아웃 적용된 최종 화면)
+        const canvasStream = getPreviewStreamRef?.current?.();
+        if (canvasStream) {
+          const videoTracks = canvasStream.getVideoTracks();
+          if (videoTracks.length > 0) {
+            await roomToUse.localParticipant.publishTrack(videoTracks[0], {
+              name: "canvas",
+              source: Track.Source.Camera,
+            });
+            console.log("Published Konva canvas video track");
+          }
+        } else {
+          console.warn("Canvas stream not available, falling back to camera");
+          const videoTrack = await createLocalTracks({
+            video: true,
+            audio: false,
+          });
+          for (const track of videoTrack) {
+            await roomToUse.localParticipant.publishTrack(track);
+          }
+        }
+
+        // 오디오 트랙 (없으면 publish)
+        const hasAudio = Array.from(
+          roomToUse.localParticipant.trackPublications.values()
+        ).some((p) => p.kind === "audio");
+        if (!hasAudio) {
           try {
             const audioTracks = await createLocalTracks({
               video: false,
               audio: true,
             });
             for (const track of audioTracks) {
-              await room.localParticipant.publishTrack(track);
+              await roomToUse.localParticipant.publishTrack(track);
             }
             console.log("Published audio track");
           } catch (audioErr) {
             console.warn("Failed to get audio track:", audioErr);
           }
-
-          roomRef.current = room;
-          setIsStreamConnected(true);
-          console.log("Connected to LiveKit room:", tokenResponse.roomName);
         }
 
         // 2. RTMP 송출 시작
@@ -931,6 +962,10 @@ export function useStudioMain(
       getPreviewStreamRef,
       studio?.recordingStorage,
       startAutoRecording,
+      getRoom,
+      sources,
+      onStageSourceIds,
+      unpublishTrack,
     ]
   );
 
@@ -951,11 +986,20 @@ export function useStudioMain(
         setIsPublishing(false);
       }
 
-      // 2. LiveKit 연결 해제
-      if (roomRef.current) {
-        await roomRef.current.disconnect();
-        roomRef.current = null;
-        setIsStreamConnected(false);
+      // 2. 캔버스 트랙 unpublish 후, Go Live에서 새로 만든 room만 disconnect
+      const room = roomRef.current;
+      if (room) {
+        const canvasPub = Array.from(
+          room.localParticipant.trackPublications.values()
+        ).find((p) => p.trackName === "canvas");
+        if (canvasPub?.track) {
+          await room.localParticipant.unpublishTrack(canvasPub.track);
+        }
+        if (weCreatedRoomRef.current) {
+          await room.disconnect();
+          roomRef.current = null;
+          setIsStreamConnected(false);
+        }
       }
 
       // 3. 채팅 연동 종료
@@ -1617,5 +1661,6 @@ export function useStudioMain(
     isLiveKitConnected,
     remoteSources,
     publishedTracks,
+    localPublishedStreamsRef,
   };
 }
