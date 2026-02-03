@@ -69,14 +69,29 @@ setup-secrets:
         --from-literal=REDIS_PASSWORD="$REDIS_PASSWORD" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # 4. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
+    # 4. Core Application Secret 생성 (JWT, Mail, OAuth)
+    - |
+      kubectl create secret generic core-secret \
+        --namespace=core \
+        --from-literal=JWT_SECRET="$JWT_SECRET" \
+        --from-literal=MAIL_USERNAME="$MAIL_USERNAME" \
+        --from-literal=MAIL_PASSWORD="$MAIL_PASSWORD" \
+        --from-literal=OAUTH_GOOGLE_CLIENT_ID="$OAUTH_GOOGLE_CLIENT_ID" \
+        --from-literal=OAUTH_GOOGLE_CLIENT_SECRET="$OAUTH_GOOGLE_CLIENT_SECRET" \
+        --from-literal=OAUTH_KAKAO_CLIENT_ID="$OAUTH_KAKAO_CLIENT_ID" \
+        --from-literal=OAUTH_KAKAO_CLIENT_SECRET="$OAUTH_KAKAO_CLIENT_SECRET" \
+        --from-literal=OAUTH_NAVER_CLIENT_ID="$OAUTH_NAVER_CLIENT_ID" \
+        --from-literal=OAUTH_NAVER_CLIENT_SECRET="$OAUTH_NAVER_CLIENT_SECRET" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 5. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
     # bitnami 이미지엔 aws cli가 없으므로, 현재는 기존 시크릿이 있다고 가정하거나
     # EC2 호스트에서 CronJob으로 갱신하는 것을 권장합니다.
     # 만약 파이프라인에서 매번 갱신하려면 aws-cli가 포함된 이미지를 써야 합니다.
 
     - echo "=== Secrets 생성 완료 ==="
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/**
       when: manual
@@ -95,7 +110,7 @@ build-core:
       - core-service/build/libs/*.jar
     expire_in: 1 hour
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - core-service/**/*
 
@@ -110,7 +125,7 @@ build-media:
       - apps/media/build/libs/*.jar
     expire_in: 1 hour
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/media/**/*
 
@@ -136,7 +151,7 @@ docker-core:
     - job: build-core
       artifacts: true
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - core-service/**/*
 
@@ -159,7 +174,7 @@ docker-media:
     - job: build-media
       artifacts: true
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/media/**/*
 
@@ -177,14 +192,14 @@ deploy-core:
   script:
     - |
       sed -i "s|image: .*|image: $CORE_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/k8s/apps/core/deployment.yaml
+      kubectl apply -f infra/k8s/apps/core/configmap.yaml -n core
       kubectl apply -f infra/k8s/apps/core/deployment.yaml -n core
       kubectl rollout status deployment/api-server -n core --timeout=300s
   needs:
     - job: docker-core
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - core-service/**/* # 소스 코드 변경 감지
         - infra/k8s/apps/core/**/* # k8s 설정 변경 감지 (추가 권장)
 
 deploy-media:
@@ -203,7 +218,7 @@ deploy-media:
   needs:
     - job: docker-media
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - infra/apps/media/**/*
         - infra/k8s/apps/media/**/* # k8s 설정 변경 감지 (추가 권장)
@@ -225,7 +240,7 @@ deploy-frontend:
     - vercel deploy --prod --yes --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN  # vercel build 작동
   rules:
     # main, master 브랜치이면서 'frontend' 폴더 내부에 변경이 있을 때만 실행
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "fe-dev" || $CI_COMMIT_BRANCH == "INFRA/infra"  # TODO: infra 추후 제거
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"  # TODO: infra 추후 제거
       # TODO: 빌드 완료 후 제거 필요
 #      changes:
 #        - frontend/**/* ```
