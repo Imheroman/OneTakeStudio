@@ -125,7 +125,9 @@ export default function MyPage() {
         >
           마이페이지
         </h1>
-        <p className={cn("text-sm", isDark ? "text-gray-400" : "text-gray-500")}>
+        <p
+          className={cn("text-sm", isDark ? "text-gray-400" : "text-gray-500")}
+        >
           내 계정 정보와 설정을 관리하세요.
         </p>
       </div>
@@ -135,11 +137,7 @@ export default function MyPage() {
       <div className="flex flex-col md:flex-row gap-8">
         {/* 왼쪽: 요약 프로필 카드 */}
         <aside className="md:w-1/3">
-          <Card
-            className={cn(
-              isDark && "border-gray-700 bg-gray-800/50"
-            )}
-          >
+          <Card className={cn(isDark && "border-gray-700 bg-gray-800/50")}>
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 relative">
                 <Avatar className="h-24 w-24">
@@ -167,12 +165,14 @@ export default function MyPage() {
                 variant="outline"
                 className={cn(
                   "w-full text-red-500 hover:text-red-600",
-                  isDark ? "hover:bg-red-900/30 border-gray-600" : "hover:bg-red-50"
+                  isDark
+                    ? "hover:bg-red-900/30 border-gray-600"
+                    : "hover:bg-red-50"
                 )}
                 onClick={() => {
                   if (confirm("정말 로그아웃 하시겠습니까?")) {
                     logout();
-                    router.push("/login");
+                    router.push("/?auth=login");
                   }
                 }}
               >
@@ -214,11 +214,7 @@ export default function MyPage() {
 
             {/* 탭 1: 프로필 설정 */}
             <TabsContent value="profile">
-              <Card
-                className={cn(
-                  isDark && "border-gray-700 bg-gray-800/50"
-                )}
-              >
+              <Card className={cn(isDark && "border-gray-700 bg-gray-800/50")}>
                 <CardHeader>
                   <CardTitle
                     className={cn(isDark ? "text-gray-100" : "text-gray-900")}
@@ -226,7 +222,9 @@ export default function MyPage() {
                     프로필 수정
                   </CardTitle>
                   <CardDescription
-                    className={cn(isDark ? "text-gray-400" : "text-muted-foreground")}
+                    className={cn(
+                      isDark ? "text-gray-400" : "text-muted-foreground"
+                    )}
                   >
                     다른 사용자에게 보여질 정보를 수정합니다.
                   </CardDescription>
@@ -252,7 +250,9 @@ export default function MyPage() {
                           value={user?.email || ""}
                           disabled
                           className={cn(
-                            isDark ? "bg-gray-700 border-gray-600 text-gray-200" : "bg-gray-100"
+                            isDark
+                              ? "bg-gray-700 border-gray-600 text-gray-200"
+                              : "bg-gray-100"
                           )}
                         />
                         <p className="text-xs text-gray-500">
@@ -308,11 +308,7 @@ export default function MyPage() {
 
             {/* 탭 2: 비밀번호 변경 */}
             <TabsContent value="password">
-              <Card
-                className={cn(
-                  isDark && "border-gray-700 bg-gray-800/50"
-                )}
-              >
+              <Card className={cn(isDark && "border-gray-700 bg-gray-800/50")}>
                 <CardHeader>
                   <CardTitle
                     className={cn(isDark ? "text-gray-100" : "text-gray-900")}
@@ -320,7 +316,9 @@ export default function MyPage() {
                     비밀번호 변경
                   </CardTitle>
                   <CardDescription
-                    className={cn(isDark ? "text-gray-400" : "text-muted-foreground")}
+                    className={cn(
+                      isDark ? "text-gray-400" : "text-muted-foreground"
+                    )}
                   >
                     계정 보안을 위해 비밀번호를 주기적으로 변경해주세요.
                   </CardDescription>

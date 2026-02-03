@@ -2,7 +2,7 @@
 
 import { memo, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { useCollapsible } from "@/hooks/useCollapsible";
@@ -199,13 +199,12 @@ const SidebarFooter = memo(function SidebarFooter({
   isDark,
   shouldShowText,
 }: SidebarFooterProps) {
-  const router = useRouter();
   const { logout } = useAuthStore();
 
   const handleLogout = useCallback(() => {
     logout();
-    router.push("/login");
-  }, [logout, router]);
+    window.location.href = "/?auth=login";
+  }, [logout]);
 
   return (
     <div

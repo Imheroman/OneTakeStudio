@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -17,8 +17,9 @@ import { cn } from "@/shared/lib/utils";
 
 export default function LandingPage() {
   const { isLoggedIn, user, hasHydrated } = useAuthStore();
-  const { openSignupModal } = useAuthModal();
+  const { openSignupModal, openLoginModal } = useAuthModal();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const theme = useLandingThemeStore((s) => s.theme);
   const isDark = theme === "dark";
 
@@ -28,6 +29,17 @@ export default function LandingPage() {
       router.replace(`/workspace/${user.userId}`);
     }
   }, [hasHydrated, isLoggedIn, user, router]);
+
+  // 로그아웃 후 /?auth=login으로 이동 시 로그인 모달 자동 열기
+  useEffect(() => {
+    if (searchParams.get("auth") === "login") {
+      openLoginModal();
+      // redirect 파라미터가 있으면 유지 (로그인 후 해당 경로로 이동용)
+      const redirect = searchParams.get("redirect");
+      const cleanUrl = redirect ? `/?redirect=${redirect}` : "/";
+      router.replace(cleanUrl, { scroll: false });
+    }
+  }, [searchParams, openLoginModal, router]);
 
   return (
     <div

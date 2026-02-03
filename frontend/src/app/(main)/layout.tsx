@@ -13,7 +13,10 @@ import type { NotificationWithActions } from "@/widgets/workspace/notification-p
 import { NotificationListResponseSchema } from "@/entities/notification/model";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useWorkspaceThemeStore, useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import {
+  useWorkspaceThemeStore,
+  useResolvedTheme,
+} from "@/stores/useWorkspaceThemeStore";
 import { apiClient } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
 import { useShortsPolling } from "@/features/shorts/useShortsPolling";
@@ -65,7 +68,7 @@ export default function MainLayout({
     try {
       const response = await apiClient.get(
         "/api/notifications",
-        NotificationListResponseSchema,
+        NotificationListResponseSchema
       );
       setApiNotifications(
         response.notifications.map((notif) => ({
@@ -78,7 +81,7 @@ export default function MainLayout({
                       await apiClient.post(
                         `/api/favorites/requests/${notif.id}/accept`,
                         MessageResponseSchema,
-                        {},
+                        {}
                       );
                       removeNotification(notif.id);
                     } catch (error) {
@@ -91,7 +94,7 @@ export default function MainLayout({
                       await apiClient.post(
                         `/api/favorites/requests/${notif.id}/decline`,
                         MessageResponseSchema,
-                        {},
+                        {}
                       );
                       removeNotification(notif.id);
                     } catch (error) {
@@ -101,48 +104,50 @@ export default function MainLayout({
                   },
                 }
               : notif.type === "studio_invite" && notif.referenceId
-                ? {
-                    accept: async () => {
-                      try {
-                        await apiClient.post(
-                          `/api/invites/${notif.referenceId}/accept`,
-                          MessageResponseSchema,
-                          {},
-                        );
+              ? {
+                  accept: async () => {
+                    try {
+                      await apiClient.post(
+                        `/api/invites/${notif.referenceId}/accept`,
+                        MessageResponseSchema,
+                        {}
+                      );
+                      removeNotification(notif.id);
+                      // 워크스페이스 데이터 갱신 트리거
+                      window.dispatchEvent(
+                        new CustomEvent("studio-invite-accepted")
+                      );
+                      closeNotifications();
+                      alert("스튜디오 초대를 수락했습니다.");
+                    } catch (error) {
+                      console.error("스튜디오 초대 수락 실패:", error);
+                      alert("스튜디오 초대 수락에 실패했습니다.");
+                    }
+                  },
+                  decline: async () => {
+                    try {
+                      await apiClient.post(
+                        `/api/invites/${notif.referenceId}/reject`,
+                        MessageResponseSchema,
+                        {}
+                      );
+                      removeNotification(notif.id);
+                      closeNotifications();
+                    } catch (error: unknown) {
+                      // 404 에러는 이미 처리된 초대 (수락됨 또는 삭제됨) - 알림만 제거
+                      const status = (error as { status?: number })?.status;
+                      if (status === 404) {
                         removeNotification(notif.id);
-                        // 워크스페이스 데이터 갱신 트리거
-                        window.dispatchEvent(new CustomEvent("studio-invite-accepted"));
                         closeNotifications();
-                        alert("스튜디오 초대를 수락했습니다.");
-                      } catch (error) {
-                        console.error("스튜디오 초대 수락 실패:", error);
-                        alert("스튜디오 초대 수락에 실패했습니다.");
+                        return;
                       }
-                    },
-                    decline: async () => {
-                      try {
-                        await apiClient.post(
-                          `/api/invites/${notif.referenceId}/reject`,
-                          MessageResponseSchema,
-                          {},
-                        );
-                        removeNotification(notif.id);
-                        closeNotifications();
-                      } catch (error: unknown) {
-                        // 404 에러는 이미 처리된 초대 (수락됨 또는 삭제됨) - 알림만 제거
-                        const status = (error as { status?: number })?.status;
-                        if (status === 404) {
-                          removeNotification(notif.id);
-                          closeNotifications();
-                          return;
-                        }
-                        console.error("스튜디오 초대 거절 실패:", error);
-                        alert("스튜디오 초대 거절에 실패했습니다.");
-                      }
-                    },
-                  }
-                : undefined,
-        })),
+                      console.error("스튜디오 초대 거절 실패:", error);
+                      alert("스튜디오 초대 거절에 실패했습니다.");
+                    }
+                  },
+                }
+              : undefined,
+        }))
       );
     } catch (error) {
       console.error("알림 목록 조회 실패:", error);
@@ -154,7 +159,9 @@ export default function MainLayout({
 
     const isAuthenticated = checkAuth();
     if (!isAuthenticated) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname || "/workspace")}`);
+      router.replace(
+        `/?auth=login&redirect=${encodeURIComponent(pathname || "/workspace")}`
+      );
     }
   }, [hasHydrated, checkAuth, router, pathname]);
 
@@ -197,7 +204,10 @@ export default function MainLayout({
     () => (showNotifications ? MAIN_MIN_WIDTH + PANEL_WIDTH : MAIN_MIN_WIDTH),
     [showNotifications]
   );
-  const contentColumnStyle = useMemo(() => ({ minWidth: contentMinWidth }), [contentMinWidth]);
+  const contentColumnStyle = useMemo(
+    () => ({ minWidth: contentMinWidth }),
+    [contentMinWidth]
+  );
   const mainStyle = useMemo(() => ({ minWidth: MAIN_MIN_WIDTH }), []);
 
   if (isStudioPage) {
@@ -208,9 +218,7 @@ export default function MainLayout({
     <div
       className={cn(
         "flex h-screen w-full min-w-0 overflow-x-auto overflow-y-hidden transition-colors duration-280 ease-[cubic-bezier(0.4,0,0.2,1)]",
-        isDark
-          ? "dark bg-[#0c0c0f] text-white"
-          : "bg-[#f4f4f8] text-gray-900"
+        isDark ? "dark bg-[#0c0c0f] text-white" : "bg-[#f4f4f8] text-gray-900"
       )}
       data-theme={theme}
     >

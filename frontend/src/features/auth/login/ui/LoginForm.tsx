@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
 import {
   getHttpErrorStatus,
@@ -66,6 +66,7 @@ interface LoginFormProps {
 
 export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const login = useAuthStore((state) => state.login);
   const [errorMsg, setErrorMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,7 +106,11 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
 
         login(userData, accessToken);
         if (user?.userId) {
-          router.push(`/workspace/${user.userId}`);
+          const redirect = searchParams.get("redirect");
+          const targetPath = redirect?.startsWith("/")
+            ? redirect
+            : `/workspace/${user.userId}`;
+          router.push(targetPath);
         }
       }
     } catch (error: unknown) {
