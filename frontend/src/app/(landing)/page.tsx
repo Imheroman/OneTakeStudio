@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthModal } from "@/widgets/landing/auth-modal-context";
 import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
 import { SocialProofBand } from "@/components/landing/SocialProofBand";
 import { TimelineScanAnimation } from "@/components/landing/TimelineScanAnimation";
@@ -16,6 +17,7 @@ import { cn } from "@/shared/lib/utils";
 
 export default function LandingPage() {
   const { isLoggedIn, user, hasHydrated } = useAuthStore();
+  const { openSignupModal } = useAuthModal();
   const router = useRouter();
   const theme = useLandingThemeStore((s) => s.theme);
   const isDark = theme === "dark";
@@ -129,22 +131,24 @@ export default function LandingPage() {
             transition={{ delay: 0.7, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
             className="flex items-center gap-4 flex-wrap justify-center"
           >
-            <Link href="/signup">
-              <motion.span
-                className={cn(
-                  "inline-flex items-center justify-center font-bold text-lg px-8 py-4 rounded-2xl cursor-pointer transition-all duration-300",
-                  "backdrop-blur-xl border",
-                  "hover:scale-[1.02] active:scale-[0.98]",
-                  isDark
-                    ? "bg-white/[0.12] text-white border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-white/[0.18] hover:shadow-[0_12px_40px_rgba(139,92,246,0.2),inset_0_1px_0_rgba(255,255,255,0.2)]"
-                    : "bg-white/80 text-gray-900 border-white/60 shadow-[0_8px_32px_rgba(139,92,246,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] hover:bg-white hover:shadow-[0_12px_40px_rgba(139,92,246,0.18),inset_0_1px_0_rgba(255,255,255,1)]"
-                )}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                지금 바로 시작하기
-              </motion.span>
-            </Link>
+            <motion.span
+              role="button"
+              tabIndex={0}
+              onClick={openSignupModal}
+              onKeyDown={(e) => e.key === "Enter" && openSignupModal()}
+              className={cn(
+                "inline-flex items-center justify-center font-bold text-lg px-8 py-4 rounded-2xl cursor-pointer transition-all duration-300",
+                "backdrop-blur-xl border",
+                "hover:scale-[1.02] active:scale-[0.98]",
+                isDark
+                  ? "bg-white/[0.12] text-white border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)] hover:bg-white/[0.18] hover:shadow-[0_12px_40px_rgba(139,92,246,0.2),inset_0_1px_0_rgba(255,255,255,0.2)]"
+                  : "bg-white/80 text-gray-900 border-white/60 shadow-[0_8px_32px_rgba(139,92,246,0.12),inset_0_1px_0_rgba(255,255,255,0.9)] hover:bg-white hover:shadow-[0_12px_40px_rgba(139,92,246,0.18),inset_0_1px_0_rgba(255,255,255,1)]"
+              )}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              지금 바로 시작하기
+            </motion.span>
             <Link href="/#solution">
               <motion.span
                 className={cn(
@@ -185,7 +189,11 @@ export default function LandingPage() {
           >
             <motion.div
               animate={{ y: [0, 12, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
               className={cn(
                 "w-1 h-1.5 rounded-full",
                 isDark ? "bg-white/50" : "bg-gray-500"
@@ -262,7 +270,9 @@ export default function LandingPage() {
               transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
               className="inline-block bg-purple-500/10 border border-purple-500/30 rounded-full px-6 py-2 mb-8"
             >
-              <span className="text-purple-500 font-semibold text-sm">핵심 기능</span>
+              <span className="text-purple-500 font-semibold text-sm">
+                핵심 기능
+              </span>
             </motion.div>
 
             <motion.h2
@@ -498,15 +508,17 @@ export default function LandingPage() {
             <p className="text-lg sm:text-xl text-white/90 mb-8">
               YouTube 채널 연동 후, 씬·소스만 꾸미면 Go Live 한 번이면 됩니다.
             </p>
-            <Link href="/signup">
-              <motion.span
-                className="inline-block bg-white text-purple-600 font-bold text-lg px-10 py-4 rounded-2xl shadow-2xl hover:shadow-[0_20px_50px_rgba(255,255,255,0.3)] transition-all cursor-pointer"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                무료로 시작하기
-              </motion.span>
-            </Link>
+            <motion.span
+              role="button"
+              tabIndex={0}
+              onClick={openSignupModal}
+              onKeyDown={(e) => e.key === "Enter" && openSignupModal()}
+              className="inline-block bg-white text-purple-600 font-bold text-lg px-10 py-4 rounded-2xl shadow-2xl hover:shadow-[0_20px_50px_rgba(255,255,255,0.3)] transition-all cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              무료로 시작하기
+            </motion.span>
           </div>
         </motion.div>
       </section>

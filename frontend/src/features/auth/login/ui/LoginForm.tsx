@@ -59,7 +59,12 @@ const OAUTH_PROVIDERS = {
   },
 };
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** 모달 모드: 회원가입 링크 대신 클릭 핸들러 사용 */
+  onSwitchToSignup?: () => void;
+}
+
+export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const [errorMsg, setErrorMsg] = useState("");
@@ -81,7 +86,7 @@ export function LoginForm() {
       const response = await apiClient.post(
         "/api/auth/login",
         AuthResponseSchema,
-        values,
+        values
       );
 
       if (response.success && response.data) {
@@ -110,21 +115,20 @@ export function LoginForm() {
       if (status === 503) {
         setErrorMsg(
           "서비스를 사용할 수 없습니다 (503).\n" +
-          "- Eureka에 core-service가 등록(UP)인지 확인\n" +
-          "- 실행 순서: Eureka → core-service → api-gateway\n" +
-          "- 모킹으로 우회하려면 NEXT_PUBLIC_API_MOCKING=enabled 후 프론트 dev 서버 재시작"
+            "- Eureka에 core-service가 등록(UP)인지 확인\n" +
+            "- 실행 순서: Eureka → core-service → api-gateway\n" +
+            "- 모킹으로 우회하려면 NEXT_PUBLIC_API_MOCKING=enabled 후 프론트 dev 서버 재시작"
         );
         return;
       }
-      
+
       if (status === 500) {
         setErrorMsg(
-          "서버 오류가 발생했습니다 (500).\n" +
-          "백엔드 로그를 확인해주세요."
+          "서버 오류가 발생했습니다 (500).\n" + "백엔드 로그를 확인해주세요."
         );
         return;
       }
-      
+
       setErrorMsg(
         getHttpErrorMessage(error, "이메일 또는 비밀번호를 확인해주세요.")
       );
@@ -140,7 +144,11 @@ export function LoginForm() {
     // state는 plain text로 전달 (Naver가 JSON state를 HTML entity로 변환하는 문제 방지)
     const state = provider;
 
-    let authUrl = `${config.authUrl}?client_id=${config.clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&state=${state}`;
+    let authUrl = `${config.authUrl}?client_id=${
+      config.clientId
+    }&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=code&state=${state}`;
 
     if (config.scope) {
       authUrl += `&scope=${encodeURIComponent(config.scope)}`;
@@ -155,7 +163,9 @@ export function LoginForm() {
         <Logo href="/" size="lg" />
       </div>
       <CardHeader className="space-y-1 text-center pb-6">
-        <CardTitle className="text-xl font-bold text-gray-900">로그인</CardTitle>
+        <CardTitle className="text-xl font-bold text-gray-900">
+          로그인
+        </CardTitle>
         <CardDescription className="text-gray-500">
           서비스 이용을 위해 이메일과 비밀번호를 입력해주세요.
         </CardDescription>
@@ -169,7 +179,9 @@ export function LoginForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">이메일</FormLabel>
+                  <FormLabel className="text-gray-700 font-medium">
+                    이메일
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="email"
@@ -187,7 +199,9 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">비밀번호</FormLabel>
+                  <FormLabel className="text-gray-700 font-medium">
+                    비밀번호
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="password"
@@ -227,7 +241,7 @@ export function LoginForm() {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-white px-2 text-gray-400 font-medium">
-              Or continue with
+              또는 다음으로 로그인하기
             </span>
           </div>
         </div>
@@ -262,12 +276,22 @@ export function LoginForm() {
 
       <CardFooter className="flex justify-center text-sm text-gray-500 pb-8">
         계정이 없으신가요?&nbsp;
-        <Link
-          href="/signup"
-          className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
-        >
-          회원가입
-        </Link>
+        {onSwitchToSignup ? (
+          <button
+            type="button"
+            onClick={onSwitchToSignup}
+            className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
+          >
+            회원가입
+          </button>
+        ) : (
+          <Link
+            href="/signup"
+            className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
+          >
+            회원가입
+          </Link>
+        )}
       </CardFooter>
     </Card>
   );
