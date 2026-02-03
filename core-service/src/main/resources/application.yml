@@ -2,21 +2,19 @@ server:
   port: 8080
 
 spring:
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: core-service
 
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/core_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:core_user}
-    password: ${DB_PASSWORD:core_password}
+    url: jdbc:mysql://localhost:3306/core_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: core_user
+    password: core_password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:true}
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
@@ -24,14 +22,14 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: localhost
+      port: 6379
 
   mail:
-    host: ${MAIL_HOST:smtp.naver.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
+    host: smtp.naver.com
+    port: 587
+    username: unimokw@naver.com
+    password: "3LEQ3HYB6V3X"
     properties:
       mail:
         smtp:
@@ -44,9 +42,9 @@ spring:
           writetimeout: 5000
 
 jwt:
-  secret: ${JWT_SECRET:bG9jYWxkZXZqd3RzZWNyZXRrZXlmb3JoczI1NmFsZ29yaXRobW11c3RiZWF0bGVhc3QyNTZiaXRz}
-  access-token-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
-  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
+  access-token-expiration: 3600000
+  refresh-token-expiration: 604800000
 
 email:
   verification:
@@ -58,46 +56,30 @@ email:
 # OAuth 설정
 oauth:
   google:
-    client-id: ${OAUTH_GOOGLE_CLIENT_ID:}
-    client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET:}
-    redirect-uri: ${OAUTH_GOOGLE_REDIRECT_URI:http://localhost:3000/oauth/callback}
+    client-id: 51683382309-340jprf00qpfjggfv5jphuifk5jk1np0.apps.googleusercontent.com
+    client-secret: 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
+    redirect-uri: http://localhost:3000/oauth/callback
   kakao:
-    client-id: ${OAUTH_KAKAO_CLIENT_ID:}
-    client-secret: ${OAUTH_KAKAO_CLIENT_SECRET:}
-    redirect-uri: ${OAUTH_KAKAO_REDIRECT_URI:http://localhost:3000/oauth/callback}
+    client-id: 42b37ce2a41ca38644fa194c0b3d86bd
+    client-secret: C21YcsY9g9y1dlVnVTMCEm0IqosxHzGh
+    redirect-uri: http://localhost:3000/oauth/callback
   naver:
-    client-id: ${OAUTH_NAVER_CLIENT_ID:}
-    client-secret: ${OAUTH_NAVER_CLIENT_SECRET:}
-    redirect-uri: ${OAUTH_NAVER_REDIRECT_URI:http://localhost:3000/oauth/callback}
+    client-id: ID4xqmLVEISnoNshnvoH
+    client-secret: QUGmPMFJqK
+    redirect-uri: http://localhost:3000/oauth/callback
 
 # Eureka Client
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${random.value}
 
-# AI Service
-ai:
-  service:
-    url: ${AI_SERVICE_URL:http://localhost:8000}
-  webhook:
-    url: ${AI_WEBHOOK_URL:http://localhost:8080/api/ai/webhook}
-
-# Media Service
-media:
-  service:
-    url: ${MEDIA_SERVICE_URL:http://localhost:8082}
-
-# Storage
-storage:
-  base-path: ${STORAGE_BASE_PATH:/mnt/storage}
-
 logging:
   level:
-    com.onetake: ${LOG_LEVEL:DEBUG}
-    org.springframework.security: ${LOG_LEVEL_SECURITY:DEBUG}
+    com.onetake: DEBUG
+    org.springframework.security: DEBUG

@@ -78,8 +78,8 @@ public class StudioService {
                 .build();
         studioMemberRepository.save(hostMember);
 
-        // 생성 직후에는 members와 scenes가 비어있으므로 빈 리스트 전달
-        return StudioDetailResponse.from(saved, List.of(), List.of());
+        // 생성 직후에는 members와 scenes가 비어있으므로 빈 리스트 전달 (생성자는 HOST)
+        return StudioDetailResponse.from(saved, List.of(), List.of(), "HOST");
     }
 
     public List<StudioResponse> getMyStudios(String userId) {
@@ -102,12 +102,16 @@ public class StudioService {
 
         validateMemberAccess(studio.getId(), internalUserId);
 
+        StudioMember currentMember = studioMemberRepository.findByStudioIdAndUserId(studio.getId(), internalUserId)
+                .orElseThrow(StudioAccessDeniedException::new);
+        String myRole = currentMember.getRole().name();
+
         List<StudioMemberResponse> members = getMemberResponses(studio.getId());
         List<SceneResponse> scenes = sceneRepository.findByStudioIdOrderBySortOrderAsc(studio.getId()).stream()
                 .map(SceneResponse::from)
                 .toList();
 
-        return StudioDetailResponse.from(studio, members, scenes);
+        return StudioDetailResponse.from(studio, members, scenes, myRole);
     }
 
     @Transactional
@@ -118,12 +122,17 @@ public class StudioService {
         Studio studio = studioRepository.findById(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
-        validateHostOrManagerAccess(studio.getId(), internalUserId);
+        StudioMember currentMember = studioMemberRepository.findByStudioIdAndUserId(studio.getId(), internalUserId)
+                .orElseThrow(StudioAccessDeniedException::new);
 
         studio.updateInfo(request.getName(), request.getThumbnail());
         log.info("스튜디오 수정 완료: studioId={}", studioId);
 
-        return StudioDetailResponse.from(studio);
+        List<StudioMemberResponse> members = getMemberResponses(studio.getId());
+        List<SceneResponse> scenes = sceneRepository.findByStudioIdOrderBySortOrderAsc(studio.getId()).stream()
+                .map(SceneResponse::from)
+                .toList();
+        return StudioDetailResponse.from(studio, members, scenes, currentMember.getRole().name());
     }
 
     @Transactional

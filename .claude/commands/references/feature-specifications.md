@@ -105,10 +105,25 @@
 - RTMP 커스텀 엔드포인트 지원
 - Local/Cloud 녹화 선택
 
-### 2. 실시간 채팅 통합
+### 2. 실시간 채팅/댓글 통합
 - YouTube Live Chat API
-- Twitch IRC
-- 채팅 타임스탬프 기록 → AI 분석용
+- 치지직 API
+- 실시간 댓글 수신 → 스튜디오 채팅창 표시
+- **분당 댓글 수 집계** → AI 하이라이트 추출 + 그래프 시각화
+
+#### 댓글 데이터 흐름
+```
+방송 중: 유튜브/치지직 API → 실시간 표시 + 분당 카운트 집계
+방송 종료: 분당 댓글 수 저장 → AI 전달 + 라이브러리 그래프
+```
+
+#### 저장 데이터 (댓글 원문 저장 X)
+```json
+{
+  "recording_id": "abc123",
+  "comment_counts": [12, 25, 45, 30, 18, ...]  // 인덱스 = 분
+}
+```
 
 ### 3. 영상 편집
 - 타임라인 기반 편집
@@ -123,16 +138,75 @@
 - 프라이빗 채팅
 
 ### 5. AI 기능
-- 채팅 빈도 분석 → 하이라이트 자동 추출
-- AI 쇼츠 자동 생성
-- STT (Speech-to-Text)
+
+#### 하이라이트 추출 (2가지 입력)
+1. **STT (음성→텍스트)**: 영상 내용 분석
+2. **분당 댓글 수**: 시청자 반응 피크 구간 파악
+
+#### AI 숏츠 생성 API
+```
+POST /shorts/process (Backend → AI)
+
+Request:
+{
+  "job_id": "job_20240522_001",
+  "videos": [{ "video_id": "vid_001", "video_path": "/mnt/share/input/video.mp4" }],
+  "comment_counts_per_minute": [12, 25, 45, 30, 18, ...],  // 댓글 반응 데이터
+  "need_subtitles": true,
+  "subtitle_lang": "ko",
+  "output_dir": "/mnt/share/output/shorts",
+  "webhook_url": "http://backend:8080/api/v1/callback/ai-result"
+}
+
+Response (Webhook):
+{
+  "job_id": "job_20240522_001",
+  "video_id": "vid_001",
+  "status": "success",
+  "data": {
+    "short": { "file_path": "...", "duration_sec": 95.5, "has_subtitles": true },
+    "highlight": { "start_sec": 120.0, "end_sec": 215.5, "reason": "..." },
+    "titles": ["제목1", "제목2", "제목3"]
+  }
+}
+```
+
+#### 기타 AI 기능
+- AI 쇼츠 자동 생성 (세로형 720x1280)
+- STT (Speech-to-Text) - Whisper 기반
 - 다국어 자막 생성 (한/영/일/중)
+- LLM 기반 제목 추천 (3개)
 
 ### 6. 데이터 분석 & 시각화
 - 실시간 시청자 수
-- 채팅 빈도 그래프
+- **댓글 타임라인 그래프** (라이브러리 페이지)
 - 타임라인 관심도 분석
 - 플랫폼별 통계
+
+#### 댓글 타임라인 그래프 API
+```
+GET /api/library/videos/{videoId}/comment-counts
+
+Response:
+{
+  "videoId": "abc123",
+  "duration_minutes": 45,
+  "counts": [12, 25, 45, 30, 18, ...]  // 분당 댓글 수
+}
+```
+
+#### 그래프 표시 (프론트엔드)
+```
+  ▲ 댓글 수
+  │
+50│          █
+40│        █ █
+30│      █ █ █ █
+20│    █ █ █ █ █ █
+10│  █ █ █ █ █ █ █ █
+  └─────────────────────► 시간(분)
+    0  5 10 15 20 25 30 35
+```
 
 ### 7. 자산 관리
 - 스토리지 용량 시각화
@@ -188,13 +262,21 @@ POST   /api/media/chat/send         → S11
 GET    /api/media/chat/history      → S11
 POST   /api/media/storage/upload    → L02
 GET    /api/media/storage           → W07
+GET    /api/library/videos/{id}/comment-counts → L05 (댓글 타임라인)
 ```
 
 ### AI Service
 ```
-POST   /api/ai/shorts/generate      → L06
-POST   /api/ai/subtitles/translate  → L07
-GET    /api/ai/jobs/{id}/status     → L10
+POST   /shorts/process              → L06 (숏츠 생성 요청, 비동기)
+POST   /api/v1/callback/ai-result   → L06 (AI → Backend 웹훅)
+```
+
+#### AI 숏츠 생성 흐름
+```
+1. Backend → AI: POST /shorts/process (video_path + comment_counts)
+2. AI → Backend: 즉시 응답 { status: "accepted" }
+3. AI 처리 (STT + 하이라이트 추출 + 쇼츠 생성)
+4. AI → Backend: POST webhook_url (완료 결과)
 ```
 
 ---

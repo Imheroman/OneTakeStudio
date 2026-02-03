@@ -29,7 +29,7 @@ export function VideoCard({ video, onMoreClick }: VideoCardProps) {
   return (
     <div
       onClick={handleCardClick} // 4. 전체 컨테이너에 클릭 이벤트 연결
-      className="group relative cursor-pointer" // 5. 마우스 커서 손가락 모양 추가
+      className="group relative cursor-pointer gpu-layer gpu-layer-hover" // 5. 마우스 커서 손가락 모양 추가
     >
       {/* 썸네일 */}
       <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden mb-3">

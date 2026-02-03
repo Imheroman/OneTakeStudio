@@ -7,7 +7,6 @@ import com.onetake.media.publish.entity.PublishStatus;
 import com.onetake.media.publish.repository.PublishSessionRepository;
 import com.onetake.media.viewer.integration.ChzzkViewerClient;
 import com.onetake.media.viewer.integration.ExternalViewerClient;
-import com.onetake.media.viewer.integration.TwitchViewerClient;
 import com.onetake.media.viewer.integration.YouTubeViewerClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +37,6 @@ public class ViewerMetricsIntegrationService {
     private final ViewerMetricsService viewerMetricsService;
     private final PublishSessionRepository publishSessionRepository;
     private final YouTubeViewerClient youTubeViewerClient;
-    private final TwitchViewerClient twitchViewerClient;
     private final ChzzkViewerClient chzzkViewerClient;
 
     // 스튜디오별 활성 시청자 수집 상태: studioId -> (platform -> client)
@@ -198,7 +196,6 @@ public class ViewerMetricsIntegrationService {
     private ExternalViewerClient getClientForPlatform(ChatPlatform platform) {
         return switch (platform) {
             case YOUTUBE -> youTubeViewerClient;
-            case TWITCH -> twitchViewerClient;
             case CHZZK -> chzzkViewerClient;
             default -> null;
         };

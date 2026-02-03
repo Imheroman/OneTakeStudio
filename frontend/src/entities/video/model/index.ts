@@ -1,10 +1,13 @@
 /**
  * Video 엔티티 모델 export
+ * FSD Phase 2: 라이브러리 목록용 Video·VideoStatus는 shared DTO 재사용
  */
-// 타입 export (zod 스키마에서 추론)
 export type {
-  Video,
-  VideoStatus,
+  LibraryVideoDto as Video,
+  LibraryVideoStatusDto as VideoStatus,
+} from "@/shared/api/dto/library";
+
+export type {
   VideoType,
   VideoListResponse,
   Clip,

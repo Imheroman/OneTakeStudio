@@ -1,37 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { Radio, Video, Crown, Shield, User } from "lucide-react";
-import { Button } from "@/shared/ui/button";
-import { Card, CardContent } from "@/shared/ui/card";
+import { motion } from "motion/react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/shared/ui/table";
-import { ActionCard, PageHeader } from "@/shared/common";
+  Radio,
+  Video,
+  Users,
+  VideoIcon,
+  Crown,
+  Shield,
+  User,
+} from "lucide-react";
+import { PageHeader } from "@/shared/common";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
+import type { RecentStudio } from "@/entities/studio/model";
 
 // 역할별 배지 컴포넌트
 function RoleBadge({ role }: { role?: string }) {
   if (!role) return null;
 
   const config = {
-    HOST: { label: "호스트", icon: Crown, className: "bg-amber-100 text-amber-700 border-amber-200" },
-    MANAGER: { label: "관리자", icon: Shield, className: "bg-blue-100 text-blue-700 border-blue-200" },
-    GUEST: { label: "게스트", icon: User, className: "bg-gray-100 text-gray-600 border-gray-200" },
+    HOST: {
+      label: "호스트",
+      icon: Crown,
+      className: "bg-amber-100 text-amber-700 border-amber-200",
+    },
+    MANAGER: {
+      label: "관리자",
+      icon: Shield,
+      className: "bg-blue-100 text-blue-700 border-blue-200",
+    },
   }[role];
 
   if (!config) return null;
 
   const Icon = config.icon;
   return (
-    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border", config.className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border",
+        config.className
+      )}
+    >
       <Icon className="h-3 w-3" />
       {config.label}
     </span>
@@ -43,7 +56,92 @@ interface WorkspaceHomeProps {
   userName?: string;
 }
 
+function StudioBentoCard({
+  studio,
+  isDark,
+  span = 1,
+}: {
+  studio: RecentStudio;
+  isDark: boolean;
+  span?: 1 | 2;
+}) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className={span === 2 ? "md:col-span-2" : ""}
+    >
+      <Link
+        href={`/studio/${studio.id}`}
+        className={cn(
+          "glass-card gpu-layer gpu-layer-hover flex flex-col transition-shadow duration-200 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-onetake-point focus-visible:ring-offset-2 focus-visible:ring-offset-transparent h-full",
+          span === 2 && "md:col-span-2"
+        )}
+      >
+        <div
+          className={cn(
+            "relative aspect-video w-full flex items-center justify-center shrink-0",
+            isDark ? "bg-gray-800/80" : "bg-gray-100/80"
+          )}
+        >
+          <VideoIcon
+            className={cn(
+              "w-12 h-12 opacity-40",
+              isDark ? "text-gray-500" : "text-gray-400"
+            )}
+          />
+          <div
+            className={cn(
+              "absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+              isDark
+                ? "bg-gray-800/90 text-gray-300"
+                : "bg-white/90 text-gray-600"
+            )}
+          >
+            <Users className="w-3.5 h-3.5" />
+            팀원 —
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col justify-between p-4">
+          <div>
+            <h3
+              className={cn(
+                "font-semibold line-clamp-1",
+                isDark ? "text-gray-100" : "text-gray-900"
+              )}
+            >
+              {studio.title}
+            </h3>
+            <p
+              className={cn(
+                "mt-1 text-sm",
+                isDark ? "text-gray-400" : "text-gray-500"
+              )}
+            >
+              {studio.date}
+            </p>
+            {studio.role && (
+              <div className="mt-1">
+                <RoleBadge role={studio.role} />
+              </div>
+            )}
+          </div>
+          <span
+            className={cn(
+              "mt-3 inline-flex h-9 w-full items-center justify-center rounded-md text-sm font-medium bg-onetake-point text-white hover:bg-onetake-point/90"
+            )}
+          >
+            스튜디오 입장
+          </span>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
 export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
   const {
     recentStudios,
     isLoading,
@@ -54,7 +152,7 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
   } = useWorkspaceHome(userId);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-6xl mx-auto">
       <PageHeader
         title={
           <>
@@ -65,29 +163,93 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
         description="오늘도 당신만의 멋진 방송을 만들어보세요."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ActionCard
-          title="Start Live Streaming"
-          description="Go live instantly with our professional streaming tools"
-          icon={<Radio className="h-8 w-8 text-gray-600" />}
-          href="#"
-          actionLabel="Start Streaming"
-          onClick={(e) => {
-            e.preventDefault();
-            openCreateDialog("live");
-          }}
+      {/* 상단 얇은 배너: 라이브 / 녹화 진입점 */}
+      <div
+        className={cn(
+          "glass-card flex flex-col sm:flex-row rounded-xl overflow-hidden",
+          isDark ? "bg-white/5" : "bg-white/70"
+        )}
+      >
+        <motion.button
+          type="button"
+          onClick={() => openCreateDialog("live")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-3 py-3.5 px-4 min-w-0",
+            isDark
+              ? "hover:bg-white/10 text-gray-200"
+              : "hover:bg-gray-100/80 text-gray-800"
+          )}
+          whileHover={{ scale: 1.02, backgroundColor: "rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Radio className="w-5 h-5 shrink-0 text-onetake-point" />
+          <span className="font-medium text-sm truncate">라이브 스트리밍</span>
+          <span className="text-xs opacity-70 shrink-0">시작</span>
+        </motion.button>
+        <div
+          className={cn(
+            "w-px shrink-0 self-stretch",
+            isDark ? "bg-white/10" : "bg-gray-200/80"
+          )}
         />
-        <ActionCard
-          title="Start Recording"
-          description="Record high-quality content for later publishing"
-          icon={<Video className="h-8 w-8 text-gray-600" />}
-          href="#"
-          actionLabel="Start Recording"
-          onClick={(e) => {
-            e.preventDefault();
-            openCreateDialog("recording");
-          }}
-        />
+        <motion.button
+          type="button"
+          onClick={() => openCreateDialog("recording")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-3 py-3.5 px-4 min-w-0",
+            isDark
+              ? "hover:bg-white/10 text-gray-200"
+              : "hover:bg-gray-100/80 text-gray-800"
+          )}
+          whileHover={{ scale: 1.02, backgroundColor: "rgba(0,0,0,0.05)" }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Video className="w-5 h-5 shrink-0 text-onetake-point" />
+          <span className="font-medium text-sm truncate">녹화</span>
+          <span className="text-xs opacity-70 shrink-0">시작</span>
+        </motion.button>
+      </div>
+
+      {/* 최근 스튜디오 벤토 그리드 */}
+      <div className="space-y-4">
+        <h2
+          className={cn(
+            "text-lg font-bold",
+            isDark ? "text-gray-100" : "text-gray-900"
+          )}
+        >
+          최근 스튜디오
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-fr">
+          {isLoading ? (
+            <div
+              className={cn(
+                "md:col-span-4 py-16 text-center rounded-2xl glass-card flex items-center justify-center",
+                isDark ? "text-gray-400" : "text-gray-500"
+              )}
+            >
+              로딩 중...
+            </div>
+          ) : recentStudios.length === 0 ? (
+            <div
+              className={cn(
+                "md:col-span-4 py-16 text-center rounded-2xl glass-card",
+                isDark ? "text-gray-400" : "text-gray-500"
+              )}
+            >
+              최근 스튜디오가 없습니다.
+            </div>
+          ) : (
+            recentStudios.map((studio, index) => (
+              <StudioBentoCard
+                key={studio.id}
+                studio={studio}
+                isDark={isDark}
+                span={index === 0 ? 2 : 1}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       <StudioCreation
@@ -95,76 +257,6 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
         onOpenChange={setIsCreateDialogOpen}
         initialType={createDialogType}
       />
-
-      <Card className="border-gray-200">
-        <CardContent className="p-6">
-          <h3 className="text-xl font-bold mb-6">Recent Studios</h3>
-          <div className="rounded-md border border-gray-100">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent bg-gray-50/50">
-                  <TableHead className="w-[40%] text-gray-600 font-semibold">
-                    Title
-                  </TableHead>
-                  <TableHead className="text-gray-600 font-semibold">
-                    Role
-                  </TableHead>
-                  <TableHead className="text-gray-600 font-semibold">
-                    Last Modified
-                  </TableHead>
-                  <TableHead className="text-right" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-gray-500 py-8"
-                    >
-                      로딩 중...
-                    </TableCell>
-                  </TableRow>
-                ) : recentStudios.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="text-center text-gray-500 py-8"
-                    >
-                      최근 스튜디오가 없습니다.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  recentStudios.map((studio) => (
-                    <TableRow
-                      key={studio.id}
-                      className="hover:bg-gray-50/80 transition-colors"
-                    >
-                      <TableCell className="font-medium text-gray-700 py-4">
-                        {studio.title}
-                      </TableCell>
-                      <TableCell>
-                        <RoleBadge role={studio.role} />
-                      </TableCell>
-                      <TableCell className="text-gray-500">{studio.date}</TableCell>
-                      <TableCell className="text-right">
-                        <Link href={`/studio/${studio.id}`}>
-                          <Button
-                            size="sm"
-                            className="bg-indigo-600 hover:bg-indigo-700"
-                          >
-                            Enter Studio
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

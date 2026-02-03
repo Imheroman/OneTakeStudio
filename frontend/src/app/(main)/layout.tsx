@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+/**
+ * 워크스페이스 메인 레이아웃 (사이드바·알림 패널·메인 영역).
+ * 메인/알림은 애니메이션 없음(단일 타임라인·부하 감소). 관련 경로: docs/WORKSPACE_LAYOUT_FILES.md
+ */
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/widgets/workspace/sidebar";
 import { WorkspaceTopNav } from "@/widgets/workspace/top-nav";
@@ -9,10 +13,9 @@ import type { NotificationWithActions } from "@/widgets/workspace/notification-p
 import { NotificationListResponseSchema } from "@/entities/notification/model";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
+import { useWorkspaceThemeStore, useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { apiClient } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
-
 import { useShortsPolling } from "@/features/shorts/useShortsPolling";
 import { ShortsResultModal } from "@/widgets/shorts/shorts-result-modal";
 import { useShortsStore } from "@/stores/useShortsStore";
@@ -20,6 +23,8 @@ import { z } from "zod";
 const MessageResponseSchema = z.object({
   message: z.string().optional(),
 });
+
+const noop = () => {};
 
 export default function MainLayout({
   children,
@@ -36,6 +41,15 @@ export default function MainLayout({
     NotificationWithActions[]
   >([]);
   const { notifications: shortsMsgs, openResultModal } = useShortsStore();
+
+  useEffect(() => {
+    if (!showNotifications) return;
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeNotifications();
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [showNotifications, closeNotifications]);
 
   useShortsPolling();
   const isStudioPage = pathname?.startsWith("/studio");
@@ -140,7 +154,7 @@ export default function MainLayout({
 
     const isAuthenticated = checkAuth();
     if (!isAuthenticated) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname || "/workspace")}`);
+      router.replace(`/login?redirect=${encodeURIComponent(pathname || "/workspace")}`);
     }
   }, [hasHydrated, checkAuth, router, pathname]);
 
@@ -148,27 +162,43 @@ export default function MainLayout({
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const shortsNotifications: NotificationWithActions[] = shortsMsgs.map(
-    (msg, index) => ({
-      id: `shorts-${index}-${Date.now()}`,
-      type: "ai_shorts",
-      title: "AI 쇼츠 생성 완료",
-      message: msg,
-      time: "방금 전",
-      isRead: false,
-      actions: {
-        accept: () => {
-          openResultModal();
-          closeNotifications();
+  const shortsNotifications = useMemo<NotificationWithActions[]>(
+    () =>
+      shortsMsgs.map((msg, index) => ({
+        id: `shorts-${index}-${typeof msg === "string" ? msg : index}`,
+        type: "ai_shorts",
+        title: "AI 쇼츠 생성 완료",
+        message: msg,
+        time: "방금 전",
+        isRead: false,
+        actions: {
+          accept: () => {
+            openResultModal();
+            closeNotifications();
+          },
         },
-      },
-    }),
+      })),
+    [shortsMsgs, openResultModal, closeNotifications]
   );
 
-  const allNotifications = [...shortsNotifications, ...apiNotifications];
+  const allNotifications = useMemo(
+    () => [...shortsNotifications, ...apiNotifications],
+    [shortsNotifications, apiNotifications]
+  );
 
   const theme = useWorkspaceThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
+
+  /** 메인 콘텐츠 최소 너비: 사이드바·알림 동시 오픈 시에도 카드 영역이 줄지 않도록 */
+  const MAIN_MIN_WIDTH = 720;
+  const PANEL_WIDTH = 384;
+  const contentMinWidth = useMemo(
+    () => (showNotifications ? MAIN_MIN_WIDTH + PANEL_WIDTH : MAIN_MIN_WIDTH),
+    [showNotifications]
+  );
+  const contentColumnStyle = useMemo(() => ({ minWidth: contentMinWidth }), [contentMinWidth]);
+  const mainStyle = useMemo(() => ({ minWidth: MAIN_MIN_WIDTH }), []);
 
   if (isStudioPage) {
     return <>{children}</>;
@@ -177,28 +207,47 @@ export default function MainLayout({
   return (
     <div
       className={cn(
-        "flex h-screen w-full transition-colors duration-300",
-        isDark ? "dark bg-gray-900 text-white" : "bg-white text-gray-900"
+        "flex h-screen w-full min-w-0 overflow-x-auto overflow-y-hidden transition-colors duration-280 ease-[cubic-bezier(0.4,0,0.2,1)]",
+        isDark
+          ? "dark bg-[#0c0c0f] text-white"
+          : "bg-[#f4f4f8] text-gray-900"
       )}
       data-theme={theme}
     >
       <Sidebar />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* 높이 고정(h-screen), 가로만 변화 → 패널/사이드바 동시 오픈 시에도 세로 레이아웃 유지 */}
+      <div
+        className="flex flex-col flex-1 h-full min-h-0 shrink-0"
+        style={contentColumnStyle}
+      >
         <WorkspaceTopNav />
-        <main className="flex-1 overflow-auto p-8 transition-colors duration-300 bg-background text-foreground">
-          {children}
-        </main>
-      </div>
 
-      {showNotifications && (
-        <NotificationPanel
-          notifications={allNotifications}
-          onClose={closeNotifications}
-          onAccept={() => {}}
-          onDecline={() => {}}
-        />
-      )}
+        <div className="flex flex-1 min-w-0 min-h-0">
+          {/* 메인: 애니메이션 없음(알림/사이드바 영향 제거로 부하 감소), 최소 너비만 보장 */}
+          <main
+            className="flex-1 overflow-auto p-8 transition-colors duration-280 ease-[cubic-bezier(0.4,0,0.2,1)] bg-transparent text-foreground shrink-0 min-h-0"
+            style={mainStyle}
+          >
+            {children}
+          </main>
+
+          {/* 알림 패널: 애니메이션 없이 표시/숨김만 */}
+          {showNotifications && (
+            <div
+              className="shrink-0 w-96 h-full flex flex-col border-l border-gray-200/80 dark:border-gray-700/50 shadow-[-8px_0_24px_-4px_rgba(0,0,0,0.1)] min-h-0"
+              aria-hidden={false}
+            >
+              <NotificationPanel
+                notifications={allNotifications}
+                onClose={closeNotifications}
+                onAccept={noop}
+                onDecline={noop}
+              />
+            </div>
+          )}
+        </div>
+      </div>
 
       <ShortsResultModal />
     </div>

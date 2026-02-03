@@ -56,7 +56,12 @@ public enum ErrorCode {
     // Viewer Metrics
     VIEWER_METRICS_NOT_FOUND(HttpStatus.NOT_FOUND, "V001", "시청 지표를 찾을 수 없습니다"),
     VIEWER_COLLECTION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "V002", "이미 시청자 수집이 진행 중입니다"),
-    VIEWER_COLLECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "V003", "시청자 수집에 실패했습니다");
+    VIEWER_COLLECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "V003", "시청자 수집에 실패했습니다"),
+
+    // Shorts
+    SHORTS_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "SH001", "이미 숏츠 생성이 진행 중입니다"),
+    SHORTS_JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "SH002", "숏츠 작업을 찾을 수 없습니다"),
+    SHORTS_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SH003", "숏츠 생성에 실패했습니다");
 
     private final HttpStatus status;
     private final String code;

@@ -21,6 +21,8 @@ interface EditLockIndicatorProps {
   onAcquire: () => void;
   /** 락 해제 핸들러 */
   onRelease: () => void;
+  /** 다른 사용자 편집 중일 때 '편집 시작' 클릭 시 호출 (안내 모달 표시용) */
+  onLockedClick?: () => void;
   /** 강제 해제 가능 여부 (호스트 전용) */
   canForceRelease?: boolean;
   /** 강제 해제 핸들러 */
@@ -37,6 +39,7 @@ export function EditLockIndicator({
   lockedByNickname,
   onAcquire,
   onRelease,
+  onLockedClick,
   canForceRelease = false,
   onForceRelease,
   isConnected = true,
@@ -45,7 +48,12 @@ export function EditLockIndicator({
   // 로딩 중
   if (isLoading) {
     return (
-      <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700/50", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700/50",
+          className
+        )}
+      >
         <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
         <span className="text-sm text-gray-400">락 상태 확인 중...</span>
       </div>
@@ -83,10 +91,24 @@ export function EditLockIndicator({
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30">
           <Lock className="h-4 w-4 text-red-400" />
           <span className="text-sm text-red-400">
-            <span className="font-medium">{lockedByNickname || "다른 사용자"}</span>
+            <span className="font-medium">
+              {lockedByNickname || "다른 사용자"}
+            </span>
             <span className="ml-1 text-red-400/80">편집 중</span>
           </span>
         </div>
+        {onLockedClick && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLockedClick}
+            className="h-8 gap-2 border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700 hover:border-gray-500"
+            title="편집 권한 요청"
+          >
+            <LockOpen className="h-4 w-4" />
+            <span>편집 시작</span>
+          </Button>
+        )}
         {canForceRelease && onForceRelease && (
           <Button
             variant="ghost"

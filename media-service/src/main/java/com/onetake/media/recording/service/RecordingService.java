@@ -1,5 +1,6 @@
 package com.onetake.media.recording.service;
 
+import com.onetake.media.chat.service.CommentCounterService;
 import com.onetake.media.global.config.RedisStreamConfig;
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
@@ -35,6 +36,8 @@ public class RecordingService {
     private final StreamSessionRepository streamSessionRepository;
     private final StringRedisTemplate redisTemplate;
     private final LiveKitEgressService liveKitEgressService;
+    private final CommentCounterService commentCounterService;
+    private final ChunkedUploadService chunkedUploadService;
 
     @Transactional
     public RecordingResponse startRecording(Long userId, RecordingStartRequest request) {
@@ -64,6 +67,9 @@ public class RecordingService {
         recordingSession.startRecording(egressId);
 
         recordingSessionRepository.save(recordingSession);
+
+        // 분당 댓글 수 집계 시작 (AI 하이라이트 추출용)
+        commentCounterService.startCounting(request.getStudioId());
 
         log.info("Recording started: studioId={}, recordingId={}", request.getStudioId(), recordingSession.getRecordingId());
 
@@ -127,7 +133,16 @@ public class RecordingService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
 
         recordingSession.complete(filePath, fileUrl, fileSize, durationSeconds);
+
+        // 외부 EC2 업로드가 활성화된 경우 업로드 대기 상태로 설정
+        if (chunkedUploadService.isUploadEnabled()) {
+            recordingSession.initExternalUpload();
+        }
+
         recordingSessionRepository.save(recordingSession);
+
+        // 분당 댓글 수 저장 (AI 하이라이트 추출용)
+        commentCounterService.saveAndStopCounting(recordingSession.getStudioId(), recordingId);
 
         // Core 서비스에 이벤트 발행 (Redis Streams 사용)
         RecordingStoppedEvent event = RecordingStoppedEvent.builder()
@@ -142,6 +157,16 @@ public class RecordingService {
                 .build();
 
         publishRecordingStoppedEvent(event);
+
+        // 외부 EC2 서버로 비동기 업로드 시작
+        if (chunkedUploadService.isUploadEnabled()) {
+            chunkedUploadService.uploadFileAsync(filePath, recordingId)
+                    .thenAccept(externalUrl -> log.info("External upload completed: recordingId={}, externalUrl={}", recordingId, externalUrl))
+                    .exceptionally(ex -> {
+                        log.error("External upload failed: recordingId={}, error={}", recordingId, ex.getMessage());
+                        return null;
+                    });
+        }
 
         log.info("Recording completed and event published: recordingId={}", recordingId);
     }

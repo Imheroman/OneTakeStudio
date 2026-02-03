@@ -72,10 +72,10 @@ export default function StoragePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Storage
+            저장 공간
           </h1>
           <p className="text-gray-500 mt-1">
-            Manage your storage space and files.
+            저장 공간과 파일을 관리합니다.
           </p>
         </div>
       </div>
@@ -83,9 +83,9 @@ export default function StoragePage() {
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <CardTitle className="text-lg font-medium flex items-center gap-2">
               <HardDrive className="h-5 w-5 text-gray-500" />
-              Overview
+              사용량 요약
             </CardTitle>
             <span
               className={cn(
@@ -97,7 +97,7 @@ export default function StoragePage() {
             </span>
           </div>
           <CardDescription>
-            {storageData.used.toFixed(2)}GB used of {storageData.total.toFixed(2)}GB
+            {storageData.used.toFixed(2)}GB / {storageData.total.toFixed(2)}GB 사용 중
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -111,17 +111,17 @@ export default function StoragePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Files</CardTitle>
+          <CardTitle>전체 파일</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Size</TableHead>
+                <TableHead>이름</TableHead>
+                <TableHead>상태</TableHead>
+                <TableHead>유형</TableHead>
+                <TableHead>날짜</TableHead>
+                <TableHead className="text-right">용량</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>

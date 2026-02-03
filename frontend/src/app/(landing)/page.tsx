@@ -64,7 +64,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
               "rounded-full px-6 py-2 mb-8 flex items-center gap-3 border transition-colors duration-300 backdrop-blur-sm",
               isDark
@@ -86,7 +86,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
+            transition={{ delay: 0.2, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
             className="text-center mb-6"
           >
             <h1
@@ -114,7 +114,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
+            transition={{ delay: 0.5, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
               "text-center text-base sm:text-[20px] leading-relaxed mb-10 max-w-2xl transition-colors duration-300",
               isDark ? "text-white/70" : "text-gray-600"
@@ -126,7 +126,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.6 }}
+            transition={{ delay: 0.7, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
             className="flex items-center gap-4 flex-wrap justify-center"
           >
             <Link href="/signup">
@@ -177,7 +177,7 @@ export default function LandingPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 0.8 }}
+            transition={{ delay: 1.2, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
               "absolute bottom-12 w-6 h-10 border-2 rounded-full flex items-start justify-center p-1 transition-colors duration-300",
               isDark ? "border-white/30" : "border-gray-400"
@@ -203,7 +203,7 @@ export default function LandingPage() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 0.15 }}
           viewport={{ once: true }}
-          transition={{ duration: 1.5 }}
+          transition={{ duration: 1.5, ease: [0.4, 0, 0.2, 1] }}
           className="absolute inset-0 z-0"
         >
           <ImageWithFallback
@@ -222,7 +222,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
           className="relative z-10 text-center px-6"
         >
           <h2 className="text-[40px] sm:text-[52px] md:text-[60px] font-bold leading-tight mb-8">
@@ -259,7 +259,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
               className="inline-block bg-purple-500/10 border border-purple-500/30 rounded-full px-6 py-2 mb-8"
             >
               <span className="text-purple-500 font-semibold text-sm">핵심 기능</span>
@@ -269,7 +269,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.1, duration: 0.6 }}
+              transition={{ delay: 0.1, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
               className="text-[40px] sm:text-[48px] font-bold leading-tight mb-6"
             >
               원테이크가 특별한 이유
@@ -279,7 +279,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.2, duration: 0.6 }}
+              transition={{ delay: 0.2, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
               className={cn(
                 "text-lg",
                 isDark ? "text-white/60" : "text-gray-600"
@@ -479,7 +479,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
           className="max-w-4xl mx-auto relative"
         >
           <div

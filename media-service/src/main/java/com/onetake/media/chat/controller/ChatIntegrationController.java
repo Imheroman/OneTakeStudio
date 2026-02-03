@@ -18,6 +18,8 @@ import java.util.Map;
  *
  * 송출 시작 시 해당 플랫폼의 채팅 연동을 시작하고,
  * 송출 종료 시 연동을 종료하는 용도
+ *
+ * OAuth 인증 완료 후 DB에 저장된 토큰을 사용하여 연동
  */
 @Slf4j
 @RestController
@@ -29,10 +31,48 @@ public class ChatIntegrationController {
     private final YouTubeBroadcastService youTubeBroadcastService;
 
     /**
-     * YouTube 채팅 연동 시작 (liveChatId 직접 지정)
+     * YouTube 채팅 연동 시작 (DB 토큰 사용)
+     * userId로 DB에서 토큰 조회하여 연동
      */
     @PostMapping("/{studioId}/youtube/start")
     public ResponseEntity<ApiResponse<Void>> startYouTubeIntegration(
+            @PathVariable Long studioId,
+            @RequestParam Long userId) {
+
+        if (!chatIntegrationService.hasValidToken(userId, ChatPlatform.YOUTUBE)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("YouTube OAuth 인증이 필요합니다. /api/oauth/youtube/authorize 를 먼저 호출하세요."));
+        }
+
+        chatIntegrationService.startIntegrationWithStoredToken(userId, studioId, ChatPlatform.YOUTUBE);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    /**
+     * 치지직 채팅 연동 시작 (DB 토큰 사용)
+     * userId로 DB에서 토큰 조회하여 연동
+     */
+    @PostMapping("/{studioId}/chzzk/start")
+    public ResponseEntity<ApiResponse<Void>> startChzzkIntegration(
+            @PathVariable Long studioId,
+            @RequestParam Long userId) {
+
+        if (!chatIntegrationService.hasValidToken(userId, ChatPlatform.CHZZK)) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("치지직 OAuth 인증이 필요합니다. /api/oauth/chzzk/authorize 를 먼저 호출하세요."));
+        }
+
+        chatIntegrationService.startIntegrationWithStoredToken(userId, studioId, ChatPlatform.CHZZK);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    /**
+     * YouTube 채팅 연동 시작 (레거시 - 토큰 직접 전달)
+     * @deprecated OAuth 인증 방식 사용 권장
+     */
+    @Deprecated
+    @PostMapping("/{studioId}/youtube/start-legacy")
+    public ResponseEntity<ApiResponse<Void>> startYouTubeIntegrationLegacy(
             @PathVariable Long studioId,
             @RequestBody YouTubeIntegrationRequest request) {
 
@@ -48,16 +88,15 @@ public class ChatIntegrationController {
     }
 
     /**
-     * YouTube 채팅 연동 시작 (자동으로 liveChatId 조회)
-     *
-     * accessToken만 있으면 현재 활성/예정 라이브 방송의 채팅을 자동 연결
+     * YouTube 채팅 연동 시작 (자동으로 liveChatId 조회 - 레거시)
+     * @deprecated OAuth 인증 방식 사용 권장
      */
+    @Deprecated
     @PostMapping("/{studioId}/youtube/auto-start")
     public ResponseEntity<ApiResponse<YouTubeAutoStartResponse>> startYouTubeIntegrationAuto(
             @PathVariable Long studioId,
             @RequestBody YouTubeAutoStartRequest request) {
 
-        // 자동으로 liveChatId 조회
         String liveChatId = youTubeBroadcastService.getLiveChatId(request.accessToken());
 
         if (liveChatId == null) {
@@ -82,29 +121,12 @@ public class ChatIntegrationController {
     }
 
     /**
-     * Twitch 채팅 연동 시작
+     * 치지직 채팅 연동 시작 (레거시 - 채널 ID 직접 전달)
+     * @deprecated OAuth 인증 방식 사용 권장
      */
-    @PostMapping("/{studioId}/twitch/start")
-    public ResponseEntity<ApiResponse<Void>> startTwitchIntegration(
-            @PathVariable Long studioId,
-            @RequestBody TwitchIntegrationRequest request) {
-
-        PlatformCredentials credentials = PlatformCredentials.forTwitch(
-                studioId,
-                request.accessToken(),
-                request.channelName(),
-                request.channelId()
-        );
-
-        chatIntegrationService.startIntegration(studioId, credentials);
-        return ResponseEntity.ok(ApiResponse.success());
-    }
-
-    /**
-     * 치지직 채팅 연동 시작
-     */
-    @PostMapping("/{studioId}/chzzk/start")
-    public ResponseEntity<ApiResponse<Void>> startChzzkIntegration(
+    @Deprecated
+    @PostMapping("/{studioId}/chzzk/start-legacy")
+    public ResponseEntity<ApiResponse<Void>> startChzzkIntegrationLegacy(
             @PathVariable Long studioId,
             @RequestBody ChzzkIntegrationRequest request) {
 
@@ -154,7 +176,6 @@ public class ChatIntegrationController {
                 activePlatforms,
                 Map.of(
                         ChatPlatform.YOUTUBE, chatIntegrationService.isIntegrationActive(studioId, ChatPlatform.YOUTUBE),
-                        ChatPlatform.TWITCH, chatIntegrationService.isIntegrationActive(studioId, ChatPlatform.TWITCH),
                         ChatPlatform.CHZZK, chatIntegrationService.isIntegrationActive(studioId, ChatPlatform.CHZZK)
                 )
         );
@@ -178,12 +199,6 @@ public class ChatIntegrationController {
     public record YouTubeAutoStartResponse(
             String liveChatId,
             String message
-    ) {}
-
-    public record TwitchIntegrationRequest(
-            String accessToken,
-            String channelName,
-            String channelId
     ) {}
 
     public record ChzzkIntegrationRequest(

@@ -38,7 +38,7 @@ export function ShortsResultModal() {
               {/* 카드 본체 (폰 화면 비율) */}
               <div
                 className={cn(
-                  "aspect-[9/16] rounded-2xl overflow-hidden shadow-sm border transition-all relative group bg-white",
+                  "aspect-[9/16] rounded-2xl overflow-hidden shadow-sm border transition-all transition-smooth relative group bg-white gpu-layer gpu-layer-hover",
                   short.status === "loading"
                     ? "border-gray-200 flex flex-col items-center justify-center"
                     : "border-purple-500 shadow-purple-100 ring-2 ring-purple-100",

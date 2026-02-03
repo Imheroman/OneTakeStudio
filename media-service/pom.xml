@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <livekit.version>0.8.1</livekit.version>
+        <livekit.version>0.10.1</livekit.version>
     </properties>
 
     <dependencies>
@@ -93,6 +93,13 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
             <version>2.25.0</version>
+        </dependency>
+
+        <!-- Java WebSocket Client -->
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.6</version>
         </dependency>
 
         <!-- JWT -->

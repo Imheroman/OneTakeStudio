@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
       setIsSubmitting(true);
       // TODO: 백엔드 비밀번호 재설정 API 연동
       // await apiClient.post("/api/auth/forgot-password", { email: values.email });
-      
+
       // 임시로 성공 상태로 전환 (실제 API 연동 시 제거)
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setIsEmailSent(true);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Source } from "@/entities/studio/model";
 import {
   setPreferredVideoDeviceId,
@@ -13,13 +13,21 @@ export interface UseSourceStreamsOptions {
   remoteSources?: RemoteSource[];
   /** 로컬에서 publish한 트랙 목록 (화면 공유 등) */
   publishedTracks?: LocalPublishedTrack[];
+  /** Go Live 시 캔버스용 로컬 스트림 캐시 (unpublish 후에도 화면공유/웹캠 유지) */
+  localPublishedStreamsRef?: React.MutableRefObject<Map<string, MediaStream>>;
 }
 
 export function useSourceStreams(
   sources: Source[],
   options: UseSourceStreamsOptions = {}
 ) {
-  const { isVideoEnabled = true, isAudioEnabled = true, remoteSources = [], publishedTracks = [] } = options;
+  const {
+    isVideoEnabled = true,
+    isAudioEnabled = true,
+    remoteSources = [],
+    publishedTracks = [],
+    localPublishedStreamsRef,
+  } = options;
   const [streamsMap, setStreamsMap] = useState<Map<string, MediaStream>>(
     () => new Map()
   );
@@ -33,9 +41,7 @@ export function useSourceStreams(
       (s.type === "video" && isVideoEnabled) ||
       s.type === "audio" ||
       (s.type === "screen" && isVideoEnabled);
-    const sourceIds = new Set(
-      sources.filter(needStream).map((s) => s.id)
-    );
+    const sourceIds = new Set(sources.filter(needStream).map((s) => s.id));
     sourceIdsRef.current = sourceIds;
     const sourceById = new Map(sources.map((s) => [s.id, s]));
 
@@ -44,11 +50,11 @@ export function useSourceStreams(
       const next = new Map(prev);
       next.forEach((stream, id) => {
         if (!sourceIds.has(id)) {
-          // 원격 소스는 트랙을 stop하지 않음 (LiveKit에서 관리)
           const source = sourceById.get(id);
           if (!source?.isRemote) {
             stream.getTracks().forEach((t) => t.stop());
           }
+          localPublishedStreamsRef?.current.delete(id);
           next.delete(id);
           requestedRef.current.delete(id);
           changed = true;
@@ -94,31 +100,51 @@ export function useSourceStreams(
       if (requestedRef.current.has(id)) return;
       requestedRef.current.add(id);
 
-      // 로컬 screen 소스는 publishedTracks에서 스트림 가져오기
+      // 로컬 screen: Go Live 시 캔버스용 캐시 우선 (unpublish 후에도 화면공유 유지)
       if (source.type === "screen" && !source.isRemote) {
+        const cached = localPublishedStreamsRef?.current.get(id);
+        if (cached && cached.active) {
+          setStreamsMap((prev) => new Map(prev).set(id, cached));
+          return;
+        }
         const publishedTrack = publishedTracks.find((pt) => pt.sourceId === id);
         if (publishedTrack?.track) {
           const mediaStreamTrack = publishedTrack.track.mediaStreamTrack;
           if (mediaStreamTrack) {
             const stream = new MediaStream([mediaStreamTrack]);
-            console.log("[useSourceStreams] 로컬 screen 스트림 설정 (publishedTracks):", id);
             setStreamsMap((prev) => new Map(prev).set(id, stream));
           } else {
-            console.log("[useSourceStreams] screen 트랙 대기 중:", id);
             requestedRef.current.delete(id);
           }
         } else {
-          console.log("[useSourceStreams] screen 소스 publish 대기 중:", id);
           requestedRef.current.delete(id);
         }
         return;
       }
 
+      // 로컬 video: Go Live 시 캔버스용 캐시 우선 (unpublish 후에도 웹캠 유지)
+      if (source.type === "video" && !source.isRemote) {
+        const cached = localPublishedStreamsRef?.current.get(id);
+        if (cached && cached.active) {
+          setStreamsMap((prev) => new Map(prev).set(id, cached));
+          return;
+        }
+      }
+
       const constraints: MediaStreamConstraints = {};
       if (source.type === "video") {
         constraints.video = source.deviceId
-          ? { deviceId: { ideal: source.deviceId }, width: { ideal: 1920, min: 640 }, height: { ideal: 1080, min: 480 }, frameRate: { ideal: 30 } }
-          : { width: { ideal: 1920, min: 640 }, height: { ideal: 1080, min: 480 }, frameRate: { ideal: 30 } };
+          ? {
+              deviceId: { ideal: source.deviceId },
+              width: { ideal: 1920, min: 640 },
+              height: { ideal: 1080, min: 480 },
+              frameRate: { ideal: 30 },
+            }
+          : {
+              width: { ideal: 1920, min: 640 },
+              height: { ideal: 1080, min: 480 },
+              frameRate: { ideal: 30 },
+            };
         constraints.audio = isAudioEnabled;
       } else if (source.type === "audio") {
         constraints.audio = source.deviceId
@@ -151,7 +177,7 @@ export function useSourceStreams(
           console.warn("useSourceStreams:", id, err);
         });
     });
-  }, [sources, isVideoEnabled, isAudioEnabled, remoteSources, publishedTracks]);
+  }, [sources, isVideoEnabled, isAudioEnabled, remoteSources, publishedTracks, localPublishedStreamsRef]);
 
   useEffect(() => {
     return () => {
@@ -162,11 +188,14 @@ export function useSourceStreams(
     };
   }, []);
 
+  /** streamsMapRef 사용으로 stale closure 방지 - 스트림이 비동기 로드된 후에도 최신 맵 참조 */
   const getStream = useCallback(
-    (sourceId: string): MediaStream | undefined => streamsMap.get(sourceId),
-    [streamsMap]
+    (sourceId: string): MediaStream | undefined =>
+      streamsMapRef.current.get(sourceId),
+    []
   );
-  const streamIds = Array.from(streamsMap.keys());
+  /** bannerRemainingSeconds 등 부모 리렌더 시 새 배열 생성 방지 → PreviewArea 불필요 리렌더/깜빡임 방지 */
+  const streamIds = useMemo(() => Array.from(streamsMap.keys()), [streamsMap]);
 
   return { streamsMap, getStream, streamIds };
 }

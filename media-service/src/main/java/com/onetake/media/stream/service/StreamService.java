@@ -1,5 +1,6 @@
 package com.onetake.media.stream.service;
 
+import com.onetake.media.chat.service.CommentCounterService;
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
 import com.onetake.media.settings.service.MediaSettingsService;
@@ -33,6 +34,7 @@ public class StreamService {
     private final StreamSessionRepository streamSessionRepository;
     private final LiveKitService liveKitService;
     private final MediaSettingsService mediaSettingsService;
+    private final CommentCounterService commentCounterService;
     private final PlatformTransactionManager transactionManager;
 
     @Value("${livekit.turn.urls:}")
@@ -120,6 +122,10 @@ public class StreamService {
                 .ifPresent(session -> {
                     if (session.getParticipantIdentity().equals(participantIdentity)) {
                         session.activate();
+
+                        // 댓글 카운터 시작 (스트리밍만 할 때도 집계 가능)
+                        commentCounterService.startCounting(session.getStudioId());
+
                         log.info("Stream session activated: roomName={}, participant={}",
                                 roomName, participantIdentity);
                     }
@@ -147,6 +153,10 @@ public class StreamService {
                 .ifPresent(session -> {
                     session.close();
                     liveKitService.deleteRoom(session.getRoomName());
+
+                    // 댓글 카운터 중지 (저장 없이 - 녹화 종료 시 RecordingService에서 저장)
+                    commentCounterService.stopCounting(studioId);
+
                     log.info("Stream ended for studio {}", studioId);
                 });
     }

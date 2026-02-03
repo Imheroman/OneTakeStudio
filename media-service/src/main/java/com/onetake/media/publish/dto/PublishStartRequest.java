@@ -15,7 +15,7 @@ public class PublishStartRequest {
     private Long studioId;
 
     @NotEmpty(message = "송출 채널은 최소 1개 이상이어야 합니다")
-    private List<Long> destinationIds; // YouTube, Twitch 등 송출 채널 ID 목록
+    private List<Long> destinationIds; // YouTube, Chzzk 등 송출 채널 ID 목록
 
     private String streamSessionId; // 연결된 스트림 세션 ID
 }

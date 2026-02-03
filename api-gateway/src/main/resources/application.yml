@@ -1,9 +1,7 @@
 server:
-  port: ${SERVER_PORT:60000}
+  port: 60000
 
 spring:
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: api-gateway
   cloud:
@@ -19,7 +17,7 @@ spring:
             - id: core-service
               uri: lb://core-service
               predicates:
-                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**, /api/ai/**
+                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**
               filters:
                 - StripPrefix=0
 
@@ -27,7 +25,7 @@ spring:
             - id: media-service-publish
               uri: lb://media-service
               predicates:
-                - Path=/api/publish/**
+                - Path=/api/publish,/api/publish/**
               filters:
                 - RewritePath=/api/publish(?<segment>.*),/api/media/publish${segment}
 
@@ -43,17 +41,17 @@ spring:
             - id: media-service
               uri: lb://media-service
               predicates:
-                - Path=/api/v1/media/**
+                - Path=/api/media/**, /api/shorts/**, /api/callback/**
               filters:
                 - RewritePath=/api/v1/media(?<segment>.*),/api/media${segment}
 
-            # Media Service - Stream Routes
+            # Media Service - Stream Routes (별칭)
             - id: media-service-stream
               uri: lb://media-service
               predicates:
                 - Path=/api/streams/**
               filters:
-                - RewritePath=/api/streams/(?<segment>.*), /api/media/stream/${segment}
+                - RewritePath=/api/streams/(?<segment>.*),/api/media/stream/${segment}
 
             # Media Service - Chat Routes
             - id: media-service-chat
@@ -63,21 +61,13 @@ spring:
               filters:
                 - StripPrefix=0
 
-            # Media Service - Marker Routes
-            - id: media-service-markers
-              uri: lb://media-service
-              predicates:
-                - Path=/api/media/markers/**
-              filters:
-                - StripPrefix=0
-
-            # Media Service - Recording Routes
+            # Media Service - Recording Routes (별칭)
             - id: media-service-recording
               uri: lb://media-service
               predicates:
                 - Path=/api/recordings/**
               filters:
-                - RewritePath=/api/recordings/(?<segment>.*), /api/media/record/${segment}
+                - RewritePath=/api/recordings/(?<segment>.*),/api/media/record/${segment}
 
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
@@ -99,15 +89,15 @@ spring:
                 allowCredentials: true
                 maxAge: 3600
 
-# JWT (base64 encoded)
+# JWT
 jwt:
-  secret: ${JWT_SECRET:bG9jYWxkZXZqd3RzZWNyZXRrZXlmb3JoczI1NmFsZ29yaXRobW11c3RiZWF0bGVhc3QyNTZiaXRz}
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
 
 # Eureka Client
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
@@ -126,5 +116,5 @@ management:
 # Logging
 logging:
   level:
-    org.springframework.cloud.gateway: ${LOG_LEVEL_GATEWAY:DEBUG}
+    org.springframework.cloud.gateway: DEBUG
     org.springframework.web: INFO

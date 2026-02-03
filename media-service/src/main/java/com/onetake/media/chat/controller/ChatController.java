@@ -29,13 +29,10 @@ public class ChatController {
     }
 
     @PostMapping("/external")
-    public ResponseEntity<ApiResponse<ChatMessageResponse>> receiveExternalMessage(
+    public ResponseEntity<ApiResponse<Void>> receiveExternalMessage(
             @Valid @RequestBody ChatMessageRequest request) {
-        ChatMessageResponse response = chatService.receiveExternalMessage(request);
-        if (response == null) {
-            return ResponseEntity.ok(ApiResponse.success(null)); // 중복 메시지
-        }
-        return ResponseEntity.ok(ApiResponse.success(response));
+        chatService.receiveExternalMessage(request);
+        return ResponseEntity.ok(ApiResponse.success());
     }
 
     @GetMapping("/{studioId}")

@@ -19,7 +19,7 @@ public class PlatformCredentials {
 
     private Long studioId;
 
-    // OAuth Access Token (YouTube, Twitch)
+    // OAuth Access Token (YouTube)
     private String accessToken;
 
     // Refresh Token (토큰 갱신용)
@@ -30,12 +30,6 @@ public class PlatformCredentials {
 
     // YouTube Live Broadcast ID
     private String broadcastId;
-
-    // Twitch Channel Name
-    private String channelName;
-
-    // Twitch Channel ID
-    private String channelId;
 
     // 치지직 채널 ID
     private String chzzkChannelId;
@@ -54,20 +48,6 @@ public class PlatformCredentials {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .liveChatId(liveChatId)
-                .build();
-    }
-
-    /**
-     * Twitch 인증 정보 생성
-     */
-    public static PlatformCredentials forTwitch(Long studioId, String accessToken,
-                                                 String channelName, String channelId) {
-        return PlatformCredentials.builder()
-                .platform(ChatPlatform.TWITCH)
-                .studioId(studioId)
-                .accessToken(accessToken)
-                .channelName(channelName)
-                .channelId(channelId)
                 .build();
     }
 
