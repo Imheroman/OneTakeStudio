@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-config
+  namespace: core
+  labels:
+    app: api-server
+data:
+  REDIS_HOST: "redis.database.svc.cluster.local"
+  REDIS_PORT: "6379"
+  OAUTH_GOOGLE_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
+  OAUTH_KAKAO_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
+  OAUTH_NAVER_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
