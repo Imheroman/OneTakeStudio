@@ -91,7 +91,6 @@ setup-secrets:
         --from-literal=JWT_SECRET="$JWT_SECRET" \
         --from-literal=LIVEKIT_API_KEY="devkey" \
         --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
-        --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
         --dry-run=client -o yaml | kubectl apply -f -
 
     - |
