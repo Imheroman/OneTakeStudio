@@ -270,14 +270,20 @@ deploy-livekit:
     - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
   script:
     - |
-      kubectl apply -f infra/k8s/livekit/namespace.yaml
-      kubectl apply -f infra/k8s/livekit/pvc.yaml
-      kubectl apply -f infra/k8s/livekit/configmap.yaml
-      kubectl apply -f infra/k8s/livekit/server-deployment.yaml
-      kubectl apply -f infra/k8s/livekit/server-service.yaml
-      kubectl apply -f infra/k8s/livekit/egress-deployment.yaml
-      kubectl apply -f infra/k8s/livekit/ingress-deployment.yaml
-      kubectl apply -f infra/k8s/livekit/ingress.yaml
+      # Namespace
+      kubectl apply -f infra/k8s/livekit/namespace/namespace.yaml
+      # Shared resources
+      kubectl apply -f infra/k8s/livekit/shared/pvc.yaml
+      # Server
+      kubectl apply -f infra/k8s/livekit/server/configmap.yaml
+      kubectl apply -f infra/k8s/livekit/server/deployment.yaml
+      kubectl apply -f infra/k8s/livekit/server/service.yaml
+      # Egress
+      kubectl apply -f infra/k8s/livekit/egress/deployment.yaml
+      # Ingress
+      kubectl apply -f infra/k8s/livekit/ingress/deployment.yaml
+      kubectl apply -f infra/k8s/livekit/ingress/ingress.yaml
+      # Wait for server
       kubectl rollout status deployment/livekit-server -n livekit --timeout=300s
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
