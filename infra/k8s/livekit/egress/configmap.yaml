@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: egress-config
+  namespace: livekit
+data:
+  config.yaml: |
+    # Egress는 Secret에서 api_key/api_secret을 환경변수로 받음
+    ws_url: ws://livekit-server.livekit.svc.cluster.local:7880
+    redis:
+      address: redis.database.svc.cluster.local:6379
+    file_output:
+      local:
+        directory: /recordings
+    logging:
+      level: info

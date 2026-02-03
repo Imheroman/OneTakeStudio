@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-config
+  namespace: livekit
+data:
+  config.yaml: |
+    # Ingress는 Secret에서 api_key/api_secret을 환경변수로 받음
+    ws_url: ws://livekit-server.livekit.svc.cluster.local:7880
+    redis:
+      address: redis.database.svc.cluster.local:6379
+    rtmp:
+      port: 1935
+    whip:
+      port: 8088
+    logging:
+      level: info
