@@ -12,6 +12,5 @@ data:
       use_external_ip: true
     redis:
       address: redis.database.svc.cluster.local:6379
-      password: ${REDIS_PASSWORD}
     logging:
       level: info
