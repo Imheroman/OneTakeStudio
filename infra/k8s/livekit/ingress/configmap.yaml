@@ -9,6 +9,7 @@ data:
     ws_url: ws://livekit-server.livekit.svc.cluster.local:7880
     redis:
       address: redis.database.svc.cluster.local:6379
+      password: onetakestudioredispw123
     rtmp:
       port: 1935
     whip:
