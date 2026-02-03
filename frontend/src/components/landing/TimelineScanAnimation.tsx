@@ -304,7 +304,11 @@ export function TimelineScanAnimation() {
                       className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1"
                       initial={{ opacity: 0, scale: 0 }}
                       animate={{ opacity: [0, 1, 0], scale: [0, 1.5, 0] }}
-                      transition={{ duration: 0.5, delay: clip.id * 0.05, ease: [0.4, 0, 0.2, 1] }}
+                      transition={{
+                        duration: 0.5,
+                        delay: clip.id * 0.05,
+                        ease: [0.4, 0, 0.2, 1],
+                      }}
                     >
                       {Array.from({ length: 8 }).map((_, i) => (
                         <motion.div
@@ -384,41 +388,23 @@ export function TimelineScanAnimation() {
               scale: 0.8 + ((progress - 70) / 30) * 0.2,
             }}
           >
-            <div className="relative">
-              {/* 휴대폰 목업 (placeholder - 실제 이미지로 교체 가능) */}
-              <div
-                className="w-[280px] sm:w-[320px] h-[560px] sm:h-[640px] rounded-[2.5rem] border-[10px] border-gray-800 bg-black overflow-hidden shadow-2xl"
-                style={{
-                  boxShadow: "0 40px 80px rgba(168, 85, 247, 0.4)",
-                }}
-              >
-                <div className="w-full h-full bg-gradient-to-b from-purple-900/30 to-black flex items-center justify-center">
-                  <div className="text-center px-6">
-                    <p className="text-purple-300 font-bold text-xl mb-2">
-                      ✨ 편집 완료
-                    </p>
-                    <p className="text-white/70 text-sm">
-                      알차고 재밌는 3개의 쇼츠가 준비되었습니다
-                    </p>
-                  </div>
+            {/* 휴대폰 목업 (placeholder - 실제 이미지로 교체 가능) */}
+            <div
+              className="w-[280px] sm:w-[320px] h-[560px] sm:h-[640px] rounded-[2.5rem] border-[10px] border-gray-800 bg-black overflow-hidden shadow-2xl"
+              style={{
+                boxShadow: "0 40px 80px rgba(168, 85, 247, 0.4)",
+              }}
+            >
+              <div className="w-full h-full bg-gradient-to-b from-purple-900/30 to-black flex items-center justify-center p-6">
+                <div className="text-center w-full">
+                  <p className="text-purple-300 font-bold text-xl mb-2">
+                    ✨ 편집 완료
+                  </p>
+                  <p className="text-white/70 text-sm leading-relaxed">
+                    알차고 재밌는 3개의 쇼츠가 준비되었습니다
+                  </p>
                 </div>
               </div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{
-                  opacity: progress > 85 ? 1 : 0,
-                  y: progress > 85 ? 0 : 20,
-                }}
-                className="absolute -bottom-20 left-1/2 -translate-x-1/2 text-center whitespace-nowrap"
-              >
-                <p className="text-purple-400 font-bold text-2xl mb-2">
-                  ✨ 완료!
-                </p>
-                <p className="text-white/60 text-lg">
-                  음성·댓글 분석으로 만든 3개의 쇼츠가 준비되었습니다
-                </p>
-              </motion.div>
             </div>
           </motion.div>
         )}
@@ -451,7 +437,11 @@ export function TimelineScanAnimation() {
             <span>스크롤을 내려 AI 편집 과정을 확인하세요</span>
             <motion.div
               animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: [0.4, 0, 0.2, 1] }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: [0.4, 0, 0.2, 1],
+              }}
             >
               ↓
             </motion.div>

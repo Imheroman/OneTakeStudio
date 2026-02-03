@@ -16,7 +16,7 @@ public class RecentStudioResponse {
     private Long id;
     private String title;
     private String date;
-    private String role;  // HOST, MANAGER, GUEST
+    private String role;  // HOST, MANAGER
 
     public static RecentStudioResponse from(Studio studio, StudioMemberRole role) {
         return RecentStudioResponse.builder()

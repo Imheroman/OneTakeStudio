@@ -10,13 +10,13 @@ export const StudioMemberResponseSchema = z.object({
   nickname: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
   profileImageUrl: z.string().nullable().optional(),
-  role: z.enum(["host", "manager", "guest"]),
+  role: z.enum(["host", "manager"]),
   joinedAt: z.string().optional(),
 });
 
 export const InviteMemberRequestSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["ADMIN", "MEMBER", "MANAGER", "GUEST"]),
+  role: z.enum(["ADMIN", "MEMBER", "MANAGER"]),
 });
 
 export const InviteResponseSchema = z.object({
@@ -30,6 +30,8 @@ export const InviteResponseSchema = z.object({
   createdAt: z.string().optional(),
 });
 
-export type StudioMemberResponseDto = z.infer<typeof StudioMemberResponseSchema>;
+export type StudioMemberResponseDto = z.infer<
+  typeof StudioMemberResponseSchema
+>;
 export type InviteMemberRequestDto = z.infer<typeof InviteMemberRequestSchema>;
 export type InviteResponseDto = z.infer<typeof InviteResponseSchema>;

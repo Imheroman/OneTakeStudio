@@ -36,7 +36,6 @@ interface SidebarNavItemProps {
   pathname: string;
   isDark: boolean;
   shouldShowText: boolean;
-  isExpanded: boolean;
 }
 
 const SidebarNavItem = memo(function SidebarNavItem({
@@ -44,7 +43,6 @@ const SidebarNavItem = memo(function SidebarNavItem({
   pathname,
   isDark,
   shouldShowText,
-  isExpanded,
 }: SidebarNavItemProps) {
   const isActive = pathname === menu.href;
   const Icon = menu.icon;
@@ -54,14 +52,14 @@ const SidebarNavItem = memo(function SidebarNavItem({
       <Link
         href={menu.href}
         className={cn(
-          "flex items-center p-3 rounded-lg transition-colors group relative h-12 min-w-0",
+          "flex items-center p-3 rounded-lg transition-colors relative h-12 min-w-0",
           isActive
             ? isDark
               ? "bg-onetake-point/20 text-indigo-300"
               : "bg-onetake-point/10 text-onetake-point"
             : isDark
-              ? "text-gray-400 hover:bg-gray-800 hover:text-white"
-              : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            ? "text-gray-400 hover:bg-gray-800 hover:text-white"
+            : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
         )}
       >
         <div className="min-w-[24px] flex justify-center items-center shrink-0">
@@ -70,21 +68,13 @@ const SidebarNavItem = memo(function SidebarNavItem({
         <span
           className={cn(
             "font-medium whitespace-nowrap flex-1 min-w-0 truncate overflow-hidden origin-left transition-[opacity,max-width,margin] duration-200",
-            shouldShowText ? "ease-out opacity-100 max-w-[200px] ml-4" : "ease-in opacity-0 max-w-0 ml-0"
+            shouldShowText
+              ? "ease-out opacity-100 max-w-[200px] ml-4"
+              : "ease-in opacity-0 max-w-0 ml-0"
           )}
         >
           {menu.name}
         </span>
-        {!isExpanded && (
-          <div
-            className={cn(
-              "absolute left-14 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-nowrap shadow-md",
-              isDark ? "bg-gray-800 text-white" : "bg-gray-900 text-white"
-            )}
-          >
-            {menu.name}
-          </div>
-        )}
       </Link>
     </div>
   );
@@ -141,11 +131,17 @@ function SidebarInner() {
             >
               {isExpanded ? (
                 <PanelLeftClose
-                  className={cn("w-[28px] h-[28px]", isDark ? "text-gray-400" : "text-gray-600")}
+                  className={cn(
+                    "w-[28px] h-[28px]",
+                    isDark ? "text-gray-400" : "text-gray-600"
+                  )}
                 />
               ) : (
                 <PanelLeft
-                  className={cn("w-[28px] h-[28px]", isDark ? "text-gray-400" : "text-gray-600")}
+                  className={cn(
+                    "w-[28px] h-[28px]",
+                    isDark ? "text-gray-400" : "text-gray-600"
+                  )}
                 />
               )}
             </button>
@@ -153,7 +149,9 @@ function SidebarInner() {
           <div
             className={cn(
               "flex flex-1 items-center gap-2 rounded-full border px-3 py-2 text-sm min-w-0 overflow-hidden origin-left transition-[opacity,max-width,margin] duration-200",
-              shouldShowText ? "ease-out opacity-100 max-w-[200px] ml-4" : "ease-in opacity-0 max-w-0 ml-0",
+              shouldShowText
+                ? "ease-out opacity-100 max-w-[200px] ml-4"
+                : "ease-in opacity-0 max-w-0 ml-0",
               isDark
                 ? "bg-gray-800/60 border-gray-700 text-gray-300 placeholder:text-gray-500"
                 : "bg-gray-100/80 border-gray-200 text-gray-700 placeholder:text-gray-400"
@@ -180,16 +178,11 @@ function SidebarInner() {
                   pathname={pathname}
                   isDark={isDark}
                   shouldShowText={shouldShowText}
-                  isExpanded={isExpanded}
                 />
               ))}
             </nav>
 
-            <SidebarFooter
-              isDark={isDark}
-              shouldShowText={shouldShowText}
-              isExpanded={isExpanded}
-            />
+            <SidebarFooter isDark={isDark} shouldShowText={shouldShowText} />
           </div>
         </Collapsible.Content>
       </motion.aside>
@@ -200,13 +193,11 @@ function SidebarInner() {
 interface SidebarFooterProps {
   isDark: boolean;
   shouldShowText: boolean;
-  isExpanded: boolean;
 }
 
 const SidebarFooter = memo(function SidebarFooter({
   isDark,
   shouldShowText,
-  isExpanded,
 }: SidebarFooterProps) {
   const router = useRouter();
   const { logout } = useAuthStore();
@@ -227,7 +218,7 @@ const SidebarFooter = memo(function SidebarFooter({
         type="button"
         onClick={handleLogout}
         className={cn(
-          "sidebar-item-hover flex items-center w-full p-3 h-12 rounded-lg min-w-0 group relative transition-transform duration-150 hover:scale-[1.01] active:scale-[0.99]",
+          "sidebar-item-hover flex items-center w-full p-3 h-12 rounded-lg min-w-0 relative transition-transform duration-150 hover:scale-[1.01] active:scale-[0.99]",
           isDark
             ? "text-gray-400 hover:bg-gray-800 hover:text-red-400"
             : "text-gray-500 hover:bg-red-50 hover:text-red-500"
@@ -239,21 +230,13 @@ const SidebarFooter = memo(function SidebarFooter({
         <span
           className={cn(
             "font-medium whitespace-nowrap flex-1 min-w-0 truncate overflow-hidden origin-left transition-[opacity,max-width,margin] duration-200",
-            shouldShowText ? "ease-out opacity-100 max-w-[200px] ml-4" : "ease-in opacity-0 max-w-0 ml-0"
+            shouldShowText
+              ? "ease-out opacity-100 max-w-[200px] ml-4"
+              : "ease-in opacity-0 max-w-0 ml-0"
           )}
         >
           로그아웃
         </span>
-        {!isExpanded && (
-          <div
-            className={cn(
-              "absolute left-14 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-nowrap shadow-md",
-              isDark ? "bg-gray-800 text-white" : "bg-gray-900 text-white"
-            )}
-          >
-            로그아웃
-          </div>
-        )}
       </button>
     </div>
   );

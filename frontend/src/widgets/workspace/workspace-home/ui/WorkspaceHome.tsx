@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Radio, Video, Users, VideoIcon, Crown, Shield, User } from "lucide-react";
+import {
+  Radio,
+  Video,
+  Users,
+  VideoIcon,
+  Crown,
+  Shield,
+  User,
+} from "lucide-react";
 import { PageHeader } from "@/shared/common";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
@@ -15,16 +23,28 @@ function RoleBadge({ role }: { role?: string }) {
   if (!role) return null;
 
   const config = {
-    HOST: { label: "호스트", icon: Crown, className: "bg-amber-100 text-amber-700 border-amber-200" },
-    MANAGER: { label: "관리자", icon: Shield, className: "bg-blue-100 text-blue-700 border-blue-200" },
-    GUEST: { label: "게스트", icon: User, className: "bg-gray-100 text-gray-600 border-gray-200" },
+    HOST: {
+      label: "호스트",
+      icon: Crown,
+      className: "bg-amber-100 text-amber-700 border-amber-200",
+    },
+    MANAGER: {
+      label: "관리자",
+      icon: Shield,
+      className: "bg-blue-100 text-blue-700 border-blue-200",
+    },
   }[role];
 
   if (!config) return null;
 
   const Icon = config.icon;
   return (
-    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border", config.className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border",
+        config.className
+      )}
+    >
       <Icon className="h-3 w-3" />
       {config.label}
     </span>
@@ -73,7 +93,9 @@ function StudioBentoCard({
           <div
             className={cn(
               "absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-              isDark ? "bg-gray-800/90 text-gray-300" : "bg-white/90 text-gray-600"
+              isDark
+                ? "bg-gray-800/90 text-gray-300"
+                : "bg-white/90 text-gray-600"
             )}
           >
             <Users className="w-3.5 h-3.5" />

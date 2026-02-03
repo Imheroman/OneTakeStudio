@@ -48,6 +48,7 @@ interface StudioHeaderProps {
   lockedByNickname?: string | null;
   onAcquireLock?: () => void;
   onReleaseLock?: () => void;
+  onLockedClick?: () => void;
   onForceReleaseLock?: () => void;
   isStateSyncConnected?: boolean;
 }
@@ -82,6 +83,7 @@ export function StudioHeader({
   lockedByNickname = null,
   onAcquireLock,
   onReleaseLock,
+  onLockedClick,
   onForceReleaseLock,
   isStateSyncConnected = true,
 }: StudioHeaderProps) {
@@ -112,7 +114,9 @@ export function StudioHeader({
           newHours += 1;
         }
 
-        return `${String(newHours).padStart(2, "0")}:${String(newMinutes).padStart(2, "0")}:${String(newSeconds).padStart(2, "0")}`;
+        return `${String(newHours).padStart(2, "0")}:${String(
+          newMinutes
+        ).padStart(2, "0")}:${String(newSeconds).padStart(2, "0")}`;
       });
     }, 1000);
 
@@ -246,6 +250,7 @@ export function StudioHeader({
               lockedByNickname={lockedByNickname}
               onAcquire={onAcquireLock}
               onRelease={onReleaseLock}
+              onLockedClick={onLockedClick}
               canForceRelease={true}
               onForceRelease={onForceReleaseLock}
               isConnected={isStateSyncConnected}
@@ -341,7 +346,9 @@ export function StudioHeader({
                       checked={selectedDestinationIds.includes(dest.id)}
                       onCheckedChange={() => handleToggleDestination(dest.id)}
                     />
-                    <span className="text-xl">{getPlatformIcon(dest.platform)}</span>
+                    <span className="text-xl">
+                      {getPlatformIcon(dest.platform)}
+                    </span>
                     <div className="flex-1">
                       <div className="font-medium">{dest.channelName}</div>
                       <div className="text-sm text-gray-400 capitalize">

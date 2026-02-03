@@ -137,7 +137,7 @@ export const handlers = [
             },
           },
         },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -146,7 +146,7 @@ export const handlers = [
         success: false,
         message: "이메일 또는 비밀번호가 일치하지 않습니다.",
       },
-      { status: 401 },
+      { status: 401 }
     );
   }),
 
@@ -252,7 +252,7 @@ export const handlers = [
     console.log(
       "[MSW] 비디오 라이브러리 목록 요청",
       type ? `(type: ${type})` : "",
-      studioId ? `(studioId: ${studioId})` : "",
+      studioId ? `(studioId: ${studioId})` : ""
     );
 
     const allVideos = [
@@ -465,7 +465,7 @@ export const handlers = [
     if (favorites.length >= MAX_FAVORITES) {
       return HttpResponse.json(
         { message: `최대 ${MAX_FAVORITES}명까지 등록 가능합니다.` },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -473,7 +473,7 @@ export const handlers = [
     if (favorites.some((f) => f.id === userId)) {
       return HttpResponse.json(
         { message: "이미 등록된 사용자입니다." },
-        { status: 409 },
+        { status: 409 }
       );
     }
 
@@ -506,7 +506,7 @@ export const handlers = [
         message: "즐겨찾기에 추가되었습니다.",
         favorite: newFavorite,
       },
-      { status: 201 },
+      { status: 201 }
     );
   }),
 
@@ -520,7 +520,7 @@ export const handlers = [
     if (index === -1) {
       return HttpResponse.json(
         { message: "즐겨찾기에 존재하지 않는 사용자입니다." },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -529,7 +529,7 @@ export const handlers = [
 
     return HttpResponse.json(
       { message: "즐겨찾기에서 제거되었습니다." },
-      { status: 200 },
+      { status: 200 }
     );
   }),
 
@@ -569,7 +569,7 @@ export const handlers = [
     const filtered = mockUsers.filter(
       (user) =>
         user.email.toLowerCase().includes(query.toLowerCase()) ||
-        user.nickname.toLowerCase().includes(query.toLowerCase()),
+        user.nickname.toLowerCase().includes(query.toLowerCase())
     );
 
     return HttpResponse.json({ users: filtered });
@@ -610,7 +610,7 @@ export const handlers = [
           message: "RTMP 채널이 추가되었습니다.",
           channel: newChannel,
         },
-        { status: 201 },
+        { status: 201 }
       );
     }
 
@@ -646,7 +646,7 @@ export const handlers = [
 
     console.log(`[MSW] OAuth URL 반환: ${platform}`);
     console.log(
-      `[MSW] 참고: 실제 프로덕션에서는 백엔드가 Client Secret을 사용하여 OAuth URL을 생성합니다.`,
+      `[MSW] 참고: 실제 프로덕션에서는 백엔드가 Client Secret을 사용하여 OAuth URL을 생성합니다.`
     );
 
     return HttpResponse.json(
@@ -654,7 +654,7 @@ export const handlers = [
         authUrl,
         message: `${platform} 채널 연결을 시작합니다.`,
       },
-      { status: 200 },
+      { status: 200 }
     );
   }),
 
@@ -670,7 +670,7 @@ export const handlers = [
     if (index === -1) {
       return HttpResponse.json(
         { message: "채널을 찾을 수 없습니다." },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -685,7 +685,7 @@ export const handlers = [
 
     return HttpResponse.json(
       { message: "채널 연결이 해제되었습니다." },
-      { status: 200 },
+      { status: 200 }
     );
   }),
 
@@ -724,7 +724,7 @@ export const handlers = [
         message: "스튜디오 생성 성공",
         data: studioDetailResponse,
       },
-      { status: 201 },
+      { status: 201 }
     );
   }),
 
@@ -801,14 +801,14 @@ export const handlers = [
           inviteId: "inv_" + Date.now(),
           studioId: Number(id),
           email: body.email,
-          role: body.role ?? "GUEST",
+          role: body.role ?? "MANAGER",
           status: "PENDING",
           expiresAt: new Date(
-            Date.now() + 7 * 24 * 60 * 60 * 1000,
+            Date.now() + 7 * 24 * 60 * 60 * 1000
           ).toISOString(),
         },
       });
-    },
+    }
   ),
 
   // --- 채팅 (Media, 경로: /api/media/chat — V1 제외) ---
@@ -879,7 +879,7 @@ export const handlers = [
         : null;
     if (active) {
       const idx = recordingState.list.findIndex(
-        (r) => r.recordingId === active.recordingId,
+        (r) => r.recordingId === active.recordingId
       );
       if (idx >= 0)
         recordingState.list[idx] = {
@@ -917,7 +917,7 @@ export const handlers = [
           durationSeconds: r.durationSeconds,
         }));
       return HttpResponse.json({ success: true, data: list });
-    },
+    }
   ),
   http.get(
     `${BASE_URL}/api/recordings/studio/:studioId/active`,
@@ -929,7 +929,7 @@ export const handlers = [
           : null;
       if (!active) return HttpResponse.json({ success: true, data: null });
       const r = recordingState.list.find(
-        (x) => x.recordingId === active.recordingId,
+        (x) => x.recordingId === active.recordingId
       );
       return HttpResponse.json({
         success: true,
@@ -944,7 +944,7 @@ export const handlers = [
             }
           : null,
       });
-    },
+    }
   ),
 
   // --- 쇼츠 생성 및 상태 폴링 핸들러 ---
@@ -969,7 +969,7 @@ export const handlers = [
 
     return HttpResponse.json(
       { message: "쇼츠 생성이 시작되었습니다." },
-      { status: 200 },
+      { status: 200 }
     );
   }),
 
@@ -1001,7 +1001,7 @@ export const handlers = [
     // 상태가 변경되었을 때만 로그 출력 (도배 방지)
     if (currentCount > shortsServerState.completedCount) {
       console.log(
-        `[MSW] 쇼츠 생성 진행중: ${currentCount}개 완료 (Video: ${shortsServerState.videoId})`,
+        `[MSW] 쇼츠 생성 진행중: ${currentCount}개 완료 (Video: ${shortsServerState.videoId})`
       );
       shortsServerState.completedCount = currentCount;
     }
