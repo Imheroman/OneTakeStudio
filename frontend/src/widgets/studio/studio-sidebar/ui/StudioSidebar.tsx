@@ -68,12 +68,13 @@ interface StudioSidebarProps {
   onStyleChange?: (style: StudioStyleState) => void;
   /** 캔버스 스트림을 가져오는 함수 (녹화용) */
   getPreviewStream?: () => MediaStream | null;
-  /** 녹화 저장 위치 설정 */
-  recordingStorage?: "LOCAL" | "CLOUD";
   /** 녹화 상태 (하단바와 연동) */
   isRecordingLocal?: boolean;
+  isRecordingCloud?: boolean;
   onStartLocalRecording?: () => void;
   onStopLocalRecording?: () => void;
+  onStartCloudRecording?: () => void;
+  onStopCloudRecording?: () => void;
   /** 현재 접속 중인 멤버 목록 */
   onlineMembers?: OnlineMember[];
 }
@@ -90,10 +91,12 @@ export function StudioSidebar({
   styleState,
   onStyleChange,
   getPreviewStream,
-  recordingStorage = "LOCAL",
   isRecordingLocal = false,
+  isRecordingCloud = false,
   onStartLocalRecording,
   onStopLocalRecording,
+  onStartCloudRecording,
+  onStopCloudRecording,
   onlineMembers = [],
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
@@ -298,9 +301,11 @@ export function StudioSidebar({
                 studioId={studioIdNum}
                 onClose={closePanel}
                 isRecordingLocal={isRecordingLocal}
+                isRecordingCloud={isRecordingCloud}
                 onStartLocalRecording={onStartLocalRecording}
                 onStopLocalRecording={onStopLocalRecording}
-                recordingStorage={recordingStorage}
+                onStartCloudRecording={onStartCloudRecording}
+                onStopCloudRecording={onStopCloudRecording}
               />
             )}
           </div>

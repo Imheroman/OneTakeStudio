@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Clock, Edit, Loader2, Radio, Square, Circle } from "lucide-react";
+import {
+  Clock,
+  Edit,
+  Loader2,
+  Radio,
+  Square,
+  Circle,
+  Bookmark,
+} from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { IconButton } from "@/shared/common";
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
@@ -51,6 +59,10 @@ interface StudioHeaderProps {
   onLockedClick?: () => void;
   onForceReleaseLock?: () => void;
   isStateSyncConnected?: boolean;
+  /** 북마크 개수 (상단바 표시용) */
+  bookmarkCount?: number;
+  /** 북마크 버튼 클릭 시 */
+  onBookmarkClick?: () => void;
 }
 
 interface DestinationItem {
@@ -86,6 +98,8 @@ export function StudioHeader({
   onLockedClick,
   onForceReleaseLock,
   isStateSyncConnected = true,
+  bookmarkCount = 0,
+  onBookmarkClick,
 }: StudioHeaderProps) {
   const { user } = useAuthStore();
   const [elapsedTime, setElapsedTime] = useState("00:00:00");
@@ -93,6 +107,8 @@ export function StudioHeader({
   const [showGoLiveDialog, setShowGoLiveDialog] = useState(false);
   const [destinations, setDestinations] = useState<DestinationItem[]>([]);
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
+  const [isBookmarkFlashing, setIsBookmarkFlashing] = useState(false);
+  const [showBookmarkToast, setShowBookmarkToast] = useState(false);
 
   // 타이머
   useEffect(() => {
@@ -189,6 +205,25 @@ export function StudioHeader({
     await onGoLive?.(selectedDestinationIds);
   };
 
+  // 북마크 클릭 핸들러: 플래시 + 토스트
+  const handleBookmarkClick = () => {
+    onBookmarkClick?.();
+    setIsBookmarkFlashing(true);
+    setShowBookmarkToast(true);
+  };
+
+  useEffect(() => {
+    if (!isBookmarkFlashing) return;
+    const t = setTimeout(() => setIsBookmarkFlashing(false), 350);
+    return () => clearTimeout(t);
+  }, [isBookmarkFlashing]);
+
+  useEffect(() => {
+    if (!showBookmarkToast) return;
+    const t = setTimeout(() => setShowBookmarkToast(false), 1000);
+    return () => clearTimeout(t);
+  }, [showBookmarkToast]);
+
   // 플랫폼 아이콘
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
@@ -205,6 +240,17 @@ export function StudioHeader({
 
   return (
     <>
+      {/* 북마크 등록 토스트 */}
+      {showBookmarkToast && (
+        <div
+          className="fixed left-1/2 top-24 -translate-x-1/2 z-[100] px-5 py-3 rounded-lg bg-black/80 text-white text-sm font-medium shadow-lg animate-in fade-in slide-in-from-top-2 duration-200"
+          role="status"
+          aria-live="polite"
+        >
+          북마크가 등록되었습니다
+        </div>
+      )}
+
       <header className="h-16 bg-gray-900 text-white flex items-center justify-between gap-4 px-6 border-b border-gray-800 shrink-0 overflow-visible">
         {/* 왼쪽: 로고 및 제목 */}
         <div className="flex items-center gap-4 min-w-0 shrink">
@@ -241,6 +287,28 @@ export function StudioHeader({
 
         {/* 오른쪽: 액션 버튼들 */}
         <div className="flex items-center gap-3 shrink-0">
+          {/* 북마크 (방송 시간 ~ 편집시작 사이) */}
+          {onBookmarkClick && (
+            <button
+              type="button"
+              onClick={handleBookmarkClick}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors"
+              title="북마크 추가"
+              aria-label="북마크 추가"
+            >
+              <Bookmark
+                className={cn(
+                  "h-4 w-4 transition-all duration-200",
+                  isBookmarkFlashing &&
+                    "text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] scale-110"
+                )}
+              />
+              <span className="font-mono text-sm tabular-nums">
+                {bookmarkCount}
+              </span>
+            </button>
+          )}
+
           {/* 편집 락 인디케이터 */}
           {onAcquireLock && onReleaseLock && (
             <EditLockIndicator

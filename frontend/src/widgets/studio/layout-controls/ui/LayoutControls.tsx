@@ -1,6 +1,5 @@
 "use client";
 
-import { Bookmark } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 import type { LayoutType } from "@/entities/studio/model";
@@ -8,7 +7,6 @@ import type { LayoutType } from "@/entities/studio/model";
 interface LayoutControlsProps {
   currentLayout: LayoutType;
   onLayoutChange: (layout: LayoutType) => void;
-  savedLayoutsCount?: number;
 }
 
 const layouts: { type: LayoutType; label: string; icon: string }[] = [
@@ -21,12 +19,13 @@ const layouts: { type: LayoutType; label: string; icon: string }[] = [
 export function LayoutControls({
   currentLayout,
   onLayoutChange,
-  savedLayoutsCount = 0,
 }: LayoutControlsProps) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <span className="text-sm font-semibold text-gray-300">Quick Layout:</span>
+        <span className="text-sm font-semibold text-gray-300">
+          Quick Layout:
+        </span>
         <div className="flex gap-2">
           {layouts.map((layout) => (
             <Button
@@ -38,7 +37,7 @@ export function LayoutControls({
                 "min-w-[100px]",
                 currentLayout === layout.type
                   ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-600",
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-600"
               )}
             >
               <span className="mr-2">{layout.icon}</span>
@@ -55,13 +54,6 @@ export function LayoutControls({
           </Button>
         </div>
       </div>
-
-      {savedLayoutsCount > 0 && (
-        <div className="flex items-center gap-2 text-gray-400">
-          <Bookmark className="h-4 w-4" />
-          <span className="text-sm">{savedLayoutsCount}</span>
-        </div>
-      )}
     </div>
   );
 }

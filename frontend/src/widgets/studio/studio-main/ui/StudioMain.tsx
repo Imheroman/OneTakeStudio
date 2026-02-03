@@ -37,10 +37,7 @@ import type { ConnectedDestinationItem } from "@/widgets/studio/studio-sidebar/u
 
 const DEFAULT_STYLE: StudioStyleState = {
   brandColor: "#5d4cc7",
-  theme: "bubble",
-  showDisplayNames: true,
-  showHeadlines: false,
-  font: "",
+  theme: "circle",
 };
 
 interface StudioMainProps {
@@ -61,6 +58,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   );
   const [showUnsavedConfirmModal, setShowUnsavedConfirmModal] = useState(false);
   const [showLockedByOtherModal, setShowLockedByOtherModal] = useState(false);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
 
   // 배너 타이머: timerSeconds가 있으면 카운트다운, 0이 되면 자동 중단
   useEffect(() => {
@@ -374,6 +372,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
             onLockedClick={() => setShowLockedByOtherModal(true)}
             onForceReleaseLock={handleForceReleaseLock}
             isStateSyncConnected={isStateSyncConnected}
+            bookmarkCount={bookmarkCount}
+            onBookmarkClick={() => setBookmarkCount((c) => c + 1)}
           />
 
           {/* 콘텐츠: 전체 높이 사용. 하단 pb로 접힌 토글 네브에 퀵 레이아웃 바가 가리지 않도록 여백 */}
@@ -419,7 +419,6 @@ export function StudioMain({ studioId }: StudioMainProps) {
               <LayoutControls
                 currentLayout={currentLayout}
                 onLayoutChange={setCurrentLayout}
-                savedLayoutsCount={3}
               />
             </div>
           </div>
@@ -595,12 +594,12 @@ export function StudioMain({ studioId }: StudioMainProps) {
           styleState={styleState}
           onStyleChange={setStyleState}
           getPreviewStream={() => getPreviewStreamRef.current?.() ?? null}
-          recordingStorage={
-            (studio?.recordingStorage as "LOCAL" | "CLOUD") ?? "LOCAL"
-          }
           isRecordingLocal={isRecordingLocal}
+          isRecordingCloud={isRecordingCloud}
           onStartLocalRecording={handleStartLocalRecording}
           onStopLocalRecording={handleStopLocalRecording}
+          onStartCloudRecording={handleStartCloudRecording}
+          onStopCloudRecording={handleStopCloudRecording}
           onlineMembers={onlineMembers}
         />
       </div>

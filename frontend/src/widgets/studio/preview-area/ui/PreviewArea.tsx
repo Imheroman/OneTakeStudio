@@ -577,7 +577,9 @@ function PreviewAreaInner({
     return () => ro.disconnect();
   }, [hasSources]);
 
+  /** 해상도 변경 시에도 컨테이너 재측정 및 스케일 재계산 트리거 */
   useLayoutEffect(() => {
+    if (!hasSources) return;
     const el = containerRef.current;
     if (!el) return;
     const w = Math.floor(el.clientWidth);
@@ -587,7 +589,13 @@ function PreviewAreaInner({
         prev.width === w && prev.height === h ? prev : { width: w, height: h }
       );
     }
-  }, [hasSources]);
+  }, [hasSources, resolution]);
+
+  /** 해상도 변경 시 Konva 레이어 리드로우 */
+  useEffect(() => {
+    layerRef.current?.batchDraw();
+    captureLayerRef.current?.batchDraw();
+  }, [resolution]);
 
   useEffect(() => {
     if (selectedId === "overlay-asset") {
@@ -855,8 +863,21 @@ function PreviewAreaInner({
                   x={transform.x}
                   y={transform.y}
                   clip={
-                    styleState?.theme === "bubble" && source.type === "video"
+                    source.type === "video" && styleState?.theme === "circle"
                       ? undefined
+                      : source.type === "video" &&
+                        styleState?.theme === "square"
+                      ? (() => {
+                          const w = transform.width;
+                          const h = transform.height;
+                          const size = Math.min(w, h);
+                          return {
+                            x: (w - size) / 2,
+                            y: (h - size) / 2,
+                            width: size,
+                            height: size,
+                          };
+                        })()
                       : {
                           x: 0,
                           y: 0,
@@ -865,7 +886,7 @@ function PreviewAreaInner({
                         }
                   }
                   clipFunc={
-                    styleState?.theme === "bubble" && source.type === "video"
+                    source.type === "video" && styleState?.theme === "circle"
                       ? (ctx) => {
                           const w = transform.width;
                           const h = transform.height;
@@ -1063,8 +1084,20 @@ function PreviewAreaInner({
                 x={transform.x}
                 y={transform.y}
                 clip={
-                  styleState?.theme === "bubble" && source.type === "video"
+                  source.type === "video" && styleState?.theme === "circle"
                     ? undefined
+                    : source.type === "video" && styleState?.theme === "square"
+                    ? (() => {
+                        const w = transform.width;
+                        const h = transform.height;
+                        const size = Math.min(w, h);
+                        return {
+                          x: (w - size) / 2,
+                          y: (h - size) / 2,
+                          width: size,
+                          height: size,
+                        };
+                      })()
                     : {
                         x: 0,
                         y: 0,
@@ -1073,7 +1106,7 @@ function PreviewAreaInner({
                       }
                 }
                 clipFunc={
-                  styleState?.theme === "bubble" && source.type === "video"
+                  source.type === "video" && styleState?.theme === "circle"
                     ? (ctx) => {
                         const w = transform.width;
                         const h = transform.height;

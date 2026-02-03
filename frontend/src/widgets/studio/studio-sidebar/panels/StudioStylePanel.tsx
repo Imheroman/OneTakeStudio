@@ -8,20 +8,22 @@ import { cn } from "@/shared/lib/utils";
 
 const STORAGE_KEY = "studio-style";
 
+export type StudioThemeType = "circle" | "original" | "square";
+
 export interface StudioStyleState {
   brandColor: string;
-  theme: "bubble" | "classic" | "minimal" | "block";
-  showDisplayNames: boolean;
-  showHeadlines: boolean;
-  font: string;
+  theme: StudioThemeType;
 }
+
+const THEME_OPTIONS: { value: StudioThemeType; label: string }[] = [
+  { value: "original", label: "원본" },
+  { value: "circle", label: "원형" },
+  { value: "square", label: "정방형" },
+];
 
 const defaultStyle: StudioStyleState = {
   brandColor: "#5d4cc7",
-  theme: "bubble",
-  showDisplayNames: true,
-  showHeadlines: false,
-  font: "",
+  theme: "circle",
 };
 
 interface StudioStylePanelProps {
@@ -38,12 +40,26 @@ export function StudioStylePanel({
   onStyleChange,
   initialStyle,
 }: StudioStylePanelProps) {
+  const migrateTheme = (t: string): StudioThemeType => {
+    if (t === "circle" || t === "original" || t === "square") return t;
+    if (t === "bubble") return "circle";
+    return "original"; // classic, minimal, block 등 기존 값
+  };
+
   const [style, setStyle] = useState<StudioStyleState>(() => {
-    if (initialStyle) return { ...defaultStyle, ...initialStyle };
+    if (initialStyle) {
+      const s = { ...defaultStyle, ...initialStyle };
+      s.theme = migrateTheme(s.theme);
+      return s;
+    }
     if (typeof window === "undefined") return defaultStyle;
     try {
       const raw = sessionStorage.getItem(`${STORAGE_KEY}-${studioId}`);
-      if (raw) return { ...defaultStyle, ...JSON.parse(raw) };
+      if (raw) {
+        const parsed = { ...defaultStyle, ...JSON.parse(raw) };
+        parsed.theme = migrateTheme(parsed.theme);
+        return parsed;
+      }
     } catch {}
     return defaultStyle;
   });
@@ -52,7 +68,7 @@ export function StudioStylePanel({
     try {
       sessionStorage.setItem(
         `${STORAGE_KEY}-${studioId}`,
-        JSON.stringify(style),
+        JSON.stringify(style)
       );
     } catch {}
     onStyleChange?.(style);
@@ -98,73 +114,24 @@ export function StudioStylePanel({
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="text-gray-300 text-sm">테마</Label>
+          <Label className="text-gray-300 text-sm">캠 형태</Label>
           <div className="flex flex-wrap gap-2">
-            {(["bubble", "classic", "minimal", "block"] as const).map((t) => (
+            {THEME_OPTIONS.map(({ value, label }) => (
               <button
-                key={t}
+                key={value}
                 type="button"
-                onClick={() => setStyle((s) => ({ ...s, theme: t }))}
+                onClick={() => setStyle((s) => ({ ...s, theme: value }))}
                 className={cn(
-                  "px-3 py-1.5 rounded text-sm capitalize",
-                  style.theme === t
+                  "px-3 py-1.5 rounded text-sm",
+                  style.theme === value
                     ? "bg-indigo-600 text-white"
-                    : "bg-gray-700 text-gray-300 hover:bg-gray-600",
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
                 )}
               >
-                {t}
+                {label}
               </button>
             ))}
           </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <Label className="text-gray-300 text-sm">이름 표시</Label>
-          <button
-            type="button"
-            onClick={() =>
-              setStyle((s) => ({ ...s, showDisplayNames: !s.showDisplayNames }))
-            }
-            className={cn(
-              "w-10 h-6 rounded-full transition-colors",
-              style.showDisplayNames ? "bg-indigo-600" : "bg-gray-600",
-            )}
-          >
-            <span
-              className={cn(
-                "block w-4 h-4 rounded-full bg-white mt-1 transition-transform",
-                style.showDisplayNames ? "translate-x-5" : "translate-x-1",
-              )}
-            />
-          </button>
-        </div>
-        <div className="flex items-center justify-between">
-          <Label className="text-gray-300 text-sm">헤드라인 표시</Label>
-          <button
-            type="button"
-            onClick={() =>
-              setStyle((s) => ({ ...s, showHeadlines: !s.showHeadlines }))
-            }
-            className={cn(
-              "w-10 h-6 rounded-full transition-colors",
-              style.showHeadlines ? "bg-indigo-600" : "bg-gray-600",
-            )}
-          >
-            <span
-              className={cn(
-                "block w-4 h-4 rounded-full bg-white mt-1 transition-transform",
-                style.showHeadlines ? "translate-x-5" : "translate-x-1",
-              )}
-            />
-          </button>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-gray-300 text-sm">폰트</Label>
-          <Input
-            placeholder="폰트 이름"
-            value={style.font}
-            onChange={(e) => setStyle((s) => ({ ...s, font: e.target.value }))}
-            className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
-          />
         </div>
       </div>
     </div>
