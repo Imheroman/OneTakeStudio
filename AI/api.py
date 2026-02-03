@@ -39,21 +39,42 @@ async def background_process_job(req: ShortsRequest):
     async with httpx.AsyncClient(timeout=60.0) as client:
         for video in req.videos:
             v_start = datetime.now(timezone.utc)
+
+            # progress webhook을 보내는 동기 콜백 (run_in_executor 내 thread에서 호출됨)
+            def make_progress_callback(vid_id, wh_url):
+                sync_client = httpx.Client(timeout=10.0)
+                def on_progress(step, total_steps, step_key):
+                    try:
+                        sync_client.post(wh_url, json={
+                            "job_id": job_id,
+                            "video_id": vid_id,
+                            "status": "progress",
+                            "step": step,
+                            "total_steps": total_steps,
+                            "step_key": step_key,
+                        })
+                    except Exception as err:
+                        print(f"[WARN] Progress webhook failed (step {step}): {err}")
+                return on_progress
+            progress_cb = make_progress_callback(video.video_id, req.webhook_url)
+
             try:
                 # [핵심] pipeline.py의 process_one_video 호출
                 # 동기 함수이므로 run_in_executor로 비동기 실행
                 loop = asyncio.get_event_loop()
                 result_data = await loop.run_in_executor(
                     None,
-                    process_one_video,
-                    video.video_path,   # input_video_path
-                    video.video_id,     # video_id
-                    job_id,             # job_id
-                    req.need_subtitles,
-                    req.subtitle_lang,
-                    "ko",               # source_lang
-                    req.output_dir,     # output_root (전달받은 공유스토리지 경로)
-                    work_root
+                    lambda: process_one_video(
+                        input_video_path=video.video_path,
+                        video_id=video.video_id,
+                        job_id=job_id,
+                        need_subtitles=req.need_subtitles,
+                        subtitle_lang=req.subtitle_lang,
+                        source_lang="ko",
+                        output_root=req.output_dir,
+                        work_root=work_root,
+                        on_progress=progress_cb,
+                    )
                 )
 
                 v_end = datetime.now(timezone.utc)
@@ -80,10 +101,10 @@ async def background_process_job(req: ShortsRequest):
 
             # 🚀 영상 하나 끝날 때마다 즉시 웹훅 전송
             try:
-                print(f"🔔 Sending webhook for {video.video_id}...")
+                print(f"[INFO] Sending webhook for {video.video_id}...")
                 await client.post(req.webhook_url, json=webhook_payload)
             except Exception as err:
-                print(f"❌ Webhook failed: {err}")
+                print(f"[ERROR] Webhook failed: {err}")
 
         # 모든 작업 완료 후 최종 요약 웹훅 (필요 시)
         total_time = round((datetime.now(timezone.utc) - t_start).total_seconds(), 3)
@@ -102,8 +123,8 @@ async def background_process_job(req: ShortsRequest):
 async def shorts_process(req: ShortsRequest, background_tasks: BackgroundTasks):
     # 1. 파일 존재 여부 간단 체크 (선택)
     for video in req.videos:
-        print(f"🔍 [서버 로그] 파일 체크 중: {video.video_path}")
-        print(f"🔍 [서버 로그] 존재 여부: {os.path.exists(video.video_path)}")
+        print(f"[INFO] File check: {video.video_path}")
+        print(f"[INFO] Exists: {os.path.exists(video.video_path)}")
         if not os.path.exists(video.video_path):
             raise HTTPException(status_code=400, detail=f"File not found: {video.video_path}")
 

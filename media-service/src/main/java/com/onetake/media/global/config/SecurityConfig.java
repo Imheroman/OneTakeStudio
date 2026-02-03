@@ -38,7 +38,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/ws/**",           // WebSocket 엔드포인트
                                 "/actuator/health", // Health check
-                                "/error"
+                                "/error",
+                                "/api/media/record/files/**"  // 녹화 파일 서빙
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

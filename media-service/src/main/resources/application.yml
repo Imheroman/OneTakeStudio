@@ -62,7 +62,7 @@ core:
 # Recording Storage
 recording:
   storage:
-    base-path: ${RECORDING_BASE_PATH:./recordings}
+    base-path: ${RECORDING_BASE_PATH:C:/Users/SSAFY/Desktop/project/test}
     base-url: ${RECORDING_BASE_URL:http://localhost:8082/api/media/record/files}
 
 # Logging
