@@ -22,6 +22,8 @@ spec:
             - containerPort: 1935
               name: rtmp
           env:
+            - name: INGRESS_CONFIG_FILE
+              value: "/etc/ingress/config.yaml"
             - name: LIVEKIT_URL
               value: "ws://livekit-server.livekit.svc.cluster.local:7880"
             - name: LIVEKIT_API_KEY
@@ -41,6 +43,9 @@ spec:
                 secretKeyRef:
                   name: redis-secret
                   key: REDIS_PASSWORD
+          volumeMounts:
+            - name: config
+              mountPath: /etc/ingress
           resources:
             requests:
               memory: "256Mi"
@@ -48,3 +53,7 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+      volumes:
+        - name: config
+          configMap:
+            name: ingress-config

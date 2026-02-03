@@ -19,6 +19,8 @@ spec:
         - name: livekit-egress
           image: livekit/egress:latest
           env:
+            - name: EGRESS_CONFIG_FILE
+              value: "/etc/egress/config.yaml"
             - name: EGRESS_REDIS_ADDRESS
               value: "redis.database.svc.cluster.local:6379"
             - name: EGRESS_REDIS_PASSWORD
@@ -41,6 +43,8 @@ spec:
           volumeMounts:
             - name: recordings
               mountPath: /recordings
+            - name: config
+              mountPath: /etc/egress
           resources:
             requests:
               memory: "512Mi"
@@ -52,3 +56,6 @@ spec:
         - name: recordings
           persistentVolumeClaim:
             claimName: livekit-recordings-pvc
+        - name: config
+          configMap:
+            name: egress-config
