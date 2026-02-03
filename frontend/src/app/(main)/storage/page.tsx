@@ -47,6 +47,13 @@ export default function StoragePage() {
         setRecentFiles([]);
       } catch (error) {
         console.error("스토리지 데이터 조회 실패:", error);
+        // 기본값 설정 (30GB)
+        setStorageData({
+          used: 0,
+          total: 30,
+          videoUsage: 0,
+          assetUsage: 0,
+        });
       } finally {
         setIsLoading(false);
       }

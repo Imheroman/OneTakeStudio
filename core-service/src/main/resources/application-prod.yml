@@ -1,0 +1,52 @@
+# =====================================================
+# Production Configuration - core-service
+# 운영 환경에서 환경변수로 오버라이드
+# =====================================================
+
+spring:
+  datasource:
+    url: ${CORE_DB_URL}
+    username: ${CORE_DB_USERNAME}
+    password: ${CORE_DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+  mail:
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+oauth:
+  google:
+    client-id: ${OAUTH_GOOGLE_CLIENT_ID}
+    client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
+    redirect-uri: ${OAUTH_GOOGLE_REDIRECT_URI}
+  kakao:
+    client-id: ${OAUTH_KAKAO_CLIENT_ID}
+    client-secret: ${OAUTH_KAKAO_CLIENT_SECRET}
+    redirect-uri: ${OAUTH_KAKAO_REDIRECT_URI}
+  naver:
+    client-id: ${OAUTH_NAVER_CLIENT_ID}
+    client-secret: ${OAUTH_NAVER_CLIENT_SECRET}
+    redirect-uri: ${OAUTH_NAVER_REDIRECT_URI}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+
+logging:
+  level:
+    com.onetake: INFO
+    org.springframework.security: WARN

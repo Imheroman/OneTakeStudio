@@ -137,9 +137,11 @@ export function StudioInviteModal({
     const results: { email: string; ok: boolean }[] = [];
     for (const email of emails) {
       try {
-        await inviteStudioMember(studioId, { email, role: "MEMBER" });
+        await inviteStudioMember(studioId, { email, role: "GUEST" });
         results.push({ email, ok: true });
-      } catch {
+      } catch (error: any) {
+        console.error(`[Invite] ${email} 초대 실패:`, error);
+        console.error(`[Invite] 응답 데이터:`, error?.response?.data);
         results.push({ email, ok: false });
       }
     }

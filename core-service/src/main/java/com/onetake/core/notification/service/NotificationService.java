@@ -8,6 +8,7 @@ import com.onetake.core.user.entity.User;
 import com.onetake.core.user.exception.UserNotFoundException;
 import com.onetake.core.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -65,15 +67,18 @@ public class NotificationService {
      */
     @Transactional
     public void deleteByReferenceId(String referenceId) {
+        log.info("알림 삭제 요청: referenceId={}", referenceId);
         notificationRepository.deleteByReferenceId(referenceId);
+        log.info("알림 삭제 쿼리 실행 완료: referenceId={}", referenceId);
     }
 
     private NotificationResponse toResponse(Notification notification) {
         return NotificationResponse.builder()
-                .id(notification.getReferenceId() != null ? notification.getReferenceId() : notification.getNotificationId())
+                .id(notification.getNotificationId())
                 .type(convertType(notification.getType()))
                 .title(notification.getTitle())
                 .message(notification.getMessage())
+                .referenceId(notification.getReferenceId())
                 .time(formatTime(notification.getCreatedAt()))
                 .createdAt(notification.getCreatedAt().toString())
                 .read(notification.getIsRead())

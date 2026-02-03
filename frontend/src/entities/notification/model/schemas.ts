@@ -18,6 +18,7 @@ export const NotificationSchema = z.object({
   type: NotificationTypeSchema,
   title: z.string(),
   message: z.string(),
+  referenceId: z.string().nullable().optional(), // 초대 ID 등 참조 ID
   time: z.string().optional(), // "방금 전", "5분 전" 등 (MSW에서 사용)
   createdAt: z.string().optional(), // 실제 API에서 사용
   read: z.boolean().optional(),

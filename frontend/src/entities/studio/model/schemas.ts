@@ -83,6 +83,14 @@ export const SourceSchema = z.object({
   deviceId: z.string().optional(),
   /** 박스 정책. 미설정 시 "contain" */
   fit: SourceFitSchema.optional(),
+  /** LiveKit 트랙 SID (원격 소스인 경우) */
+  trackSid: z.string().optional(),
+  /** 원격 소스 여부 */
+  isRemote: z.boolean().optional(),
+  /** 원격 소스의 참가자 ID */
+  participantId: z.string().optional(),
+  /** 원격 소스의 참가자 이름 */
+  participantName: z.string().optional(),
 });
 
 // 스튜디오 스키마 (백엔드 API 응답 형식)
@@ -106,6 +114,7 @@ export const RecentStudioSchema = z.object({
   id: z.number(),
   title: z.string(),
   date: z.string(),
+  role: z.enum(["HOST", "MANAGER", "GUEST"]).optional(),
 });
 
 // 스튜디오 목록 응답 스키마 (워크스페이스용)
@@ -147,7 +156,7 @@ export const StudioMemberResponseSchema = z.object({
 
 export const InviteMemberRequestSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["ADMIN", "MEMBER"]),
+  role: z.enum(["MANAGER", "GUEST"]),
 });
 
 // 백엔드 InviteResponse: inviteeEmail 사용, studioId는 목록 응답에 없을 수 있음

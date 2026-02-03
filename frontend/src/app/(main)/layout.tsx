@@ -54,6 +54,12 @@ export default function MainLayout({
   useShortsPolling();
   const isStudioPage = pathname?.startsWith("/studio");
 
+  // 알림 삭제 헬퍼
+  const removeNotification = useCallback((notifId: string) => {
+    setApiNotifications((prev) => prev.filter((n) => n.id !== notifId));
+  }, []);
+
+  // 알림 목록 조회
   const fetchNotifications = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
@@ -65,7 +71,7 @@ export default function MainLayout({
         response.notifications.map((notif) => ({
           ...notif,
           actions:
-            notif.type === "friend_request" || notif.type === "studio_invite"
+            notif.type === "friend_request"
               ? {
                   accept: async () => {
                     try {
@@ -74,9 +80,7 @@ export default function MainLayout({
                         MessageResponseSchema,
                         {},
                       );
-                      setApiNotifications((prev) =>
-                        prev.filter((n) => n.id !== notif.id),
-                      );
+                      removeNotification(notif.id);
                     } catch (error) {
                       console.error("수락 실패:", error);
                       alert("요청 수락에 실패했습니다.");
@@ -89,22 +93,61 @@ export default function MainLayout({
                         MessageResponseSchema,
                         {},
                       );
-                      setApiNotifications((prev) =>
-                        prev.filter((n) => n.id !== notif.id),
-                      );
+                      removeNotification(notif.id);
                     } catch (error) {
                       console.error("거절 실패:", error);
                       alert("요청 거절에 실패했습니다.");
                     }
                   },
                 }
-              : undefined,
+              : notif.type === "studio_invite" && notif.referenceId
+                ? {
+                    accept: async () => {
+                      try {
+                        await apiClient.post(
+                          `/api/invites/${notif.referenceId}/accept`,
+                          MessageResponseSchema,
+                          {},
+                        );
+                        removeNotification(notif.id);
+                        // 워크스페이스 데이터 갱신 트리거
+                        window.dispatchEvent(new CustomEvent("studio-invite-accepted"));
+                        closeNotifications();
+                        alert("스튜디오 초대를 수락했습니다.");
+                      } catch (error) {
+                        console.error("스튜디오 초대 수락 실패:", error);
+                        alert("스튜디오 초대 수락에 실패했습니다.");
+                      }
+                    },
+                    decline: async () => {
+                      try {
+                        await apiClient.post(
+                          `/api/invites/${notif.referenceId}/reject`,
+                          MessageResponseSchema,
+                          {},
+                        );
+                        removeNotification(notif.id);
+                        closeNotifications();
+                      } catch (error: unknown) {
+                        // 404 에러는 이미 처리된 초대 (수락됨 또는 삭제됨) - 알림만 제거
+                        const status = (error as { status?: number })?.status;
+                        if (status === 404) {
+                          removeNotification(notif.id);
+                          closeNotifications();
+                          return;
+                        }
+                        console.error("스튜디오 초대 거절 실패:", error);
+                        alert("스튜디오 초대 거절에 실패했습니다.");
+                      }
+                    },
+                  }
+                : undefined,
         })),
       );
     } catch (error) {
       console.error("알림 목록 조회 실패:", error);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, removeNotification, closeNotifications]);
 
   useEffect(() => {
     if (!hasHydrated) return;

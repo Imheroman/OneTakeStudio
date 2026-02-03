@@ -125,7 +125,8 @@ export function StagingSourceTile({
           </div>
         )}
         {/* pointer-events-none으로 드래그가 아래 타일로 전달되게 하고, 버튼만 클릭 가능 */}
-        {isHovered && (
+        {/* 편집 모드일 때만 Add/Remove 버튼 표시 */}
+        {isHovered && isEditMode && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg pointer-events-none">
             <div className="pointer-events-auto flex items-center gap-2">
               {isOnStage ? (

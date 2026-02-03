@@ -1,5 +1,7 @@
 package com.onetake.core.studio.service;
 
+import com.onetake.core.notification.entity.Notification;
+import com.onetake.core.notification.service.NotificationService;
 import com.onetake.core.studio.dto.*;
 import com.onetake.core.studio.entity.*;
 import com.onetake.core.studio.exception.*;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -27,6 +30,7 @@ public class StudioMemberService {
     private final StudioMemberRepository studioMemberRepository;
     private final MemberInviteRepository memberInviteRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private static final int INVITE_EXPIRY_DAYS = 7;
 
@@ -59,7 +63,9 @@ public class StudioMemberService {
     @Transactional
     public InviteResponse inviteMember(String userId, Long studioId, InviteMemberRequest request) {
         log.debug("멤버 초대 요청: studioId={}, email={}", studioId, request.getEmail());
-        Long internalUserId = getInternalUserId(userId);
+        User inviter = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+        Long internalUserId = inviter.getId();
 
         Studio studio = studioRepository.findById(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
@@ -76,12 +82,13 @@ public class StudioMemberService {
                     throw new StudioInUseException("이미 초대된 이메일입니다.");
                 });
 
-        userRepository.findByEmail(request.getEmail())
-                .ifPresent(user -> {
-                    if (studioMemberRepository.existsByStudioIdAndUserId(studio.getId(), user.getId())) {
-                        throw new StudioInUseException("이미 스튜디오의 멤버입니다.");
-                    }
-                });
+        // 초대 대상 사용자 조회 (가입된 사용자인 경우)
+        Optional<User> inviteeOpt = userRepository.findByEmail(request.getEmail());
+        inviteeOpt.ifPresent(user -> {
+            if (studioMemberRepository.existsByStudioIdAndUserId(studio.getId(), user.getId())) {
+                throw new StudioInUseException("이미 스튜디오의 멤버입니다.");
+            }
+        });
 
         MemberInvite invite = MemberInvite.builder()
                 .studioId(studio.getId())
@@ -93,6 +100,18 @@ public class StudioMemberService {
 
         MemberInvite saved = memberInviteRepository.save(invite);
         log.info("멤버 초대 생성 완료: inviteId={}", saved.getInviteId());
+
+        // 초대 대상 사용자가 가입된 경우 알림 생성
+        inviteeOpt.ifPresent(invitee -> {
+            Notification notification = Notification.createStudioInvite(
+                    invitee,
+                    inviter.getNickname(),
+                    studio.getName(),
+                    saved.getInviteId()
+            );
+            notificationService.createNotification(notification);
+            log.info("스튜디오 초대 알림 생성: invitee={}, studioId={}", invitee.getEmail(), studioId);
+        });
 
         return InviteResponse.from(saved);
     }

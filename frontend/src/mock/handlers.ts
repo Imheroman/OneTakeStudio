@@ -801,7 +801,7 @@ export const handlers = [
           inviteId: "inv_" + Date.now(),
           studioId: Number(id),
           email: body.email,
-          role: body.role ?? "MEMBER",
+          role: body.role ?? "GUEST",
           status: "PENDING",
           expiresAt: new Date(
             Date.now() + 7 * 24 * 60 * 60 * 1000,

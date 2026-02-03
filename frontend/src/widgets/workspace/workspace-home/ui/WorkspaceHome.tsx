@@ -2,12 +2,34 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Radio, Video, Users, VideoIcon } from "lucide-react";
+import { Radio, Video, Users, VideoIcon, Crown, Shield, User } from "lucide-react";
+import { PageHeader } from "@/shared/common";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
-import type { RecentStudioItem } from "@/shared/api/workspace";
+import type { RecentStudio } from "@/entities/studio/model";
+
+// 역할별 배지 컴포넌트
+function RoleBadge({ role }: { role?: string }) {
+  if (!role) return null;
+
+  const config = {
+    HOST: { label: "호스트", icon: Crown, className: "bg-amber-100 text-amber-700 border-amber-200" },
+    MANAGER: { label: "관리자", icon: Shield, className: "bg-blue-100 text-blue-700 border-blue-200" },
+    GUEST: { label: "게스트", icon: User, className: "bg-gray-100 text-gray-600 border-gray-200" },
+  }[role];
+
+  if (!config) return null;
+
+  const Icon = config.icon;
+  return (
+    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border", config.className)}>
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </span>
+  );
+}
 
 interface WorkspaceHomeProps {
   userId: string;
@@ -19,7 +41,7 @@ function StudioBentoCard({
   isDark,
   span = 1,
 }: {
-  studio: RecentStudioItem;
+  studio: RecentStudio;
   isDark: boolean;
   span?: 1 | 2;
 }) {
@@ -32,70 +54,74 @@ function StudioBentoCard({
       <Link
         href={`/studio/${studio.id}`}
         className={cn(
-          "glass-card gpu-layer gpu-layer-hover flex flex-col transition-shadow duration-200 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-onetake-point focus-visible:ring-offset-2 focus-visible:ring-offset-transparent block h-full",
+          "glass-card gpu-layer gpu-layer-hover flex flex-col transition-shadow duration-200 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-onetake-point focus-visible:ring-offset-2 focus-visible:ring-offset-transparent h-full",
           span === 2 && "md:col-span-2"
         )}
       >
-      <div
-        className={cn(
-          "relative aspect-video w-full flex items-center justify-center shrink-0",
-          isDark ? "bg-gray-800/80" : "bg-gray-100/80"
-        )}
-      >
-        <VideoIcon
-          className={cn(
-            "w-12 h-12 opacity-40",
-            isDark ? "text-gray-500" : "text-gray-400"
-          )}
-        />
         <div
           className={cn(
-            "absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-            isDark ? "bg-gray-800/90 text-gray-300" : "bg-white/90 text-gray-600"
+            "relative aspect-video w-full flex items-center justify-center shrink-0",
+            isDark ? "bg-gray-800/80" : "bg-gray-100/80"
           )}
         >
-          <Users className="w-3.5 h-3.5" />
-          팀원 —
-        </div>
-      </div>
-      <div className="flex flex-1 flex-col justify-between p-4">
-        <div>
-          <h3
+          <VideoIcon
             className={cn(
-              "font-semibold line-clamp-1",
-              isDark ? "text-gray-100" : "text-gray-900"
+              "w-12 h-12 opacity-40",
+              isDark ? "text-gray-500" : "text-gray-400"
+            )}
+          />
+          <div
+            className={cn(
+              "absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+              isDark ? "bg-gray-800/90 text-gray-300" : "bg-white/90 text-gray-600"
             )}
           >
-            {studio.title}
-          </h3>
-          <p
+            <Users className="w-3.5 h-3.5" />
+            팀원 —
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col justify-between p-4">
+          <div>
+            <h3
+              className={cn(
+                "font-semibold line-clamp-1",
+                isDark ? "text-gray-100" : "text-gray-900"
+              )}
+            >
+              {studio.title}
+            </h3>
+            <p
+              className={cn(
+                "mt-1 text-sm",
+                isDark ? "text-gray-400" : "text-gray-500"
+              )}
+            >
+              {studio.date}
+            </p>
+            {studio.role && (
+              <div className="mt-1">
+                <RoleBadge role={studio.role} />
+              </div>
+            )}
+          </div>
+          <span
             className={cn(
-              "mt-1 text-sm",
-              isDark ? "text-gray-400" : "text-gray-500"
+              "mt-3 inline-flex h-9 w-full items-center justify-center rounded-md text-sm font-medium bg-onetake-point text-white hover:bg-onetake-point/90"
             )}
           >
-            {studio.date}
-          </p>
+            스튜디오 입장
+          </span>
         </div>
-        <span
-          className={cn(
-            "mt-3 inline-flex h-9 w-full items-center justify-center rounded-md text-sm font-medium bg-onetake-point text-white hover:bg-onetake-point/90"
-          )}
-        >
-          스튜디오 입장
-        </span>
-      </div>
       </Link>
     </motion.div>
   );
 }
 
-export function WorkspaceHome({ userId }: WorkspaceHomeProps) {
+export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
   const {
     recentStudios,
-    dashboardStats,
     isLoading,
     isCreateDialogOpen,
     setIsCreateDialogOpen,
@@ -105,17 +131,15 @@ export function WorkspaceHome({ userId }: WorkspaceHomeProps) {
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
-      {dashboardStats != null && (
-        <p
-          className={cn(
-            "text-sm",
-            isDark ? "text-gray-400" : "text-gray-500"
-          )}
-        >
-          스튜디오 {dashboardStats.totalStudioCount}개 · 연결된 송출 채널{" "}
-          {dashboardStats.connectedDestinationCount}개
-        </p>
-      )}
+      <PageHeader
+        title={
+          <>
+            <span className="text-indigo-600">{userName ?? userId}</span>님,
+            반가워요!
+          </>
+        }
+        description="오늘도 당신만의 멋진 방송을 만들어보세요."
+      />
 
       {/* 상단 얇은 배너: 라이브 / 녹화 진입점 */}
       <div

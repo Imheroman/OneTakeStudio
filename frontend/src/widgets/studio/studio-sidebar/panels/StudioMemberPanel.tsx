@@ -12,6 +12,7 @@ import type {
   StudioMemberResponse,
   InviteResponse,
 } from "@/entities/studio/model";
+import type { OnlineMember } from "@/hooks/studio";
 import { cn } from "@/shared/lib/utils";
 
 interface StudioMemberPanelProps {
@@ -20,6 +21,8 @@ interface StudioMemberPanelProps {
   onInviteClick?: () => void;
   /** 초대 성공 후 부모에서 증가시키면 멤버·초대 목록 재조회 */
   refreshTrigger?: number;
+  /** 현재 접속 중인 멤버 목록 (userId 기준) */
+  onlineMembers?: OnlineMember[];
 }
 
 function inviteEmail(inv: InviteResponse): string {
@@ -31,24 +34,38 @@ export function StudioMemberPanel({
   onClose,
   onInviteClick,
   refreshTrigger = 0,
+  onlineMembers = [],
 }: StudioMemberPanelProps) {
   const [members, setMembers] = useState<StudioMemberResponse[]>([]);
   const [invites, setInvites] = useState<InviteResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const fetchAll = useCallback(() => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
-    Promise.all([
-      getStudioMembers(studioId),
-      getStudioInvites(studioId),
-    ])
-      .then(([memberList, inviteList]) => {
-        setMembers(memberList);
+    try {
+      // 멤버 목록은 모든 사용자가 조회 가능
+      const memberList = await getStudioMembers(studioId);
+      setMembers(memberList);
+
+      // 초대 목록은 HOST/MANAGER만 조회 가능 (GUEST는 403)
+      try {
+        const inviteList = await getStudioInvites(studioId);
         setInvites(inviteList ?? []);
-      })
-      .catch((e) => console.error("멤버/초대 목록 조회 실패:", e))
-      .finally(() => setLoading(false));
+      } catch (inviteError: unknown) {
+        // 403 에러는 권한 없음 - 초대 목록 비움 (정상 동작)
+        const status = (inviteError as { status?: number })?.status;
+        if (status === 403) {
+          setInvites([]);
+        } else {
+          console.error("초대 목록 조회 실패:", inviteError);
+        }
+      }
+    } catch (e) {
+      console.error("멤버 목록 조회 실패:", e);
+    } finally {
+      setLoading(false);
+    }
   }, [studioId]);
 
   useEffect(() => {
@@ -74,6 +91,12 @@ export function StudioMemberPanel({
     m.nickname?.trim() || m.email?.trim() || "알 수 없음";
   const displaySub = (m: StudioMemberResponse) =>
     m.email?.trim() ? (m.nickname?.trim() ? m.email : "") : "";
+
+  // 멤버가 온라인인지 확인 (닉네임으로 매칭)
+  const isOnline = (m: StudioMemberResponse) =>
+    onlineMembers.some(
+      (online) => online.nickname === m.nickname || online.nickname === m.email
+    );
 
   return (
     <div className="flex flex-col h-full min-h-0 w-full min-w-0 bg-gray-800 rounded-lg border border-gray-700">
@@ -110,8 +133,14 @@ export function StudioMemberPanel({
         ) : (
           <>
             <section>
-              <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
-                멤버 ({members.length})
+              <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <span>멤버 ({members.length})</span>
+                {onlineMembers.length > 0 && (
+                  <span className="text-green-400 flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    {onlineMembers.length}명 접속 중
+                  </span>
+                )}
               </h4>
               {members.length === 0 ? (
                 <div className="text-gray-400 text-sm">멤버가 없습니다.</div>
@@ -122,12 +151,24 @@ export function StudioMemberPanel({
                       key={m.memberId}
                       className="flex items-center gap-2 p-2 rounded bg-gray-700/50 border border-gray-600"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-gray-200 text-sm font-bold shrink-0">
-                        {displayName(m)[0] ?? "?"}
+                      {/* 아바타 + 온라인 상태 표시 */}
+                      <div className="relative shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-gray-200 text-sm font-bold">
+                          {displayName(m)[0] ?? "?"}
+                        </div>
+                        {/* 온라인 상태 표시 (초록 점) */}
+                        {isOnline(m) && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-gray-700 rounded-full" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-white truncate">
-                          {displayName(m)}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium text-white truncate">
+                            {displayName(m)}
+                          </span>
+                          {isOnline(m) && (
+                            <span className="text-[10px] text-green-400">●</span>
+                          )}
                         </div>
                         {displaySub(m) ? (
                           <div className="text-xs text-gray-400 truncate">

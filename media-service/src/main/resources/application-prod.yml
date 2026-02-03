@@ -1,0 +1,49 @@
+# =====================================================
+# Production Configuration - media-service
+# 운영 환경에서 환경변수로 오버라이드
+# =====================================================
+
+spring:
+  datasource:
+    url: ${MEDIA_DB_URL}
+    username: ${MEDIA_DB_USERNAME}
+    password: ${MEDIA_DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL}
+
+livekit:
+  host: ${LIVEKIT_HOST}
+  api:
+    key: ${LIVEKIT_API_KEY}
+    secret: ${LIVEKIT_API_SECRET}
+
+core:
+  service:
+    url: ${CORE_SERVICE_URL}
+
+recording:
+  storage:
+    base-path: ${RECORDING_BASE_PATH}
+    base-url: ${RECORDING_BASE_URL}
+
+logging:
+  level:
+    com.onetake.media: INFO
+    org.hibernate.SQL: WARN

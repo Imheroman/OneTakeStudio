@@ -13,15 +13,15 @@ spring:
               enabled: true
               lower-case-service-id: true
           routes:
-            # Core Service Routes (쇼츠 API는 백엔드 미구현 → video-service 추가 시 별도 라우트 예정)
+            # Core Service Routes
             - id: core-service
               uri: lb://core-service
               predicates:
-                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/library/**, /api/invites/**
+                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**
               filters:
                 - StripPrefix=0
 
-            # Media Service - Publish (직접 /api/publish 호출)
+            # Media Service - Publish
             - id: media-service-publish
               uri: lb://media-service
               predicates:
@@ -29,7 +29,7 @@ spring:
               filters:
                 - RewritePath=/api/publish(?<segment>.*),/api/media/publish${segment}
 
-            # Media Service - Publish (Media는 /api/media/publish 사용 → /api/v1/media/publish 요청을 재작성)
+            # Media Service - Publish v1
             - id: media-service-publish-v1
               uri: lb://media-service
               predicates:
@@ -37,7 +37,7 @@ spring:
               filters:
                 - RewritePath=/api/v1/media/publish(?<segment>.*),/api/media/publish${segment}
 
-            # Media Service Routes (Media 서비스는 /api/media 사용 → /api/v1/media 요청을 재작성)
+            # Media Service Routes
             - id: media-service
               uri: lb://media-service
               predicates:

@@ -4,17 +4,22 @@ import {
   setPreferredVideoDeviceId,
   setPreferredAudioDeviceId,
 } from "@/shared/lib/device-preferences";
+import type { RemoteSource, LocalPublishedTrack } from "./useStudioLiveKit";
 
 export interface UseSourceStreamsOptions {
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
+  /** 원격 소스 목록 (LiveKit에서 받은 것) */
+  remoteSources?: RemoteSource[];
+  /** 로컬에서 publish한 트랙 목록 (화면 공유 등) */
+  publishedTracks?: LocalPublishedTrack[];
 }
 
 export function useSourceStreams(
   sources: Source[],
   options: UseSourceStreamsOptions = {}
 ) {
-  const { isVideoEnabled = true, isAudioEnabled = true } = options;
+  const { isVideoEnabled = true, isAudioEnabled = true, remoteSources = [], publishedTracks = [] } = options;
   const [streamsMap, setStreamsMap] = useState<Map<string, MediaStream>>(
     () => new Map()
   );
@@ -37,7 +42,11 @@ export function useSourceStreams(
       const next = new Map(prev);
       next.forEach((stream, id) => {
         if (!sourceIds.has(id)) {
-          stream.getTracks().forEach((t) => t.stop());
+          // 원격 소스는 트랙을 stop하지 않음 (LiveKit에서 관리)
+          const source = sourceById.get(id);
+          if (!source?.isRemote) {
+            stream.getTracks().forEach((t) => t.stop());
+          }
           next.delete(id);
           requestedRef.current.delete(id);
           changed = true;
@@ -47,32 +56,59 @@ export function useSourceStreams(
     });
 
     sourceIds.forEach((id) => {
-      if (requestedRef.current.has(id)) return;
       const source = sourceById.get(id);
       if (!source) return;
 
+      // 원격 소스인 경우 (다른 사용자가 공유한 미디어)
+      // requestedRef를 사용하지 않고 항상 확인 (trackSid가 나중에 업데이트될 수 있음)
+      if (source.isRemote) {
+        // 이미 스트림이 있으면 스킵
+        if (streamsMapRef.current.has(id)) return;
+
+        // trackSid가 있으면 remoteSources에서 스트림 가져오기
+        if (source.trackSid) {
+          const remoteSource = remoteSources.find((rs) => rs.trackSid === source.trackSid);
+          if (remoteSource) {
+            const track = remoteSource.track;
+            const mediaStreamTrack = track.mediaStreamTrack;
+            if (mediaStreamTrack) {
+              const stream = new MediaStream([mediaStreamTrack]);
+              console.log("[useSourceStreams] 원격 스트림 설정:", id, source.trackSid);
+              setStreamsMap((prev) => new Map(prev).set(id, stream));
+            } else {
+              console.warn("[useSourceStreams] 원격 트랙의 mediaStreamTrack이 없음:", source.trackSid);
+            }
+          } else {
+            console.warn("[useSourceStreams] remoteSources에서 트랙을 찾을 수 없음:", source.trackSid);
+          }
+        } else {
+          // trackSid가 없으면 LiveKit에서 스트림을 받을 때까지 대기 (getUserMedia 호출 안 함)
+          console.log("[useSourceStreams] 원격 소스 대기 중 (trackSid 없음):", id);
+        }
+        return;
+      }
+
+      // 로컬 소스는 requestedRef로 중복 요청 방지
+      if (requestedRef.current.has(id)) return;
       requestedRef.current.add(id);
 
-      if (source.type === "screen") {
-        const nav = typeof navigator !== "undefined" ? navigator : null;
-        const mediaDevices = nav?.mediaDevices as MediaDevices | undefined;
-        if (!mediaDevices?.getDisplayMedia) {
-          requestedRef.current.delete(id);
-          return;
-        }
-        mediaDevices
-          .getDisplayMedia({ video: true, audio: isAudioEnabled })
-          .then((stream) => {
-            if (!sourceIdsRef.current.has(id)) {
-              stream.getTracks().forEach((t) => t.stop());
-              return;
-            }
+      // 로컬 screen 소스는 publishedTracks에서 스트림 가져오기
+      if (source.type === "screen" && !source.isRemote) {
+        const publishedTrack = publishedTracks.find((pt) => pt.sourceId === id);
+        if (publishedTrack?.track) {
+          const mediaStreamTrack = publishedTrack.track.mediaStreamTrack;
+          if (mediaStreamTrack) {
+            const stream = new MediaStream([mediaStreamTrack]);
+            console.log("[useSourceStreams] 로컬 screen 스트림 설정 (publishedTracks):", id);
             setStreamsMap((prev) => new Map(prev).set(id, stream));
-          })
-          .catch((err) => {
+          } else {
+            console.log("[useSourceStreams] screen 트랙 대기 중:", id);
             requestedRef.current.delete(id);
-            console.warn("useSourceStreams (screen):", id, err);
-          });
+          }
+        } else {
+          console.log("[useSourceStreams] screen 소스 publish 대기 중:", id);
+          requestedRef.current.delete(id);
+        }
         return;
       }
 
@@ -122,7 +158,7 @@ export function useSourceStreams(
           console.warn("useSourceStreams:", id, err);
         });
     });
-  }, [sources, isVideoEnabled, isAudioEnabled]);
+  }, [sources, isVideoEnabled, isAudioEnabled, remoteSources, publishedTracks]);
 
   useEffect(() => {
     return () => {

@@ -43,8 +43,8 @@ spring:
 
 jwt:
   secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
-  access-token-expiration: 3600000    # 1시간 (밀리초)
-  refresh-token-expiration: 604800000 # 7일 (밀리초)
+  access-token-expiration: 3600000
+  refresh-token-expiration: 604800000
 
 email:
   verification:

@@ -16,7 +16,7 @@ export const StudioMemberResponseSchema = z.object({
 
 export const InviteMemberRequestSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["ADMIN", "MEMBER"]),
+  role: z.enum(["ADMIN", "MEMBER", "MANAGER", "GUEST"]),
 });
 
 export const InviteResponseSchema = z.object({
