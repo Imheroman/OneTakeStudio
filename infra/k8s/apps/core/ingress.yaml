@@ -15,10 +15,117 @@ spec:
     - host: i14c206.p.ssafy.io
       http:
         paths:
-          - backend:
+          # Auth
+          - path: /api/auth
+            pathType: Prefix
+            backend:
               service:
                 name: api-server
                 port:
                   number: 8080
-            path: /test-api
+          # Users
+          - path: /api/users
             pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Studios
+          - path: /api/studios
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Workspace
+          - path: /api/workspace
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Notifications
+          - path: /api/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Destinations
+          - path: /api/destinations
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Favorites
+          - path: /api/favorites
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Storage
+          - path: /api/storage
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Library
+          - path: /api/library
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Invites
+          - path: /api/invites
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # Dashboard
+          - path: /api/dashboard
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+---
+# Test API (별도 관리)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: core-test-ingress
+  namespace: core
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - i14c206.p.ssafy.io
+  rules:
+    - host: i14c206.p.ssafy.io
+      http:
+        paths:
+          - path: /test-api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
