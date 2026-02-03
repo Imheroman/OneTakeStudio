@@ -54,8 +54,9 @@ spec:
               cpu: "1000m"
       volumes:
         - name: recordings
-          persistentVolumeClaim:
-            claimName: livekit-recordings-pvc
+          hostPath:
+            path: /data/recordings
+            type: DirectoryOrCreate
         - name: config
           configMap:
             name: egress-config
