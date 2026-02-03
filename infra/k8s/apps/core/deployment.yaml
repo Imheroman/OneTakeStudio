@@ -61,15 +61,83 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: DB_PASSWORD
+            # ConfigMap에서 참조
             - name: REDIS_HOST
-              value: "redis.database.svc.cluster.local"
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: REDIS_HOST
             - name: REDIS_PORT
-              value: "6379"
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: REDIS_PORT
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: redis-secret
                   key: REDIS_PASSWORD
+            - name: OAUTH_GOOGLE_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: OAUTH_GOOGLE_REDIRECT_URI
+            - name: OAUTH_KAKAO_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: OAUTH_KAKAO_REDIRECT_URI
+            - name: OAUTH_NAVER_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: OAUTH_NAVER_REDIRECT_URI
+            # Secret에서 참조 (core-secret)
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: JWT_SECRET
+            - name: MAIL_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: MAIL_USERNAME
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: MAIL_PASSWORD
+            - name: OAUTH_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: OAUTH_GOOGLE_CLIENT_ID
+            - name: OAUTH_GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: OAUTH_GOOGLE_CLIENT_SECRET
+            - name: OAUTH_KAKAO_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: OAUTH_KAKAO_CLIENT_ID
+            - name: OAUTH_KAKAO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: OAUTH_KAKAO_CLIENT_SECRET
+            - name: OAUTH_NAVER_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: OAUTH_NAVER_CLIENT_ID
+            - name: OAUTH_NAVER_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: core-secret
+                  key: OAUTH_NAVER_CLIENT_SECRET
 
           resources:
             requests:
