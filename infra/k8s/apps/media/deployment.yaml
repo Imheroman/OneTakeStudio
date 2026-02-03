@@ -56,17 +56,22 @@ spec:
                 secretKeyRef:
                   name: db-secret
                   key: DB_PASSWORD
-            # ConfigMap
-            - name: REDIS_HOST
+            # ConfigMap - Redis (Spring Boot 자동 바인딩 형식)
+            - name: SPRING_DATA_REDIS_HOST
               valueFrom:
                 configMapKeyRef:
                   name: media-config
                   key: REDIS_HOST
-            - name: REDIS_PORT
+            - name: SPRING_DATA_REDIS_PORT
               valueFrom:
                 configMapKeyRef:
                   name: media-config
                   key: REDIS_PORT
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
             - name: LIVEKIT_HOST
               valueFrom:
                 configMapKeyRef:
