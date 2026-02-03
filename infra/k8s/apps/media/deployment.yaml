@@ -67,11 +67,6 @@ spec:
                 configMapKeyRef:
                   name: media-config
                   key: REDIS_PORT
-            - name: SPRING_DATA_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: redis-secret
-                  key: REDIS_PASSWORD
             - name: LIVEKIT_HOST
               valueFrom:
                 configMapKeyRef:
@@ -108,11 +103,6 @@ spec:
                 secretKeyRef:
                   name: media-secret
                   key: LIVEKIT_API_SECRET
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: redis-secret
-                  key: REDIS_PASSWORD
           volumeMounts:
             - name: recordings
               mountPath: /recordings

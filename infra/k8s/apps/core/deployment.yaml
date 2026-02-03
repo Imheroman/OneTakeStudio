@@ -72,11 +72,6 @@ spec:
                 configMapKeyRef:
                   name: core-config
                   key: REDIS_PORT
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: redis-secret
-                  key: REDIS_PASSWORD
             - name: OAUTH_GOOGLE_REDIRECT_URI
               valueFrom:
                 configMapKeyRef:

@@ -23,11 +23,6 @@ spec:
               value: "/etc/egress/config.yaml"
             - name: EGRESS_REDIS_ADDRESS
               value: "redis.database.svc.cluster.local:6379"
-            - name: EGRESS_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: redis-secret
-                  key: REDIS_PASSWORD
             - name: LIVEKIT_URL
               value: "ws://livekit-server.livekit.svc.cluster.local:7880"
             - name: LIVEKIT_API_KEY

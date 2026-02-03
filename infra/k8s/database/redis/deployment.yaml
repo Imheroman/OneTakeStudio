@@ -19,8 +19,8 @@ spec:
         - name: redis
           image: redis:7-alpine
           command: ["redis-server", "/etc/redis/redis.conf"]
-          # 데이터 저장 및 비밀번호 설정 명령 추가
-          args: ["--appendonly", "yes", "--requirepass", "onetakestudioredispw123"]
+          # 데이터 저장 명령 (비밀번호 없이)
+          args: ["--appendonly", "yes"]
           ports:
             - containerPort: 6379
           volumeMounts:
