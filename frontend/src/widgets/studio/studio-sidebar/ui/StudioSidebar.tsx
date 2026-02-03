@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import {
   MessageSquare,
   Image,
@@ -14,6 +15,8 @@ import {
 } from "lucide-react";
 import { IconButton } from "@/shared/common";
 import { cn } from "@/shared/lib/utils";
+import { sidebarSpring, sidebarEaseReduced } from "@/shared/lib/sidebar-motion";
+import { usePrefersMotion } from "@/stores/useWorkspaceDisplayStore";
 import { StudioChatPanel } from "../panels/StudioChatPanel";
 import { StudioBannerPanel } from "../panels/StudioBannerPanel";
 import { StudioAssetPanel } from "../panels/StudioAssetPanel";
@@ -92,6 +95,8 @@ export function StudioSidebar({
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [refreshMembersTrigger, setRefreshMembersTrigger] = useState(0);
+  const prefersMotion = usePrefersMotion();
+  const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
 
   const studioIdNum = Number(studioId) || 0;
   const unreadCount = usePrivateChatStore(
@@ -187,14 +192,19 @@ export function StudioSidebar({
 
   const closePanel = () => setActiveTab(null);
 
+  const isExpanded = !!activeTab;
+
   return (
     <>
-      <aside
+      <motion.aside
+        layout
+        layoutRoot
         className={cn(
-          "flex flex-row-reverse bg-gray-900 border-l border-gray-800 shrink-0 overflow-hidden transition-all duration-300 ease-in-out",
-          activeTab ? "w-[25rem]" : "w-16",
+          "flex flex-row-reverse bg-gray-900 border-l border-gray-800 shrink-0 overflow-hidden will-change-[width]",
           className
         )}
+        animate={{ width: isExpanded ? 400 : 64 }}
+        transition={sidebarTransition}
       >
         {/* 탭 아이콘 열: 오른쪽 벽에 고정 */}
         <div className="w-16 flex flex-col items-center py-4 gap-3 shrink-0">
@@ -290,7 +300,7 @@ export function StudioSidebar({
             )}
           </div>
         )}
-      </aside>
+      </motion.aside>
 
       <StudioInviteModal
         open={inviteOpen}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState, useEffect, useMemo } from "react";
+import { motion, LayoutGroup } from "motion/react";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { sidebarSpring } from "@/shared/lib/sidebar-motion";
 import { Button } from "@/shared/ui/button";
 import { StudioHeader } from "@/widgets/studio/studio-header";
 import { PreviewArea } from "@/widgets/studio/preview-area";
@@ -190,9 +192,10 @@ export function StudioMain({ studioId }: StudioMainProps) {
   }
 
   return (
-    <div className="flex h-screen bg-gray-900 overflow-hidden">
-      {/* 왼쪽 사이드바: 씬 */}
-      <aside className="shrink-0 w-56 border-r border-gray-700 bg-gray-800/95 flex flex-col overflow-hidden">
+    <LayoutGroup>
+      <div className="flex h-screen bg-gray-900 overflow-hidden">
+        {/* 왼쪽 사이드바: 씬 */}
+        <aside className="shrink-0 w-56 border-r border-gray-700 bg-gray-800/95 flex flex-col overflow-hidden">
         <div className="p-3 border-b border-gray-700">
           <h3 className="text-sm font-semibold text-gray-300">Scenes</h3>
         </div>
@@ -212,7 +215,11 @@ export function StudioMain({ studioId }: StudioMainProps) {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <motion.div
+        layout
+        className="flex-1 flex flex-col min-w-0 overflow-hidden relative"
+        transition={{ layout: sidebarSpring }}
+      >
         <StudioHeader
           studioTitle={studio.name}
           studioId={studioId}
@@ -325,7 +332,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           onOpenChange={setShowAddSourceDialog}
           onSelect={handleAddSourceConfirm}
         />
-      </div>
+      </motion.div>
 
       <StudioSidebar
         studioId={studioId}
@@ -346,5 +353,6 @@ export function StudioMain({ studioId }: StudioMainProps) {
         onStopLocalRecording={handleStopLocalRecording}
       />
     </div>
+    </LayoutGroup>
   );
 }

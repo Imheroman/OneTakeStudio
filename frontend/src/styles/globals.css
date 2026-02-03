@@ -4,6 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  /* 레이아웃·테마 전환용 duration (린트 duration-280 권장 대응) */
+  --duration-280: 280ms;
+
   /* 피그마에서 추출한 브랜드 컬러 이식 */
   --color-brand-primary: #1A73E8;
   --color-brand-secondary: #4285F4;
@@ -166,7 +169,7 @@
     box-shadow: 0 4px 24px -2px rgb(0 0 0 / 0.2), 0 12px 32px -4px rgb(0 0 0 / 0.15);
   }
 
-  /* 구글 시그니처 4색 호버: 테두리만 4색 구분 (위·오른쪽·아래·왼쪽) */
+  /* 구글 시그니처 4색 호버: 테두리만 4색 구분 (위·오른쪽·아래·왼쪽). 호버 시에만 will-change로 프레임 드랍 방지 */
   .google-oauth-hover:hover {
     border-width: 3px !important;
     border-style: solid !important;
@@ -175,6 +178,12 @@
     border-bottom-color: #fbbc05 !important; /* 노랑 */
     border-left-color: #34a853 !important;   /* 초록 */
     color: #202124 !important;
+    will-change: transform, opacity;
+  }
+
+  /* 사이드바 아이템: 호버 시점에만 will-change 활성화 → 브라우저가 미리 레이어 준비해 프레임 드랍 완화 */
+  .sidebar-item-hover:hover {
+    will-change: transform, opacity;
   }
 
   /* GPU 레이어 분리: 호버·애니메이션 시 주사율 유지 (노션형 부드러운 스크롤) */

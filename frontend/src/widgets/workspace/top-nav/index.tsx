@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { memo, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, User, Settings, LogOut, ChevronDown } from "lucide-react";
@@ -22,7 +22,7 @@ import { apiClient } from "@/shared/api/client";
 import { NotificationListResponseSchema } from "@/entities/notification/model";
 import { cn } from "@/shared/lib/utils";
 
-export function WorkspaceTopNav() {
+function WorkspaceTopNavInner() {
   const router = useRouter();
   const { user, logout, isLoggedIn } = useAuthStore();
   const theme = useWorkspaceThemeStore((s) => s.theme);
@@ -207,3 +207,5 @@ export function WorkspaceTopNav() {
     </header>
   );
 }
+
+export const WorkspaceTopNav = memo(WorkspaceTopNavInner);
