@@ -29,6 +29,11 @@ spec:
                 secretKeyRef:
                   name: livekit-secret
                   key: LIVEKIT_KEYS
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
           args:
             - "--config"
             - "/etc/livekit/livekit.yaml"

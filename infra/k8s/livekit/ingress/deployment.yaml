@@ -34,6 +34,13 @@ spec:
                 secretKeyRef:
                   name: livekit-secret
                   key: LIVEKIT_API_SECRET
+            - name: INGRESS_REDIS_HOST
+              value: "redis.database.svc.cluster.local"
+            - name: INGRESS_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDIS_PASSWORD
           resources:
             requests:
               memory: "256Mi"
