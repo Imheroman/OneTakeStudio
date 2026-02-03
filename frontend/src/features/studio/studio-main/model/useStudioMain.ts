@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { z } from "zod";
@@ -69,7 +69,13 @@ export interface SourceTransform {
 
 export function useStudioMain(
   studioId: string,
-  options?: { getPreviewStreamRef?: GetPreviewStreamRef | null }
+  options?: {
+    getPreviewStreamRef?: GetPreviewStreamRef | null;
+    /** Go Live 직전 캡처용 레이어 1회 그리기 (화면공유 포함 프레임 확보) */
+    requestCaptureDrawRef?: React.MutableRefObject<
+      (() => Promise<void>) | null
+    > | null;
+  }
 ) {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -95,6 +101,10 @@ export function useStudioMain(
   const roomRef = useRef<Room | null>(null);
   /** handleGoLive에서 새로 만든 room이면 End Live 시 disconnect, 기존 room이면 disconnect 안 함 */
   const weCreatedRoomRef = useRef(false);
+  /** Go Live 레이스 방지: 동시에 한 번만 실행 */
+  const goLiveInProgressRef = useRef(false);
+  /** End Live 레이스 방지 */
+  const endLiveInProgressRef = useRef(false);
 
   const [sources, setSources] = useState<Source[]>([]);
   const [onStageSourceIds, setOnStageSourceIds] = useState<string[]>([]);
@@ -712,6 +722,7 @@ export function useStudioMain(
 
   // LiveKit 연결 및 송출 시작
   const getPreviewStreamRef = options?.getPreviewStreamRef;
+  const requestCaptureDrawRef = options?.requestCaptureDrawRef;
 
   // 라이브 자동 녹화 시작 (라이브 시작 시 호출)
   const startAutoRecording = useCallback(() => {
@@ -789,15 +800,36 @@ export function useStudioMain(
     console.log("라이브 자동 녹화 중지");
   }, []);
 
+  /** 다음 N프레임 대기 (캔버스 캡처 타이밍 보정) */
+  const waitForFrames = useCallback((count: number) => {
+    return new Promise<void>((resolve) => {
+      let n = 0;
+      const tick = () => {
+        n += 1;
+        if (n >= count) resolve();
+        else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  }, []);
+
   const handleGoLive = useCallback(
     async (destinationIds?: number[]) => {
       const sid = Number(studioId);
       if (Number.isNaN(sid)) return;
 
+      // 레이스 방지: 이미 실행 중이면 무시
+      if (goLiveInProgressRef.current) {
+        console.warn("[GoLive] 이미 진행 중, 무시");
+        return;
+      }
+      goLiveInProgressRef.current = true;
+
       // 송출할 채널이 없으면 경고
       const destIds = destinationIds ?? selectedDestinationIds;
       if (destIds.length === 0) {
         setPublishError("송출할 채널을 선택해주세요.");
+        goLiveInProgressRef.current = false;
         return;
       }
 
@@ -862,7 +894,11 @@ export function useStudioMain(
           }
         }
 
-        // Konva 캔버스 스트림 publish (레이아웃 적용된 최종 화면)
+        // unpublish 반영·캡처 레이어 갱신 대기 (레이스 완화)
+        await waitForFrames(2);
+
+        // Phase 1: 캡처용 레이어를 명시적으로 1회 그린 뒤 스트림 획득 (화면공유 포함)
+        await requestCaptureDrawRef?.current?.();
         const canvasStream = getPreviewStreamRef?.current?.();
         if (canvasStream) {
           const videoTracks = canvasStream.getVideoTracks();
@@ -903,7 +939,8 @@ export function useStudioMain(
           }
         }
 
-        // 2. RTMP 송출 시작
+        // 2. RTMP 송출 시작 (캔버스 트랙이 room에 반영될 짧은 대기)
+        await new Promise((r) => setTimeout(r, 150));
         await startPublish({
           studioId: sid,
           destinationIds: destIds,
@@ -953,6 +990,7 @@ export function useStudioMain(
         );
       } finally {
         setIsGoingLive(false);
+        goLiveInProgressRef.current = false;
       }
     },
     [
@@ -960,12 +998,14 @@ export function useStudioMain(
       user?.nickname,
       selectedDestinationIds,
       getPreviewStreamRef,
+      requestCaptureDrawRef,
       studio?.recordingStorage,
       startAutoRecording,
       getRoom,
       sources,
       onStageSourceIds,
       unpublishTrack,
+      waitForFrames,
     ]
   );
 
@@ -973,6 +1013,12 @@ export function useStudioMain(
   const handleEndLive = useCallback(async () => {
     const sid = Number(studioId);
     if (Number.isNaN(sid)) return;
+
+    if (endLiveInProgressRef.current) {
+      console.warn("[EndLive] 이미 진행 중, 무시");
+      return;
+    }
+    endLiveInProgressRef.current = true;
 
     try {
       // 0. 자동 녹화 중지 (가장 먼저 실행하여 녹화 데이터 손실 방지)
@@ -1012,6 +1058,8 @@ export function useStudioMain(
       console.log("Live ended");
     } catch (error) {
       console.error("End live failed:", error);
+    } finally {
+      endLiveInProgressRef.current = false;
     }
   }, [studioId, isPublishing, isAutoRecording, stopAutoRecording]);
 

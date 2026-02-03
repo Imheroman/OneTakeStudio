@@ -102,6 +102,10 @@ interface PreviewAreaProps {
   resolution?: PreviewResolution;
   getSourceStream?: (sourceId: string) => MediaStream | undefined;
   getPreviewStreamRef?: GetPreviewStreamRef | null;
+  /** Go Live 직전 캡처용 레이어를 1회 그리기 (화면공유 포함 프레임 확보) */
+  requestCaptureDrawRef?: React.MutableRefObject<
+    (() => Promise<void>) | null
+  > | null;
   sourceTransforms?: Record<string, SourceTransform>;
   setSourceTransform?: (
     sourceId: string,
@@ -113,7 +117,7 @@ interface PreviewAreaProps {
   styleState?: StudioStyleState | null;
 }
 
-/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. scheduleBatchDraw로 프레임당 1회만 그리기 요청. */
+/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. scheduleBatchDraw로 프레임당 1회만 그리기 요청. registerExternalUpdate 있으면 단일 RAF에서 호출됨(캡처용). */
 function VideoSourceNode({
   sourceId,
   video,
@@ -122,6 +126,7 @@ function VideoSourceNode({
   fit,
   scheduleBatchDraw,
   isVisible,
+  registerExternalUpdate,
 }: {
   sourceId: string;
   video: HTMLVideoElement;
@@ -130,6 +135,8 @@ function VideoSourceNode({
   fit: SourceFitMode;
   scheduleBatchDraw: () => void;
   isVisible: boolean;
+  /** 캡처용: 부모 단일 RAF에서 이 노드 갱신 호출 (자체 RAF 미사용) */
+  registerExternalUpdate?: (fn: () => void) => () => void;
 }) {
   const imageRef = useRef<Konva.Image>(null);
   const [sourceSize, setSourceSize] = useState({
@@ -157,10 +164,21 @@ function VideoSourceNode({
   const sourceH = sourceSize.h || boxHeight;
   const rect = computeSourceFitRect(fit, boxWidth, boxHeight, sourceW, sourceH);
 
-  useLayoutEffect(() => {
-    if (!video || !isVisible) return;
-    let rafId: number;
+  /** Phase 2: 캡처용 — 부모 단일 RAF에 업데이트 함수 등록 */
+  useEffect(() => {
+    if (!registerExternalUpdate || !video || !isVisible) return;
+    const update = () => {
+      const img = imageRef.current;
+      if (img && video.readyState >= 2) img.image(video);
+    };
+    const unregister = registerExternalUpdate(update);
+    return unregister;
+  }, [registerExternalUpdate, video, isVisible]);
 
+  /** 표시용 또는 캡처용(registerExternalUpdate 없을 때): 자체 RAF */
+  useLayoutEffect(() => {
+    if (registerExternalUpdate || !video || !isVisible) return;
+    let rafId: number;
     const tick = () => {
       const img = imageRef.current;
       if (img && video.readyState >= 2) {
@@ -171,7 +189,7 @@ function VideoSourceNode({
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [video, scheduleBatchDraw, isVisible]);
+  }, [video, scheduleBatchDraw, isVisible, registerExternalUpdate]);
 
   if (!isVisible) return null;
   return (
@@ -416,6 +434,7 @@ function PreviewAreaInner({
   resolution = "720p",
   getSourceStream,
   getPreviewStreamRef,
+  requestCaptureDrawRef,
   sourceTransforms = {},
   setSourceTransform,
   onBringSourceToFront,
@@ -456,6 +475,15 @@ function PreviewAreaInner({
       captureLayerRef.current?.batchDraw();
       captureBatchDrawScheduledRef.current = false;
     });
+  }, []);
+
+  /** Phase 2: 캡처용 Stage — 소스별 RAF 대신 단일 RAF에서 한 번에 갱신 후 1회 그리기 */
+  const captureUpdatersRef = useRef<Set<() => void>>(new Set());
+  const registerCaptureUpdate = useCallback((fn: () => void) => {
+    captureUpdatersRef.current.add(fn);
+    return () => {
+      captureUpdatersRef.current.delete(fn);
+    };
   }, []);
 
   /** 줌 시 DPR만 갱신. containerSize는 ResizeObserver에서만 갱신해 충돌 방지. Stage key 제거로 리마운트 없이 RAF 유지. */
@@ -559,6 +587,19 @@ function PreviewAreaInner({
 
   const hasSources = sources.length > 0 && sources.some((s) => s.isVisible);
 
+  /** Phase 2: 캡처용 Stage 단일 RAF — hasSources 선언 이후에 배치 */
+  useLayoutEffect(() => {
+    if (!hasSources) return;
+    let rafId: number;
+    const tick = () => {
+      captureUpdatersRef.current.forEach((update) => update());
+      captureLayerRef.current?.batchDraw();
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [hasSources]);
+
   /** hasSources가 true일 때만 containerRef가 마운트됨. 의존성에 포함해 컨테이너가 렌더된 후 ResizeObserver 설정 */
   useEffect(() => {
     if (!hasSources) return;
@@ -615,6 +656,20 @@ function PreviewAreaInner({
       getPreviewStreamRef.current = null;
     };
   }, [getPreviewStreamRef]);
+
+  /** Phase 1: Go Live 직전 캡처용 레이어를 명시적으로 1회 그린 뒤 다음 프레임까지 대기 */
+  useEffect(() => {
+    if (!requestCaptureDrawRef) return;
+    requestCaptureDrawRef.current = async () => {
+      scheduleCaptureBatchDraw();
+      await new Promise<void>((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => r()))
+      );
+    };
+    return () => {
+      requestCaptureDrawRef.current = null;
+    };
+  }, [requestCaptureDrawRef, scheduleCaptureBatchDraw]);
 
   const streamsMap = useRef<Map<string, MediaStream>>(new Map());
 
@@ -1097,6 +1152,7 @@ function PreviewAreaInner({
                       fit="contain"
                       scheduleBatchDraw={scheduleCaptureBatchDraw}
                       isVisible={source.isVisible}
+                      registerExternalUpdate={registerCaptureUpdate}
                     />
                   ) : (
                     <Rect

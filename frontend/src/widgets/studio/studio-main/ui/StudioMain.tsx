@@ -49,6 +49,7 @@ interface StudioMainProps {
 
 export function StudioMain({ studioId }: StudioMainProps) {
   const getPreviewStreamRef = useRef<(() => MediaStream | null) | null>(null);
+  const requestCaptureDrawRef = useRef<(() => Promise<void>) | null>(null);
   const [toolbarExpanded, setToolbarExpanded] = useState(true);
   const [activeBanner, setActiveBanner] = useState<BannerItem | null>(null);
   const [bannerRemainingSeconds, setBannerRemainingSeconds] = useState<
@@ -187,7 +188,10 @@ export function StudioMain({ studioId }: StudioMainProps) {
     remoteSources,
     publishedTracks,
     localPublishedStreamsRef,
-  } = useStudioMain(studioId, { getPreviewStreamRef });
+  } = useStudioMain(studioId, {
+    getPreviewStreamRef,
+    requestCaptureDrawRef,
+  });
 
   // 편집 모드 진입 시 락 획득 시도
   const handleEditModeToggle = async () => {
@@ -392,6 +396,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 resolution={previewResolution}
                 getSourceStream={getSourceStream}
                 getPreviewStreamRef={getPreviewStreamRef}
+                requestCaptureDrawRef={requestCaptureDrawRef}
                 sourceTransforms={sourceTransforms}
                 setSourceTransform={setSourceTransform}
                 onBringSourceToFront={handleBringSourceToFront}
