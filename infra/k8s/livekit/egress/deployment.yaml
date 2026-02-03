@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: livekit-egress
+  namespace: livekit
+  labels:
+    app: livekit-egress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: livekit-egress
+  template:
+    metadata:
+      labels:
+        app: livekit-egress
+    spec:
+      containers:
+        - name: livekit-egress
+          image: livekit/egress:latest
+          env:
+            - name: EGRESS_CONFIG_FILE
+              value: ""
+            - name: LIVEKIT_URL
+              value: "ws://livekit-server.livekit.svc.cluster.local:7880"
+            - name: LIVEKIT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secret
+                  key: LIVEKIT_API_KEY
+            - name: LIVEKIT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secret
+                  key: LIVEKIT_API_SECRET
+          volumeMounts:
+            - name: recordings
+              mountPath: /recordings
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: recordings
+          persistentVolumeClaim:
+            claimName: livekit-recordings-pvc

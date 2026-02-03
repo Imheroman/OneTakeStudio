@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: livekit-ingress
+  namespace: livekit
+  labels:
+    app: livekit-ingress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: livekit-ingress
+  template:
+    metadata:
+      labels:
+        app: livekit-ingress
+    spec:
+      containers:
+        - name: livekit-ingress
+          image: livekit/ingress:latest
+          ports:
+            - containerPort: 1935
+              name: rtmp
+          env:
+            - name: LIVEKIT_URL
+              value: "ws://livekit-server.livekit.svc.cluster.local:7880"
+            - name: LIVEKIT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secret
+                  key: LIVEKIT_API_KEY
+            - name: LIVEKIT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secret
+                  key: LIVEKIT_API_SECRET
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
