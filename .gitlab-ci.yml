@@ -276,7 +276,8 @@ deploy-livekit:
       kubectl apply -f infra/k8s/livekit/namespace/namespace.yaml
       # Shared resources
       kubectl apply -f infra/k8s/livekit/shared/pvc.yaml
-      # Server
+      # Server - ConfigMap에서 REDIS_PASSWORD 치환
+      sed -i "s|\${REDIS_PASSWORD}|$REDIS_PASSWORD|g" infra/k8s/livekit/server/configmap.yaml
       kubectl apply -f infra/k8s/livekit/server/configmap.yaml
       kubectl apply -f infra/k8s/livekit/server/deployment.yaml
       kubectl apply -f infra/k8s/livekit/server/service.yaml
