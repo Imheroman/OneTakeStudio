@@ -110,7 +110,14 @@ setup-secrets:
         --from-literal=LIVEKIT_KEYS="devkey: $LIVEKIT_API_SECRET" \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # 8. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
+    # 8. Redis Secret (livekit namespace)
+    - |
+      kubectl create secret generic redis-secret \
+        --namespace=livekit \
+        --from-literal=REDIS_PASSWORD="$REDIS_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 9. ECR 접근용 Secret 생성 (필수! 토큰 12시간 유효)
     # bitnami 이미지엔 aws cli가 없으므로, 현재는 기존 시크릿이 있다고 가정하거나
     # EC2 호스트에서 CronJob으로 갱신하는 것을 권장합니다.
     # 만약 파이프라인에서 매번 갱신하려면 aws-cli가 포함된 이미지를 써야 합니다.
@@ -276,8 +283,7 @@ deploy-livekit:
       kubectl apply -f infra/k8s/livekit/namespace/namespace.yaml
       # Shared resources
       kubectl apply -f infra/k8s/livekit/shared/pvc.yaml
-      # Server - ConfigMap에서 REDIS_PASSWORD 치환
-      sed -i "s|\${REDIS_PASSWORD}|$REDIS_PASSWORD|g" infra/k8s/livekit/server/configmap.yaml
+      # Server
       kubectl apply -f infra/k8s/livekit/server/configmap.yaml
       kubectl apply -f infra/k8s/livekit/server/deployment.yaml
       kubectl apply -f infra/k8s/livekit/server/service.yaml
