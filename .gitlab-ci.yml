@@ -129,8 +129,8 @@ build-core:
   stage: build
   image: maven:3.9-eclipse-temurin-21
   script:
-    - cd core-service
-    - mvn clean package -DskipTests
+    # 루트에서 common + core-service 빌드 (-am: also make dependencies)
+    - mvn clean package -pl common,core-service -am -DskipTests
   artifacts:
     paths:
       - core-service/target/*.jar
@@ -139,13 +139,14 @@ build-core:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - core-service/**/*
+        - common/**/*
 
 build-media:
   stage: build
   image: maven:3.9-eclipse-temurin-21
   script:
-    - cd media-service
-    - mvn clean package -DskipTests
+    # 루트에서 common + media-service 빌드 (-am: also make dependencies)
+    - mvn clean package -pl common,media-service -am -DskipTests
   artifacts:
     paths:
       - media-service/target/*.jar
@@ -154,6 +155,7 @@ build-media:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - media-service/**/*
+        - common/**/*
 
 # ─────────────────────────────────────────────
 # Stage 3: Docker 이미지 빌드 & 푸시 (AWS ECR)
