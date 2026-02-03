@@ -5,9 +5,9 @@
 
 spring:
   datasource:
-    url: ${CORE_DB_URL}
-    username: ${CORE_DB_USERNAME}
-    password: ${CORE_DB_PASSWORD}
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -43,8 +43,7 @@ oauth:
 
 eureka:
   client:
-    service-url:
-      defaultZone: ${EUREKA_URL}
+    enabled: false
 
 logging:
   level:
