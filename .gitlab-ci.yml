@@ -118,8 +118,8 @@ setup-secrets:
     - echo "=== Secrets 생성 완료 ==="
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
-      changes:
-        - infra/apps/**
+#      changes:
+#        - infra/apps/**
       when: manual
 
 # ─────────────────────────────────────────────
@@ -231,7 +231,6 @@ deploy-core:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - core-service/**/*
-        - infra/k8s/apps/core/**/*
 
 deploy-media:
   stage: deploy
@@ -258,7 +257,6 @@ deploy-media:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         - media-service/**/*
-        - infra/k8s/apps/media/**/*
 
 deploy-livekit:
   stage: deploy
