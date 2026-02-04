@@ -24,7 +24,7 @@ public class LibraryController {
             @CurrentUser CustomUserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) Long studioId) {
+            @RequestParam(required = false) String studioId) {
 
         log.debug("녹화 목록 조회 요청: userId={}, studioId={}", userDetails.getUserId(), studioId);
 

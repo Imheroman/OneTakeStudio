@@ -14,7 +14,7 @@ import lombok.Setter;
 public class CreateRecordingRequest {
 
     @NotNull(message = "스튜디오 ID는 필수입니다")
-    private Long studioId;
+    private String studioId;
 
     @Size(max = 200, message = "제목은 200자 이내로 입력해주세요")
     private String title;

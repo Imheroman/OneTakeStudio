@@ -27,7 +27,7 @@ public class StudioAssetService {
     public List<AssetResponse> getAssets(String studioId) {
         Long internalStudioId = getInternalStudioId(studioId);
         return assetRepository.findByStudioIdOrderBySortOrderAsc(internalStudioId).stream()
-                .map(AssetResponse::from)
+                .map(asset -> AssetResponse.from(asset, studioId))
                 .toList();
     }
 
@@ -35,7 +35,7 @@ public class StudioAssetService {
         Long internalStudioId = getInternalStudioId(studioId);
         AssetType assetType = parseAssetType(type);
         return assetRepository.findByStudioIdAndTypeOrderBySortOrderAsc(internalStudioId, assetType).stream()
-                .map(AssetResponse::from)
+                .map(asset -> AssetResponse.from(asset, studioId))
                 .toList();
     }
 
@@ -57,7 +57,7 @@ public class StudioAssetService {
 
         log.info("Asset created: studioId={}, assetId={}, type={}", studioId, asset.getAssetId(), assetType);
 
-        return AssetResponse.from(asset);
+        return AssetResponse.from(asset, studioId);
     }
 
     @Transactional

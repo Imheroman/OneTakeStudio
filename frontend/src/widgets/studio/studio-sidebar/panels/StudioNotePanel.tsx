@@ -9,7 +9,7 @@ import { getStudioNote, putStudioNote } from "@/shared/api/studio-note";
 const STORAGE_KEY = "studio-note";
 
 interface StudioNotePanelProps {
-  studioId: number;
+  studioId: string | number;
   onClose?: () => void;
 }
 

@@ -60,7 +60,7 @@ function recordingToVideo(r: RecordingDto): LibraryVideoDto {
 export type GetRecordingsParams = {
   page?: number;
   size?: number;
-  studioId?: number;
+  studioId?: string | number;
 };
 
 /**
