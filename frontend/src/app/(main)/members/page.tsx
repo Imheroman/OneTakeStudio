@@ -45,12 +45,21 @@ function MembersContent() {
         >
           팀 관리
         </h1>
-        <p className={cn("mt-1 text-sm", isDark ? "text-gray-400" : "text-gray-500")}>
+        <p
+          className={cn(
+            "mt-1 text-sm",
+            isDark ? "text-gray-400" : "text-gray-500"
+          )}
+        >
           팀원과 받은 초대를 관리합니다.
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList
           className={cn(
             "grid w-full max-w-md grid-cols-2",
@@ -93,7 +102,7 @@ export default function MembersPage() {
 
   useEffect(() => {
     if (hasHydrated && !isLoggedIn) {
-      router.replace("/login");
+      router.replace(`/?auth=login&redirect=${encodeURIComponent("/members")}`);
     }
   }, [hasHydrated, isLoggedIn, router]);
 

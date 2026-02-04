@@ -88,7 +88,9 @@ function SidebarInner() {
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
   const prefersMotion = usePrefersMotion();
-  const workspaceLink = user?.userId ? `/workspace/${user.userId}` : "/login";
+  const workspaceLink = user?.userId
+    ? `/workspace/${user.userId}`
+    : "/?auth=login";
   const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
 
   const menus = useMemo<MenuItem[]>(

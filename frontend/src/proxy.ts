@@ -23,7 +23,9 @@ function isTokenExpired(token: string): boolean {
     const parts = token.split(".");
     if (parts.length !== 3) return true;
 
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+    );
     if (!payload.exp) return true;
 
     const now = Math.floor(Date.now() / 1000);
@@ -61,9 +63,10 @@ export function proxy(request: NextRequest) {
   const authCookie = request.cookies.get("onetake-authenticated");
   const isAuthenticated = authCookie?.value === "true";
 
-  // 보호된 경로에 비인증 사용자가 접근하면 로그인으로 리다이렉트
+  // 보호된 경로에 비인증 사용자가 접근하면 랜딩 페이지 로그인 모달로 리다이렉트
   if (isProtectedPath && !isAuthenticated) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/", request.url);
+    loginUrl.searchParams.set("auth", "login");
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -71,6 +74,22 @@ export function proxy(request: NextRequest) {
   // 인증된 사용자가 로그인/회원가입 페이지에 접근하면 워크스페이스로 리다이렉트
   if (isAuthPath && isAuthenticated) {
     return NextResponse.redirect(new URL("/workspace", request.url));
+  }
+
+  // 비인증 사용자가 /login 또는 /signup 직접 접근 시 랜딩 페이지 모달로 리다이렉트
+  if (pathname === "/login") {
+    const landingUrl = new URL("/", request.url);
+    landingUrl.searchParams.set("auth", "login");
+    const redirectParam = request.nextUrl.searchParams.get("redirect");
+    if (redirectParam) landingUrl.searchParams.set("redirect", redirectParam);
+    return NextResponse.redirect(landingUrl);
+  }
+  if (pathname === "/signup") {
+    const landingUrl = new URL("/", request.url);
+    landingUrl.searchParams.set("auth", "signup");
+    const redirectParam = request.nextUrl.searchParams.get("redirect");
+    if (redirectParam) landingUrl.searchParams.set("redirect", redirectParam);
+    return NextResponse.redirect(landingUrl);
   }
 
   return NextResponse.next();

@@ -15,7 +15,7 @@ export default function InvitesPage() {
   useEffect(() => {
     if (!hasHydrated) return;
     if (!isLoggedIn) {
-      router.replace("/login");
+      router.replace(`/?auth=login&redirect=${encodeURIComponent("/invites")}`);
       return;
     }
     router.replace("/members?tab=invites");

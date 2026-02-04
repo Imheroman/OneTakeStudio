@@ -291,7 +291,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
           </button>
         ) : (
           <Link
-            href="/signup"
+            href="/?auth=signup"
             className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
           >
             회원가입

@@ -12,7 +12,7 @@ export function CTASection() {
             14일 무료 체험, 신용카드 필요 없어요
           </p>
           <div className="mt-6 flex items-center justify-center">
-            <ActionButton href="/signup" variant="outline">
+            <ActionButton href="/?auth=signup" variant="outline">
               무료 체험 시작하기
             </ActionButton>
           </div>

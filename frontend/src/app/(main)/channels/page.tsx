@@ -11,7 +11,9 @@ export default function ChannelsPage() {
 
   useEffect(() => {
     if (hasHydrated && !isLoggedIn) {
-      router.replace("/login");
+      router.replace(
+        `/?auth=login&redirect=${encodeURIComponent("/channels")}`
+      );
     }
   }, [hasHydrated, isLoggedIn, router]);
 

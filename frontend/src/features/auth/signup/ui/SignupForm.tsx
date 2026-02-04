@@ -224,7 +224,7 @@ export function SignupForm({
         if (onSignupSuccess) {
           onSignupSuccess();
         } else {
-          router.push("/login");
+          router.push("/?auth=login");
         }
       }
     } catch (error: unknown) {
@@ -607,7 +607,7 @@ export function SignupForm({
           </button>
         ) : (
           <Link
-            href="/login"
+            href="/?auth=login"
             className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
           >
             로그인

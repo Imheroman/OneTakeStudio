@@ -13,7 +13,9 @@ function OAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useAuthStore((state) => state.login);
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading"
+  );
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -107,7 +109,9 @@ function OAuthCallbackContent() {
         console.error("OAuth 콜백 처리 실패:", error);
         setStatus("error");
         setMessage(
-          error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다."
+          error instanceof Error
+            ? error.message
+            : "로그인 중 오류가 발생했습니다."
         );
       }
     };
@@ -141,8 +145,13 @@ function OAuthCallbackContent() {
             <div className="flex flex-col items-center justify-center py-8">
               <XCircle className="h-12 w-12 text-red-500 mb-4" />
               <p className="text-gray-900 font-medium mb-2">로그인 실패</p>
-              <p className="text-sm text-gray-600 text-center mb-4">{message}</p>
-              <Button onClick={() => router.push("/login")} className="w-full">
+              <p className="text-sm text-gray-600 text-center mb-4">
+                {message}
+              </p>
+              <Button
+                onClick={() => router.push("/?auth=login")}
+                className="w-full"
+              >
                 로그인 페이지로 돌아가기
               </Button>
             </div>
