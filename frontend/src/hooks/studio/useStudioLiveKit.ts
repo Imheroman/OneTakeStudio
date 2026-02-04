@@ -63,8 +63,8 @@ export interface UseStudioLiveKitReturn {
   publishAudioTrack: (sourceId: string, deviceId?: string) => Promise<string | null>;
   /** 화면 공유 트랙 publish */
   publishScreenTrack: (sourceId: string) => Promise<string | null>;
-  /** 트랙 unpublish */
-  unpublishTrack: (sourceId: string) => Promise<void>;
+  /** 트랙 unpublish. keepTrackAlive=true면 track.stop() 생략 (캔버스 그리기용 유지) */
+  unpublishTrack: (sourceId: string, options?: { keepTrackAlive?: boolean }) => Promise<void>;
   /** 특정 원격 소스의 MediaStream 가져오기 */
   getRemoteStream: (trackSid: string) => MediaStream | null;
 }
@@ -347,25 +347,39 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
     [onTrackEnded]
   );
 
-  // 트랙 unpublish
-  const unpublishTrack = useCallback(async (sourceId: string): Promise<void> => {
-    const room = roomRef.current;
-    if (!room) return;
+  // 트랙 unpublish. keepTrackAlive=true면 track.stop() 생략 (Go Live 시 캔버스 그리기용 유지)
+  const unpublishTrack = useCallback(
+    async (
+      sourceId: string,
+      options?: { keepTrackAlive?: boolean }
+    ): Promise<void> => {
+      const room = roomRef.current;
+      if (!room) return;
 
-    const publishedTrack = publishedTracks.find((t) => t.sourceId === sourceId);
-    if (!publishedTrack) return;
+      const publishedTrack = publishedTracks.find((t) => t.sourceId === sourceId);
+      if (!publishedTrack) return;
 
-    try {
-      await room.localParticipant.unpublishTrack(publishedTrack.track);
-      publishedTrack.track.stop();
+      try {
+        await room.localParticipant.unpublishTrack(publishedTrack.track);
+        if (!options?.keepTrackAlive) {
+          publishedTrack.track.stop();
+        }
 
-      setPublishedTracks((prev) => prev.filter((t) => t.sourceId !== sourceId));
+        setPublishedTracks((prev) =>
+          prev.filter((t) => t.sourceId !== sourceId)
+        );
 
-      console.log("[StudioLiveKit] 트랙 unpublish 완료:", sourceId);
-    } catch (error) {
-      console.error("[StudioLiveKit] 트랙 unpublish 실패:", error);
-    }
-  }, [publishedTracks]);
+        console.log(
+          "[StudioLiveKit] 트랙 unpublish 완료:",
+          sourceId,
+          options?.keepTrackAlive ? "(track 유지)" : ""
+        );
+      } catch (error) {
+        console.error("[StudioLiveKit] 트랙 unpublish 실패:", error);
+      }
+    },
+    [publishedTracks]
+  );
 
   // 원격 소스의 MediaStream 가져오기
   const getRemoteStream = useCallback((trackSid: string): MediaStream | null => {

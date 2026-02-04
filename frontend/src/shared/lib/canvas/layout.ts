@@ -79,7 +79,21 @@ export function getLayoutGrid(
 }
 
 /**
+ * full 레이아웃에서 소스가 2개 이상일 때 사용할 그리드 (합친 화면이 한 소스만 크게 나오는 현상 방지)
+ */
+function getEffectiveLayout(
+  layout: LayoutType,
+  visibleCount: number
+): LayoutType {
+  if (layout !== "full" || visibleCount <= 1) return layout;
+  if (visibleCount === 2) return "split";
+  if (visibleCount === 3) return "three-grid";
+  return "four-grid";
+}
+
+/**
  * 소스들을 레이아웃에 맞게 배치
+ * full 레이아웃 + 소스 2개 이상 시 자동으로 split/three-grid/four-grid로 분할해 모든 소스가 보이도록 함
  */
 export function arrangeSourcesInLayout(
   layout: LayoutType,
@@ -93,8 +107,9 @@ export function arrangeSourcesInLayout(
   width: number;
   height: number;
 }> {
-  const grid = getLayoutGrid(layout, canvasWidth, canvasHeight);
   const visibleSources = sources.filter((s) => s.source.isVisible);
+  const effectiveLayout = getEffectiveLayout(layout, visibleSources.length);
+  const grid = getLayoutGrid(effectiveLayout, canvasWidth, canvasHeight);
 
   return visibleSources.map((item, index) => {
     const cellIndex = Math.min(index, grid.cells.length - 1);

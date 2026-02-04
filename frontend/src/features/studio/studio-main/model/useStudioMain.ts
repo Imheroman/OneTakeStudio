@@ -47,6 +47,13 @@ import {
   createLocalTracks,
   Track,
 } from "livekit-client";
+import {
+  arrangeSourcesInLayout,
+  toNormalizedTransform,
+  toPixelTransform,
+  type NormalizedTransform,
+  type PixelTransform,
+} from "@/shared/lib/canvas";
 
 const ApiResponseSceneSchema = z.object({
   success: z.boolean(),
@@ -58,14 +65,8 @@ export type GetPreviewStreamRef = {
   current: (() => MediaStream | null) | null;
 };
 
-/** 프리뷰 캔버스 내 소스별 위치·크기·레이어(드래그/리사이즈/z-order용) */
-export interface SourceTransform {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  zIndex: number;
-}
+/** 프리뷰 캔버스 내 소스별 위치·크기·레이어. 저장/동기화는 0~1 정규화 좌표(Virtual Canvas 대비). */
+export type SourceTransform = NormalizedTransform;
 
 export function useStudioMain(
   studioId: string,
@@ -592,6 +593,7 @@ export function useStudioMain(
       const elements = activeScene.layout?.elements;
       const rawElements = Array.isArray(elements) ? elements : [];
       const nextSources = layoutElementsToSources(rawElements);
+      const { width: stageW, height: stageH } = stageSize;
       const nextTransforms: Record<string, SourceTransform> = {};
       rawElements.forEach((e, i) => {
         if (e == null || typeof e !== "object" || !("id" in e)) return;
@@ -600,13 +602,17 @@ export function useStudioMain(
         const defaultZ = rawElements.length - 1 - i;
         if (t != null && typeof t === "object" && "x" in t) {
           const tt = t as Record<string, unknown>;
-          nextTransforms[id] = {
+          const raw: PixelTransform = {
             x: Number(tt.x) || 0,
             y: Number(tt.y) || 0,
             width: Number(tt.width) || 0,
             height: Number(tt.height) || 0,
             zIndex: Number(tt.zIndex) ?? defaultZ,
           };
+          nextTransforms[id] =
+            raw.width > 1 || raw.height > 1
+              ? toNormalizedTransform(raw, stageW, stageH)
+              : raw;
         }
       });
       setSources(nextSources);
@@ -614,7 +620,7 @@ export function useStudioMain(
       setSourceTransforms(nextTransforms);
       setHasUnsavedChanges(false);
     }
-  }, [previewSceneId, activeScene, layoutElementsToSources]);
+  }, [previewSceneId, activeScene, layoutElementsToSources, stageSize]);
 
   const scenesForPanel: Scene[] = useMemo(() => {
     const list = studio?.scenes ?? [];
@@ -699,26 +705,50 @@ export function useStudioMain(
   );
   useEffect(() => {
     if (displaySources.length === 0) return;
+    const { width: stageWidth, height: stageHeight } = stageSize;
     setSourceTransforms((prev) => {
-      const next = { ...prev };
+      const sorted = [...displaySources].sort(
+        (a, b) =>
+          (prev[a.id]?.zIndex ?? 0) - (prev[b.id]?.zIndex ?? 0)
+      );
+      const arranged = arrangeSourcesInLayout(
+        currentLayout,
+        sorted.map((s, i) => ({ source: s, index: i })),
+        stageWidth,
+        stageHeight
+      );
+      const next: Record<string, SourceTransform> = { ...prev };
       displaySources.forEach((s, i) => {
         const z = displaySources.length - 1 - i;
         const current = prev[s.id];
+        const cell = arranged[i];
         if (current != null && current.width > 0 && current.height > 0) {
           next[s.id] = { ...current, zIndex: z };
+        } else if (cell) {
+          next[s.id] = toNormalizedTransform(
+            {
+              x: cell.x,
+              y: cell.y,
+              width: cell.width,
+              height: cell.height,
+              zIndex: z,
+            },
+            stageWidth,
+            stageHeight
+          );
         } else {
           next[s.id] = {
-            x: current?.x ?? 0,
-            y: current?.y ?? 0,
-            width: current?.width ?? 0,
-            height: current?.height ?? 0,
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
             zIndex: z,
           };
         }
       });
       return next;
     });
-  }, [displaySourceOrderKey, displaySources]);
+  }, [displaySourceOrderKey, displaySources, currentLayout, stageSize]);
 
   // LiveKit 연결 및 송출 시작
   const getPreviewStreamRef = options?.getPreviewStreamRef;
@@ -833,6 +863,14 @@ export function useStudioMain(
         return;
       }
 
+      // 스테이지에 올라간 소스가 없으면 송출 차단 (빈 캔버스 송출 방지)
+      const onStageIds = onStageSourceIds;
+      if (!onStageIds.length) {
+        setPublishError("스테이지에 소스를 추가한 뒤 송출을 시작해주세요.");
+        goLiveInProgressRef.current = false;
+        return;
+      }
+
       try {
         setIsGoingLive(true);
         setPublishError(null);
@@ -890,24 +928,97 @@ export function useStudioMain(
             !source.isRemote &&
             displaySourceIds.includes(source.id)
           ) {
-            await unpublishTrack(source.id);
+            // keepTrackAlive: 캔버스가 아직 이 스트림으로 그리므로 track.stop() 하지 않음
+            await unpublishTrack(source.id, { keepTrackAlive: true });
           }
         }
 
-        // unpublish 반영·캡처 레이어 갱신 대기 (레이스 완화)
-        await waitForFrames(2);
+        // unpublish 반영·Room 상태 전파 대기 (레이스 완화)
+        await new Promise((r) => setTimeout(r, 120));
+        await waitForFrames(3);
 
         // Phase 1: 캡처용 레이어를 명시적으로 1회 그린 뒤 스트림 획득 (화면공유 포함)
         await requestCaptureDrawRef?.current?.();
+        // 화면공유가 스테이지에 있으면 video 엘리먼트 첫 프레임 반영을 위해 추가 대기
+        const hasScreenOnStage = sources.some(
+          (s) =>
+            s.type === "screen" &&
+            !s.isRemote &&
+            displaySourceIds.includes(s.id)
+        );
+        if (hasScreenOnStage) {
+          await new Promise((r) => setTimeout(r, 200));
+          await requestCaptureDrawRef?.current?.();
+        }
         const canvasStream = getPreviewStreamRef?.current?.();
         if (canvasStream) {
           const videoTracks = canvasStream.getVideoTracks();
           if (videoTracks.length > 0) {
-            await roomToUse.localParticipant.publishTrack(videoTracks[0], {
+            const track = videoTracks[0];
+            const settings = track.getSettings();
+            console.log(
+              "[GoLive] Virtual Canvas Stage 스트림:",
+              settings.width,
+              "x",
+              settings.height,
+              "@",
+              settings.frameRate,
+              "fps"
+            );
+            // Virtual Canvas Stage 해상도 검증 (720p/1080p만 허용)
+            const expectedResolutions = [
+              { w: 1280, h: 720 },
+              { w: 1920, h: 1080 },
+            ];
+            const isValidResolution = expectedResolutions.some(
+              (r) =>
+                Math.abs((settings.width ?? 0) - r.w) < 10 &&
+                Math.abs((settings.height ?? 0) - r.h) < 10
+            );
+            if (!isValidResolution) {
+              console.warn(
+                "[GoLive] 경고: Virtual Canvas Stage 해상도가 예상과 다릅니다:",
+                settings.width,
+                "x",
+                settings.height,
+                "(예상: 1280x720 또는 1920x1080)"
+              );
+            }
+            await roomToUse.localParticipant.publishTrack(track, {
               name: "canvas",
               source: Track.Source.Camera,
             });
-            console.log("Published Konva canvas video track");
+            console.log("[GoLive] Virtual Canvas Stage 트랙 publish 완료");
+            // 백스테이지(화면공유 등)가 송출되지 않도록: 캔버스 외 비디오 트랙은 모두 unpublish
+            const canvasTrackName = "canvas";
+            const videoPubs = Array.from(
+              roomToUse.localParticipant.trackPublications.values()
+            ).filter((p) => p.kind === "video");
+            console.log(
+              "[GoLive] 현재 비디오 트랙 수:",
+              videoPubs.length,
+              videoPubs.map((p) => p.trackName)
+            );
+            for (const pub of videoPubs) {
+              if (pub.trackName !== canvasTrackName && pub.track) {
+                await roomToUse.localParticipant.unpublishTrack(pub.track);
+                console.log("[GoLive] 비캔버스 비디오 트랙 제거:", pub.trackName);
+              }
+            }
+            // 최종 확인: 비디오 트랙이 "canvas" 하나만 남았는지 검증
+            const finalVideoPubs = Array.from(
+              roomToUse.localParticipant.trackPublications.values()
+            ).filter((p) => p.kind === "video");
+            if (finalVideoPubs.length !== 1 || finalVideoPubs[0].trackName !== canvasTrackName) {
+              console.error(
+                "[GoLive] 오류: Virtual Canvas Stage 외 비디오 트랙이 남아있습니다:",
+                finalVideoPubs.map((p) => p.trackName)
+              );
+            } else {
+              console.log("[GoLive] 검증 완료: Virtual Canvas Stage 트랙만 남음");
+            }
+            // Egress가 단일 트랙만 받도록 추가 대기 (서버 반영 시간)
+            await new Promise((r) => setTimeout(r, 300));
           }
         } else {
           console.warn("Canvas stream not available, falling back to camera");
@@ -1278,17 +1389,29 @@ export function useStudioMain(
   );
 
   const setSourceTransform = useCallback(
-    (sourceId: string, partial: Partial<SourceTransform>, broadcast = true) => {
+    (
+      sourceId: string,
+      partial: Partial<PixelTransform>,
+      broadcast = true
+    ) => {
+      const { width: w, height: h } = stageSize;
       setSourceTransforms((prev) => {
         const current = prev[sourceId];
-        const next: SourceTransform = {
-          x: partial.x ?? current?.x ?? 0,
-          y: partial.y ?? current?.y ?? 0,
-          width: partial.width ?? current?.width ?? 0,
-          height: partial.height ?? current?.height ?? 0,
-          zIndex: partial.zIndex ?? current?.zIndex ?? 0,
+        const currentPixel = current
+          ? toPixelTransform(current, w, h)
+          : { x: 0, y: 0, width: 0, height: 0, zIndex: 0 };
+        const mergedPixel: PixelTransform = {
+          x: partial.x ?? currentPixel.x,
+          y: partial.y ?? currentPixel.y,
+          width: partial.width ?? currentPixel.width,
+          height: partial.height ?? currentPixel.height,
+          zIndex: partial.zIndex ?? currentPixel.zIndex,
         };
-        // 브로드캐스트 (연결된 모든 사용자가 공유)
+        const next: SourceTransform = toNormalizedTransform(
+          mergedPixel,
+          w,
+          h
+        );
         if (broadcast && isStateSyncConnected) {
           broadcastSourceTransform(sourceId, next);
         }
@@ -1296,7 +1419,7 @@ export function useStudioMain(
       });
       setHasUnsavedChanges(true);
     },
-    [isStateSyncConnected, broadcastSourceTransform]
+    [isStateSyncConnected, broadcastSourceTransform, stageSize]
   );
 
   const handleAddToStage = useCallback(
@@ -1311,34 +1434,10 @@ export function useStudioMain(
         broadcastState("SOURCE_ADDED_TO_STAGE", { sourceId });
       }
 
-      if (!source || !(source.type === "video" || source.type === "screen"))
-        return;
-      const { width: stageWidth, height: stageHeight } = stageSize;
-      if (source.type === "video") {
-        setSourceTransform(sourceId, {
-          x: stageWidth * 0.75,
-          y: stageHeight * 0.75,
-          width: stageWidth * 0.25,
-          height: stageHeight * 0.25,
-          zIndex: 0,
-        });
-      } else if (source.type === "screen") {
-        setSourceTransform(sourceId, {
-          x: 0,
-          y: 0,
-          width: stageWidth,
-          height: stageHeight,
-          zIndex: 0,
-        });
-      }
+      // 초기 위치는 레이아웃 effect가 자동으로 할당하도록 함 (정규화 좌표, UI Stage 가시 영역 내)
+      // handleAddToStage에서는 transform을 설정하지 않음 → displaySourceOrderKey effect가 레이아웃 셀 기준으로 설정
     },
-    [
-      sources,
-      stageSize,
-      setSourceTransform,
-      isStateSyncConnected,
-      broadcastState,
-    ]
+    [sources, isStateSyncConnected, broadcastState]
   );
 
   const handleBringSourceToFront = useCallback(

@@ -275,6 +275,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const {
     getStream: getSourceStream,
     streamIds: availableStreamIds,
+    streamIdsKey,
     streamsMap,
   } = useSourceStreams(sources, {
     isVideoEnabled,
@@ -390,6 +391,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 layout={currentLayout}
                 sources={displaySources}
                 availableStreamIds={availableStreamIds}
+                streamIdsKey={streamIdsKey}
+                isStreaming={isPublishing}
                 isVideoEnabled={isVideoEnabled}
                 isAudioEnabled={isAudioEnabled}
                 isEditMode={canEdit}

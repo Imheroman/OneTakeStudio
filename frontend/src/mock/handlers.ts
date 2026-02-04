@@ -46,7 +46,7 @@ let favorites: Favorite[] = [
 const MAX_FAVORITES = 10;
 
 // 녹화 상태 (MSW 메모리)
-let recordingState: {
+const recordingState: {
   active: { studioId: number; recordingId: string } | null;
   list: {
     recordingId: string;
@@ -76,7 +76,7 @@ interface Channel {
 }
 
 // 초기 채널 데이터
-let channels: Channel[] = [
+const channels: Channel[] = [
   {
     id: "channel_1",
     platform: "youtube",
