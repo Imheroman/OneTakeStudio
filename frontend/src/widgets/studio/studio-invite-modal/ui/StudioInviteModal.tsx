@@ -97,7 +97,7 @@ export function StudioInviteModal({
     apiClient
       .get(
         `/api/favorites/search?q=${encodeURIComponent(searchQuery)}`,
-        UserSearchResponseSchema,
+        UserSearchResponseSchema
       )
       .then((res) => {
         const list = (res.users ?? []).map(fromSearch);
@@ -137,7 +137,7 @@ export function StudioInviteModal({
     const results: { email: string; ok: boolean }[] = [];
     for (const email of emails) {
       try {
-        await inviteStudioMember(studioId, { email, role: "GUEST" });
+        await inviteStudioMember(studioId, { email, role: "MANAGER" });
         results.push({ email, ok: true });
       } catch (error: any) {
         console.error(`[Invite] ${email} 초대 실패:`, error);
@@ -205,7 +205,7 @@ export function StudioInviteModal({
                       "w-full text-left px-2 py-1.5 rounded text-sm",
                       selectedEmails.has(u.email)
                         ? "bg-indigo-900/50 text-white"
-                        : "text-gray-200 hover:bg-gray-700",
+                        : "text-gray-200 hover:bg-gray-700"
                     )}
                   >
                     {u.nickname} ({u.email})
@@ -232,7 +232,7 @@ export function StudioInviteModal({
                       "w-full text-left px-2 py-1.5 rounded text-sm",
                       selectedEmails.has(u.email)
                         ? "bg-indigo-900/50 text-white"
-                        : "text-gray-200 hover:bg-gray-700",
+                        : "text-gray-200 hover:bg-gray-700"
                     )}
                   >
                     {u.nickname} ({u.email})
@@ -246,7 +246,7 @@ export function StudioInviteModal({
             <p
               className={cn(
                 "text-sm",
-                message.type === "ok" ? "text-green-400" : "text-red-400",
+                message.type === "ok" ? "text-green-400" : "text-red-400"
               )}
             >
               {message.text}

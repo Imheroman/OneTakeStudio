@@ -1,6 +1,6 @@
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios from "axios";
 import { z, ZodTypeAny } from "zod";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { isNetworkError } from "@/shared/lib/error-utils";
 
 // 1. MSA 백엔드 주소 설정
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -81,19 +81,14 @@ export const apiClient = {
           throw new Error("API 응답 검증 실패: 알 수 없는 오류");
         }
       })
-      .catch((error: any) => {
-        // 네트워크 에러 처리
-        if (
-          error.code === "ERR_NETWORK" ||
-          error.message?.includes("Network Error")
-        ) {
+      .catch((error: unknown) => {
+        if (isNetworkError(error)) {
           const networkError = new Error(
             "네트워크 오류가 발생했습니다. 백엔드 서버가 실행 중인지 확인해주세요.",
-          );
-          (networkError as any).isNetworkError = true;
+          ) as Error & { isNetworkError?: boolean };
+          networkError.isNetworkError = true;
           throw networkError;
         }
-        // 기존 에러는 그대로 전달
         throw error;
       });
   },
@@ -215,24 +210,4 @@ export const apiClient = {
   },
 };
 
-// 3. 요청 인터셉터는 app 레이어(ApiAuthProvider)에서 등록
-// 4. 응답 인터셉터: 공통 에러 핸들링
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    const status = error.response?.status;
-
-    if (status === 401) {
-      // 토큰 만료 시 로그아웃 처리 및 로그인 페이지로 리다이렉트
-      console.error("[Auth] 인증이 만료되었습니다. 로그아웃 처리합니다.");
-      useAuthStore.getState().logout();
-
-      // 브라우저 환경에서만 리다이렉트
-      if (typeof window !== "undefined") {
-        window.location.href = "/login";
-      }
-    }
-
-    return Promise.reject(error);
-  },
-);
+// 3. 요청·응답 인터셉터는 app 레이어(ApiAuthProvider)에서 등록 (FSD: shared는 stores 미참조)

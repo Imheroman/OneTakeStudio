@@ -1,16 +1,17 @@
 /**
  * 스튜디오 멤버 API
- * 백엔드 ApiResponse<T> 형식: { resultCode?, success, message?, data }
+ * FSD: shared는 entities 미참조. dto/studio 사용.
  */
 import { z } from "zod";
 import { apiClient } from "./client";
 import {
   StudioMemberResponseSchema,
+  InviteMemberRequestSchema,
   InviteResponseSchema,
-  type StudioMemberResponse,
-  type InviteMemberRequest,
-  type InviteResponse,
-} from "@/entities/studio/model";
+  type StudioMemberResponseDto,
+  type InviteMemberRequestDto,
+  type InviteResponseDto,
+} from "./dto/studio";
 
 const ApiResponseMembersSchema = z.object({
   resultCode: z.string().optional(),
@@ -34,42 +35,42 @@ const ApiResponseInviteListSchema = z.object({
 });
 
 export async function getStudioMembers(
-  studioId: string | number,
-): Promise<StudioMemberResponse[]> {
+  studioId: string | number
+): Promise<StudioMemberResponseDto[]> {
   const res = await apiClient.get(
     `/api/studios/${studioId}/members`,
-    ApiResponseMembersSchema,
+    ApiResponseMembersSchema
   );
   return Array.isArray(res.data) ? res.data : [];
 }
 
 export async function inviteStudioMember(
   studioId: string | number,
-  body: InviteMemberRequest,
-): Promise<InviteResponse> {
+  body: InviteMemberRequestDto
+): Promise<InviteResponseDto> {
   const res = await apiClient.post(
     `/api/studios/${studioId}/members/invite`,
     ApiResponseInviteSchema,
-    body,
+    body
   );
   return res.data;
 }
 
 export async function kickStudioMember(
   studioId: string | number,
-  memberId: number,
+  memberId: number
 ): Promise<void> {
   await apiClient.post(
     `/api/studios/${studioId}/members/${memberId}/kick`,
-    z.object({ success: z.boolean(), message: z.string().optional() }),
+    z.object({ success: z.boolean(), message: z.string().optional() })
   );
 }
 
 export async function updateMemberRole(
   studioId: string | number,
   memberId: number,
-  role: "MANAGER" | "GUEST",
-): Promise<StudioMemberResponse> {
+  role: "ADMIN" | "MEMBER" | "MANAGER"
+): Promise<StudioMemberResponseDto> {
   const ApiResponseMemberSchema = z.object({
     resultCode: z.string().optional(),
     success: z.boolean(),
@@ -79,23 +80,22 @@ export async function updateMemberRole(
   const res = await apiClient.patch(
     `/api/studios/${studioId}/members/${memberId}`,
     ApiResponseMemberSchema,
-    { role },
+    { role }
   );
   return res.data;
 }
 
-/** 스튜디오 초대 대기 목록 — GET /api/studios/{studioId}/invites */
 export async function getStudioInvites(
-  studioId: string | number,
-): Promise<InviteResponse[]> {
+  studioId: string | number
+): Promise<InviteResponseDto[]> {
   try {
     const res = await apiClient.get(
       `/api/studios/${studioId}/invites`,
-      ApiResponseInviteListSchema,
+      ApiResponseInviteListSchema
     );
     return Array.isArray(res.data) ? res.data : [];
   } catch (error: unknown) {
-    // 403 에러는 GUEST 권한으로 조회 불가 - 빈 배열 반환 (정상 동작)
+    // 403 에러 시 빈 배열 반환 (정상 동작)
     const axiosError = error as { response?: { status?: number } };
     if (axiosError?.response?.status === 403) {
       return [];
@@ -104,10 +104,9 @@ export async function getStudioInvites(
   }
 }
 
-/** 초대 취소 — DELETE /api/studios/{studioId}/invites/{inviteId} */
 export async function cancelStudioInvite(
   studioId: string | number,
-  inviteId: string,
+  inviteId: string
 ): Promise<void> {
   await apiClient.delete(
     `/api/studios/${studioId}/invites/${inviteId}`,
@@ -115,6 +114,6 @@ export async function cancelStudioInvite(
       resultCode: z.string().optional(),
       success: z.boolean(),
       message: z.string().optional(),
-    }),
+    })
   );
 }

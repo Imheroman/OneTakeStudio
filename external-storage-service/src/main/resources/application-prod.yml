@@ -1,0 +1,37 @@
+# =====================================================
+# Production Configuration - external-storage-service
+# 운영 환경에서 환경변수로 오버라이드
+# =====================================================
+
+spring:
+  datasource:
+    url: ${STORAGE_DB_URL:jdbc:mysql://localhost:3306/storage_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${STORAGE_DB_USERNAME}
+    password: ${STORAGE_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  h2:
+    console:
+      enabled: false
+
+# Storage 설정
+storage:
+  base-path: ${STORAGE_BASE_PATH:/data/storage/files}
+  chunk-path: ${STORAGE_CHUNK_PATH:/data/storage/chunks}
+  base-url: ${STORAGE_BASE_URL}
+
+# Security 설정
+security:
+  enabled: ${SECURITY_ENABLED:true}
+  api-key: ${API_KEY}
+
+# Logging
+logging:
+  level:
+    com.onetake.storage: INFO
+    org.hibernate.SQL: WARN

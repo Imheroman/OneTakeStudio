@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/destinations/internal/**",
+                                "/api/ai/webhook",  // AI 서비스 Webhook (인증 없이)
                                 "/actuator/health",
                                 "/error",
                                 "/*.html",

@@ -2,7 +2,9 @@ package com.onetake.media.chat.integration;
 
 import com.onetake.media.chat.dto.ChatMessageRequest;
 import com.onetake.media.chat.entity.ChatPlatform;
+import com.onetake.media.chat.entity.PlatformToken;
 import com.onetake.media.chat.service.ChatService;
+import com.onetake.media.chat.service.OAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -29,25 +32,26 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatIntegrationService {
 
     private final ChatService chatService;
-    private final YouTubeChatClient youTubeChatClient;
-    private final TwitchChatClient twitchChatClient;
-    private final ChzzkChatClient chzzkChatClient;
+    private final OAuthService oAuthService;
+    private final YouTubeChatClientFactory youTubeChatClientFactory;
+    private final ChzzkChatClientFactory chzzkChatClientFactory;
 
     // 스튜디오별 활성 연동 상태: studioId -> (platform -> client)
     private final Map<Long, Map<ChatPlatform, ExternalChatClient>> activeIntegrations = new ConcurrentHashMap<>();
 
     /**
-     * 플랫폼 채팅 연동 시작
+     * 플랫폼 채팅 연동 시작 (기존 방식 - credentials 직접 전달)
      */
     public void startIntegration(Long studioId, PlatformCredentials credentials) {
-        ExternalChatClient client = getClientForPlatform(credentials.getPlatform());
+        // 기존 연동이 있으면 먼저 종료
+        stopIntegration(studioId, credentials.getPlatform());
+
+        // 새 클라이언트 인스턴스 생성 (스튜디오별 독립)
+        ExternalChatClient client = createClientForPlatform(credentials.getPlatform());
         if (client == null) {
             log.warn("Unsupported platform: {}", credentials.getPlatform());
             return;
         }
-
-        // 기존 연동이 있으면 먼저 종료
-        stopIntegration(studioId, credentials.getPlatform());
 
         // 새 연동 시작
         client.connect(credentials);
@@ -59,6 +63,47 @@ public class ChatIntegrationService {
 
         log.info("Chat integration started: studioId={}, platform={}",
                 studioId, credentials.getPlatform());
+    }
+
+    /**
+     * 플랫폼 채팅 연동 시작 (DB 토큰 사용)
+     */
+    public void startIntegrationWithStoredToken(Long userId, Long studioId, ChatPlatform platform) {
+        // DB에서 유효한 토큰 조회 (만료 임박 시 자동 갱신)
+        PlatformToken token = oAuthService.getValidToken(userId, platform);
+
+        PlatformCredentials credentials = buildCredentialsFromToken(token, studioId);
+        startIntegration(studioId, credentials);
+    }
+
+    /**
+     * PlatformToken → PlatformCredentials 변환
+     */
+    private PlatformCredentials buildCredentialsFromToken(PlatformToken token, Long studioId) {
+        return switch (token.getPlatform()) {
+            case YOUTUBE -> PlatformCredentials.builder()
+                    .platform(ChatPlatform.YOUTUBE)
+                    .studioId(studioId)
+                    .accessToken(token.getAccessToken())
+                    .refreshToken(token.getRefreshToken())
+                    .liveChatId(token.getLiveChatId())
+                    .broadcastId(token.getBroadcastId())
+                    .build();
+            case CHZZK -> PlatformCredentials.builder()
+                    .platform(ChatPlatform.CHZZK)
+                    .studioId(studioId)
+                    .chzzkChannelId(token.getChannelId())
+                    .build();
+            default -> throw new IllegalArgumentException("Unsupported platform: " + token.getPlatform());
+        };
+    }
+
+    /**
+     * 토큰 연동 여부 확인
+     */
+    public boolean hasValidToken(Long userId, ChatPlatform platform) {
+        Optional<PlatformToken> token = oAuthService.getToken(userId, platform);
+        return token.isPresent() && !token.get().isExpired();
     }
 
     /**
@@ -139,7 +184,7 @@ public class ChatIntegrationService {
                 try {
                     List<ChatMessageRequest> messages = client.fetchNewMessages();
                     for (ChatMessageRequest message : messages) {
-                        chatService.receiveExternalMessage(message);
+                        chatService.receiveExternalMessage(studioId, message);
                     }
 
                     if (!messages.isEmpty()) {
@@ -154,11 +199,14 @@ public class ChatIntegrationService {
         }
     }
 
-    private ExternalChatClient getClientForPlatform(ChatPlatform platform) {
+    /**
+     * 플랫폼별 새 클라이언트 인스턴스 생성
+     * 팩토리를 통해 매번 새 인스턴스 생성 (스튜디오별 독립 상태)
+     */
+    private ExternalChatClient createClientForPlatform(ChatPlatform platform) {
         return switch (platform) {
-            case YOUTUBE -> youTubeChatClient;
-            case TWITCH -> twitchChatClient;
-            case CHZZK -> chzzkChatClient;
+            case YOUTUBE -> youTubeChatClientFactory.create();
+            case CHZZK -> chzzkChatClientFactory.create();
             default -> null;
         };
     }

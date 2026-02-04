@@ -1,55 +1,21 @@
 /**
  * 라이브러리(녹화 목록) API — Core Service /api/library/recordings
- * 백엔드 ApiResponse<RecordingListResponse> 형식에 맞춤.
+ * FSD: shared는 entities 미참조. dto/library 사용.
  */
-import { z } from "zod";
 import { apiClient } from "./client";
-import type { Video, VideoStatus } from "@/entities/video/model";
-
-// 백엔드 RecordingStatus
-const RecordingStatusSchema = z.enum([
-  "RECORDING",
-  "PROCESSING",
-  "READY",
-  "DELETED",
-  "FAILED",
-]);
-
-const RecordingSchema = z.object({
-  recordingId: z.string(),
-  studioId: z.number(),
-  userId: z.string(),
-  title: z.string(),
-  description: z.string().nullable().optional(),
-  thumbnailUrl: z.string().nullable().optional(),
-  s3Url: z.string().nullable().optional(),
-  fileSize: z.number().nullable().optional(),
-  durationSeconds: z.number().nullable().optional(),
-  status: RecordingStatusSchema,
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
-const PaginationInfoSchema = z.object({
-  page: z.number(),
-  size: z.number(),
-  totalElements: z.number(),
-  totalPages: z.number(),
-  hasNext: z.boolean(),
-  hasPrevious: z.boolean(),
-});
-
-const RecordingListResponseSchema = z.object({
-  recordings: z.array(RecordingSchema),
-  pagination: PaginationInfoSchema,
-});
-
-const ApiResponseDataSchema = z.object({
-  resultCode: z.string().optional(),
-  success: z.boolean(),
-  message: z.string().optional(),
-  data: RecordingListResponseSchema,
-});
+import {
+  ApiResponseDataSchema,
+  ApiResponseRecordingSchema,
+  ApiResponseDownloadUrlSchema,
+  ApiResponseStorageSchema,
+  type RecordingDto,
+  type RecordingStatusDto,
+  type PaginationInfoDto,
+  type LibraryVideoDto,
+  type LibraryVideoStatusDto,
+  type VideoDetailFromApiDto,
+  type StorageDataFromApiDto,
+} from "./dto/library";
 
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null || seconds < 0) return "0:00";
@@ -63,8 +29,8 @@ function formatDuration(seconds: number | null | undefined): string {
 }
 
 function mapRecordingStatus(
-  status: z.infer<typeof RecordingStatusSchema>
-): VideoStatus {
+  status: RecordingStatusDto
+): LibraryVideoStatusDto {
   switch (status) {
     case "READY":
       return "Saved";
@@ -78,13 +44,8 @@ function mapRecordingStatus(
   }
 }
 
-function recordingToVideo(
-  r: z.infer<typeof RecordingSchema>
-): Video {
-  const date =
-    r.createdAt != null
-      ? r.createdAt.slice(0, 10)
-      : "";
+function recordingToVideo(r: RecordingDto): LibraryVideoDto {
+  const date = r.createdAt != null ? r.createdAt.slice(0, 10) : "";
   return {
     id: r.recordingId,
     title: r.title || "제목 없음",
@@ -104,12 +65,13 @@ export type GetRecordingsParams = {
 
 /**
  * 녹화 목록 조회 — 백엔드 /api/library/recordings
- * 응답을 Video[] 및 total로 변환하여 반환.
  */
-export async function getRecordings(params: GetRecordingsParams = {}): Promise<{
-  videos: Video[];
+export async function getRecordings(
+  params: GetRecordingsParams = {}
+): Promise<{
+  videos: LibraryVideoDto[];
   total: number;
-  pagination: z.infer<typeof PaginationInfoSchema>;
+  pagination: PaginationInfoDto;
 }> {
   const { page = 0, size = 20, studioId } = params;
   const searchParams = new URLSearchParams({
@@ -130,45 +92,12 @@ export async function getRecordings(params: GetRecordingsParams = {}): Promise<{
   };
 }
 
-// --- 상세 조회 / 다운로드 URL ---
-
-const ApiResponseRecordingSchema = z.object({
-  resultCode: z.string().optional(),
-  success: z.boolean(),
-  message: z.string().optional(),
-  data: RecordingSchema,
-});
-
-const DownloadUrlResponseSchema = z.object({
-  downloadUrl: z.string(),
-  expiresIn: z.number().optional(),
-});
-
-const ApiResponseDownloadUrlSchema = z.object({
-  resultCode: z.string().optional(),
-  success: z.boolean(),
-  message: z.string().optional(),
-  data: DownloadUrlResponseSchema,
-});
-
-export type VideoDetailFromApi = {
-  id: string;
-  title: string;
-  date: string;
-  duration: string;
-  description?: string | null;
-  videoUrl?: string | null;
-  thumbnailUrl?: string | null;
-  clips?: Array<{ id: string; title: string; duration?: string; url?: string | null; thumbnailUrl?: string | null; status?: string }>;
-};
-
 /**
  * 녹화 상세 조회 — GET /api/library/recordings/{recordingId}
- * VideoDetail 형태로 변환하여 반환.
  */
 export async function getRecordingDetail(
   recordingId: string
-): Promise<VideoDetailFromApi> {
+): Promise<VideoDetailFromApiDto> {
   const response = await apiClient.get(
     `/api/library/recordings/${recordingId}`,
     ApiResponseRecordingSchema
@@ -189,7 +118,6 @@ export async function getRecordingDetail(
 
 /**
  * 다운로드 URL 조회 — GET /api/library/recordings/{recordingId}/download
- * data.downloadUrl 반환.
  */
 export async function getRecordingDownloadUrl(
   recordingId: string
@@ -201,34 +129,11 @@ export async function getRecordingDownloadUrl(
   return response.data.downloadUrl;
 }
 
-// --- 스토리지 ---
-
-const StorageResponseSchema = z.object({
-  usedBytes: z.number(),
-  limitBytes: z.number(),
-  usedPercentage: z.number().optional(),
-  usedFormatted: z.string().optional(),
-  limitFormatted: z.string().optional(),
-});
-
-const ApiResponseStorageSchema = z.object({
-  resultCode: z.string().optional(),
-  success: z.boolean(),
-  message: z.string().optional(),
-  data: StorageResponseSchema,
-});
-
-export type StorageDataFromApi = {
-  used: number;
-  total: number;
-  available?: number;
-  videoUsage?: number;
-  assetUsage?: number;
-};
+export type VideoDetailFromApi = VideoDetailFromApiDto;
+export type StorageDataFromApi = StorageDataFromApiDto;
 
 /**
  * 스토리지 용량 조회 — GET /api/library/storage
- * used/total은 GB 단위로 변환하여 반환 (프론트 표시용).
  */
 export async function getStorage(): Promise<StorageDataFromApi> {
   const response = await apiClient.get(

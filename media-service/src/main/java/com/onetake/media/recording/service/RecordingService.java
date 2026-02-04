@@ -1,5 +1,6 @@
 package com.onetake.media.recording.service;
 
+import com.onetake.media.chat.service.CommentCounterService;
 import com.onetake.media.global.config.RedisStreamConfig;
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
@@ -35,24 +36,26 @@ public class RecordingService {
     private final StreamSessionRepository streamSessionRepository;
     private final StringRedisTemplate redisTemplate;
     private final LiveKitEgressService liveKitEgressService;
+    private final CommentCounterService commentCounterService;
+    private final ChunkedUploadService chunkedUploadService;
 
     @Transactional
-    public RecordingResponse startRecording(Long userId, RecordingStartRequest request) {
+    public RecordingResponse startRecording(Long userId, Long studioId, RecordingStartRequest request) {
         // 이미 녹화 중인지 확인
-        if (recordingSessionRepository.existsByStudioIdAndStatus(request.getStudioId(), RecordingStatus.RECORDING)) {
+        if (recordingSessionRepository.existsByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)) {
             throw new BusinessException(ErrorCode.RECORDING_ALREADY_IN_PROGRESS);
         }
 
         // 활성 스트림 세션 확인
         StreamSession streamSession = streamSessionRepository
-                .findByStudioIdAndStatus(request.getStudioId(), SessionStatus.ACTIVE)
+                .findByStudioIdAndStatus(studioId, SessionStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
 
         // 녹화 세션 생성
-        String fileName = generateFileName(request.getStudioId(), request.getOutputFormat());
+        String fileName = generateFileName(studioId, request.getOutputFormat());
 
         RecordingSession recordingSession = RecordingSession.builder()
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .userId(userId)
                 .streamSessionId(streamSession.getId())
                 .status(RecordingStatus.PENDING)
@@ -65,7 +68,10 @@ public class RecordingService {
 
         recordingSessionRepository.save(recordingSession);
 
-        log.info("Recording started: studioId={}, recordingId={}", request.getStudioId(), recordingSession.getRecordingId());
+        // 분당 댓글 수 집계 시작 (AI 하이라이트 추출용)
+        commentCounterService.startCounting(studioId);
+
+        log.info("Recording started: studioId={}, recordingId={}", studioId, recordingSession.getRecordingId());
 
         return RecordingResponse.from(recordingSession);
     }
@@ -127,7 +133,16 @@ public class RecordingService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
 
         recordingSession.complete(filePath, fileUrl, fileSize, durationSeconds);
+
+        // 외부 EC2 업로드가 활성화된 경우 업로드 대기 상태로 설정
+        if (chunkedUploadService.isUploadEnabled()) {
+            recordingSession.initExternalUpload();
+        }
+
         recordingSessionRepository.save(recordingSession);
+
+        // 분당 댓글 수 저장 (AI 하이라이트 추출용)
+        commentCounterService.saveAndStopCounting(recordingSession.getStudioId(), recordingId);
 
         // Core 서비스에 이벤트 발행 (Redis Streams 사용)
         RecordingStoppedEvent event = RecordingStoppedEvent.builder()
@@ -142,6 +157,16 @@ public class RecordingService {
                 .build();
 
         publishRecordingStoppedEvent(event);
+
+        // 외부 EC2 서버로 비동기 업로드 시작
+        if (chunkedUploadService.isUploadEnabled()) {
+            chunkedUploadService.uploadFileAsync(filePath, recordingId)
+                    .thenAccept(externalUrl -> log.info("External upload completed: recordingId={}, externalUrl={}", recordingId, externalUrl))
+                    .exceptionally(ex -> {
+                        log.error("External upload failed: recordingId={}, error={}", recordingId, ex.getMessage());
+                        return null;
+                    });
+        }
 
         log.info("Recording completed and event published: recordingId={}", recordingId);
     }

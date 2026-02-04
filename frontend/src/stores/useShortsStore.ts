@@ -1,7 +1,4 @@
-// src/stores/useShortsStore.ts
 import { create } from "zustand";
-
-// 타입 정의
 export type ShortStatus = "idle" | "loading" | "completed";
 
 interface ShortItem {

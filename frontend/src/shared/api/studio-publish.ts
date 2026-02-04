@@ -1,52 +1,45 @@
 /**
- * 스튜디오 송출 API (Gateway: /api/publish/**)
- * RTMP 송출 시작/중지/상태 조회
+ * 스튜디오 송출 API (Gateway: /api/v1/media/publish 또는 /api/publish)
+ * FSD: shared는 entities 미참조. dto/publish 사용.
  */
 import { apiClient } from "./client";
 import {
   ApiResponsePublishSchema,
   ApiResponsePublishStatusSchema,
-  type PublishStartRequest,
-  type PublishResponse,
-  type PublishStatusResponse,
-} from "@/entities/publish/model";
+  type PublishStartRequestDto,
+  type PublishResponseDto,
+  type PublishStatusResponseDto,
+} from "./dto/publish";
 
-const PUBLISH_BASE = "/api/publish";
+const PUBLISH_BASE = "/api/v1/media/publish";
 
-/**
- * 송출 시작
- */
 export async function startPublish(
-  body: PublishStartRequest
-): Promise<PublishResponse> {
+  body: PublishStartRequestDto,
+): Promise<PublishResponseDto> {
   const res = await apiClient.post(
     PUBLISH_BASE,
     ApiResponsePublishSchema,
-    body
+    body,
   );
   return res.data;
 }
 
-/**
- * 송출 중지
- */
-export async function stopPublish(studioId: number): Promise<PublishResponse> {
+export async function stopPublish(
+  studioId: number,
+): Promise<PublishResponseDto> {
   const res = await apiClient.post(
     `${PUBLISH_BASE}/stop?studioId=${studioId}`,
-    ApiResponsePublishSchema
+    ApiResponsePublishSchema,
   );
   return res.data;
 }
 
-/**
- * 송출 상태 조회
- */
 export async function getPublishStatus(
-  studioId: number
-): Promise<PublishStatusResponse> {
+  studioId: number,
+): Promise<PublishStatusResponseDto> {
   const res = await apiClient.get(
     `${PUBLISH_BASE}/status?studioId=${studioId}`,
-    ApiResponsePublishStatusSchema
+    ApiResponsePublishStatusSchema,
   );
   return res.data;
 }

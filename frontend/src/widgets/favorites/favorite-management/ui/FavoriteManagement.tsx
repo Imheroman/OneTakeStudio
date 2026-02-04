@@ -22,14 +22,14 @@ export function FavoriteManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Favorites</h1>
+        <h1 className="text-2xl font-bold text-gray-900">팀원</h1>
         <Button
           onClick={() => setIsDialogOpen(true)}
           disabled={isMaxReached}
           className="bg-indigo-600 hover:bg-indigo-700"
         >
           <UserPlus className="h-4 w-4 mr-2" />
-          Invite Member
+          팀원 초대
         </Button>
       </div>
 

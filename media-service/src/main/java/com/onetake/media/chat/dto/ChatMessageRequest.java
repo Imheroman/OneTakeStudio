@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ChatMessageRequest {
 
-    @NotNull(message = "스튜디오 ID는 필수입니다")
-    private Long studioId;
+    @NotBlank(message = "스튜디오 ID는 필수입니다")
+    private String studioId;
 
     @Builder.Default
     private ChatPlatform platform = ChatPlatform.INTERNAL;

@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * 외부 플랫폼 채팅 연동 인터페이스
  *
- * YouTube, Twitch, 치지직 등 외부 플랫폼에서 채팅을 가져오는 클라이언트의 공통 인터페이스
+ * YouTube, 치지직 등 외부 플랫폼에서 채팅을 가져오는 클라이언트의 공통 인터페이스
  */
 public interface ExternalChatClient {
 

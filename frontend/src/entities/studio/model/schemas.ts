@@ -96,6 +96,8 @@ export const SourceSchema = z.object({
 // 스튜디오 스키마 (백엔드 API 응답 형식)
 export const StudioSchema = z.object({
   studioId: z.number(),
+  /** 현재 사용자의 스튜디오 내 역할 (HOST, MANAGER) */
+  myRole: z.enum(["HOST", "MANAGER"]).optional(),
   name: z.string(),
   description: z.string().nullable().optional(),
   thumbnail: z.string().nullable().optional(),
@@ -114,7 +116,7 @@ export const RecentStudioSchema = z.object({
   id: z.number(),
   title: z.string(),
   date: z.string(),
-  role: z.enum(["HOST", "MANAGER", "GUEST"]).optional(),
+  role: z.enum(["HOST", "MANAGER"]).optional(),
 });
 
 // 스튜디오 목록 응답 스키마 (워크스페이스용)
@@ -150,13 +152,13 @@ export const StudioMemberResponseSchema = z.object({
   nickname: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
   profileImageUrl: z.string().nullable().optional(),
-  role: z.enum(["host", "manager", "guest"]),
+  role: z.enum(["host", "manager"]),
   joinedAt: z.string().optional(),
 });
 
 export const InviteMemberRequestSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["MANAGER", "GUEST"]),
+  role: z.enum(["MANAGER"]),
 });
 
 // 백엔드 InviteResponse: inviteeEmail 사용, studioId는 목록 응답에 없을 수 있음
