@@ -37,13 +37,8 @@ export function AddSourceDialog({
   onOpenChange,
   onSelect,
 }: AddSourceDialogProps) {
-  const {
-    videoDevices,
-    audioDevices,
-    isLoading,
-    error,
-    refresh,
-  } = useEnumerateDevices({ enabled: open });
+  const { videoDevices, audioDevices, isLoading, error, refresh } =
+    useEnumerateDevices({ enabled: open });
 
   const [permLoading, setPermLoading] = useState(false);
   const handleRequestPermission = useCallback(async () => {
@@ -102,11 +97,11 @@ export function AddSourceDialog({
                 className={cn(
                   "w-full h-10 justify-start gap-2",
                   "bg-gray-700 border-gray-600 text-gray-200",
-                  "hover:bg-gray-600 hover:border-gray-500",
+                  "hover:bg-gray-600 hover:border-gray-500"
                 )}
                 onClick={() => {
                   onSelect("screen");
-                  onOpenChange(false);
+                  // 화면 공유: 부모에서 publish(선택 창) 완료 후 닫음. 여기서 닫으면 getDisplayMedia 사용자 제스처 손실
                 }}
               >
                 <Monitor className="h-4 w-4 shrink-0" />
@@ -189,7 +184,9 @@ export function AddSourceDialog({
               onClick={handleRequestPermission}
               disabled={permLoading}
             >
-              {permLoading ? "권한 요청 중…" : "카메라·마이크 권한 허용 후 목록 새로고침"}
+              {permLoading
+                ? "권한 요청 중…"
+                : "카메라·마이크 권한 허용 후 목록 새로고침"}
             </Button>
           </div>
         )}

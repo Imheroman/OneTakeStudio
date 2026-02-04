@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { z } from "zod";
@@ -708,8 +714,7 @@ export function useStudioMain(
     const { width: stageWidth, height: stageHeight } = stageSize;
     setSourceTransforms((prev) => {
       const sorted = [...displaySources].sort(
-        (a, b) =>
-          (prev[a.id]?.zIndex ?? 0) - (prev[b.id]?.zIndex ?? 0)
+        (a, b) => (prev[a.id]?.zIndex ?? 0) - (prev[b.id]?.zIndex ?? 0)
       );
       const arranged = arrangeSourcesInLayout(
         currentLayout,
@@ -718,11 +723,20 @@ export function useStudioMain(
         stageHeight
       );
       const next: Record<string, SourceTransform> = { ...prev };
-      displaySources.forEach((s, i) => {
-        const z = displaySources.length - 1 - i;
+      const isPipLayout =
+        displaySources.length === 2 &&
+        displaySources.some((s) => s.type === "screen") &&
+        displaySources.some((s) => s.type === "video");
+      // arranged 순서로 할당 (pip: 화면공유 전체→cell0, 웹캠 작게→cell1)
+      // pip: 웹캠이 오버레이이므로 앞에 보여야 함 → zIndex 역순 (arranged[0]=화면 z0, arranged[1]=웹캠 z1)
+      arranged.forEach((item, i) => {
+        const s = item.source;
+        const z = isPipLayout ? i : displaySources.length - 1 - i;
         const current = prev[s.id];
-        const cell = arranged[i];
-        if (current != null && current.width > 0 && current.height > 0) {
+        const cell = item;
+        const hasValidTransform =
+          current != null && current.width > 0 && current.height > 0;
+        if (hasValidTransform && !isPipLayout) {
           next[s.id] = { ...current, zIndex: z };
         } else if (cell) {
           next[s.id] = toNormalizedTransform(
@@ -1002,20 +1016,28 @@ export function useStudioMain(
             for (const pub of videoPubs) {
               if (pub.trackName !== canvasTrackName && pub.track) {
                 await roomToUse.localParticipant.unpublishTrack(pub.track);
-                console.log("[GoLive] 비캔버스 비디오 트랙 제거:", pub.trackName);
+                console.log(
+                  "[GoLive] 비캔버스 비디오 트랙 제거:",
+                  pub.trackName
+                );
               }
             }
             // 최종 확인: 비디오 트랙이 "canvas" 하나만 남았는지 검증
             const finalVideoPubs = Array.from(
               roomToUse.localParticipant.trackPublications.values()
             ).filter((p) => p.kind === "video");
-            if (finalVideoPubs.length !== 1 || finalVideoPubs[0].trackName !== canvasTrackName) {
+            if (
+              finalVideoPubs.length !== 1 ||
+              finalVideoPubs[0].trackName !== canvasTrackName
+            ) {
               console.error(
                 "[GoLive] 오류: Virtual Canvas Stage 외 비디오 트랙이 남아있습니다:",
                 finalVideoPubs.map((p) => p.trackName)
               );
             } else {
-              console.log("[GoLive] 검증 완료: Virtual Canvas Stage 트랙만 남음");
+              console.log(
+                "[GoLive] 검증 완료: Virtual Canvas Stage 트랙만 남음"
+              );
             }
             // Egress가 단일 트랙만 받도록 추가 대기 (서버 반영 시간)
             await new Promise((r) => setTimeout(r, 300));
@@ -1346,32 +1368,39 @@ export function useStudioMain(
         deviceId: resolvedDeviceId,
         isRemote: false,
       };
+
+      // 화면 공유: getDisplayMedia는 사용자 제스처 직후에 호출되어야 함 → publish를 먼저 수행
+      if (type === "screen" && isLiveKitConnected) {
+        try {
+          const trackSid = await publishScreenTrack(id);
+          if (!trackSid) {
+            console.warn("[StudioMain] 화면 공유 취소 또는 실패");
+            return;
+          }
+          console.log("[StudioMain] 화면 공유 트랙 공유됨:", trackSid);
+        } catch (err) {
+          console.error("[StudioMain] 화면 공유 실패:", err);
+          return;
+        }
+      }
+
       setSources((prev) => [...prev, newSource]);
       setShowAddSourceDialog(false);
-      // 브로드캐스트 (연결된 모든 사용자가 공유)
       if (isStateSyncConnected) {
         broadcastState("SOURCE_ADDED", { source: newSource });
       }
 
-      // LiveKit에 트랙 publish (다른 참가자와 미디어 공유)
-      console.log("[StudioMain] isLiveKitConnected:", isLiveKitConnected);
-      if (isLiveKitConnected) {
+      // LiveKit에 트랙 publish (화면 공유는 위에서 이미 처리)
+      if (isLiveKitConnected && type !== "screen") {
         try {
           if (type === "video") {
             const trackSid = await publishVideoTrack(id, resolvedDeviceId);
-            if (trackSid) {
+            if (trackSid)
               console.log("[StudioMain] 비디오 트랙 공유됨:", trackSid);
-            }
-          } else if (type === "screen") {
-            const trackSid = await publishScreenTrack(id);
-            if (trackSid) {
-              console.log("[StudioMain] 화면 공유 트랙 공유됨:", trackSid);
-            }
           } else if (type === "audio") {
             const trackSid = await publishAudioTrack(id, resolvedDeviceId);
-            if (trackSid) {
+            if (trackSid)
               console.log("[StudioMain] 오디오 트랙 공유됨:", trackSid);
-            }
           }
         } catch (err) {
           console.error("[StudioMain] 미디어 공유 실패:", err);
@@ -1389,11 +1418,7 @@ export function useStudioMain(
   );
 
   const setSourceTransform = useCallback(
-    (
-      sourceId: string,
-      partial: Partial<PixelTransform>,
-      broadcast = true
-    ) => {
+    (sourceId: string, partial: Partial<PixelTransform>, broadcast = true) => {
       const { width: w, height: h } = stageSize;
       setSourceTransforms((prev) => {
         const current = prev[sourceId];
@@ -1407,11 +1432,7 @@ export function useStudioMain(
           height: partial.height ?? currentPixel.height,
           zIndex: partial.zIndex ?? currentPixel.zIndex,
         };
-        const next: SourceTransform = toNormalizedTransform(
-          mergedPixel,
-          w,
-          h
-        );
+        const next: SourceTransform = toNormalizedTransform(mergedPixel, w, h);
         if (broadcast && isStateSyncConnected) {
           broadcastSourceTransform(sourceId, next);
         }
