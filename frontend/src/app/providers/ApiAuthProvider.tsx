@@ -32,7 +32,10 @@ export function ApiAuthProvider() {
           console.error("[Auth] 인증이 만료되었습니다. 로그아웃 처리합니다.");
           useAuthStore.getState().logout();
           if (typeof window !== "undefined") {
-            window.location.href = "/login";
+            const redirect = encodeURIComponent(
+              window.location.pathname || "/workspace"
+            );
+            window.location.href = `/?auth=login&redirect=${redirect}`;
           }
         }
         return Promise.reject(error);

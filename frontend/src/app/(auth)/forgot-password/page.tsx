@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
         </CardContent>
         <CardFooter className="flex justify-center pb-10">
           <Link
-            href="/login"
+            href="/?auth=login"
             className="text-indigo-300 hover:text-indigo-200 font-medium text-sm flex items-center gap-1 hover:underline transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -154,7 +154,7 @@ export default function ForgotPasswordPage() {
 
       <CardFooter className="flex justify-center text-sm text-white/70 pb-10">
         <Link
-          href="/login"
+          href="/?auth=login"
           className="text-indigo-300 hover:text-indigo-200 font-medium flex items-center gap-1 hover:underline transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

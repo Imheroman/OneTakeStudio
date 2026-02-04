@@ -2,12 +2,14 @@
 
 import { memo, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Bell, User, Settings, LogOut, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useShortsStore } from "@/stores/useShortsStore";
-import { useWorkspaceThemeStore, useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import {
+  useWorkspaceThemeStore,
+  useResolvedTheme,
+} from "@/stores/useWorkspaceThemeStore";
 import { Avatar, AvatarImage, AvatarFallback } from "@/shared/ui/avatar";
 import {
   DropdownMenu,
@@ -23,7 +25,6 @@ import { NotificationListResponseSchema } from "@/entities/notification/model";
 import { cn } from "@/shared/lib/utils";
 
 function WorkspaceTopNavInner() {
-  const router = useRouter();
   const { user, logout, isLoggedIn } = useAuthStore();
   const theme = useWorkspaceThemeStore((s) => s.theme);
   const resolved = useResolvedTheme();
@@ -45,7 +46,7 @@ function WorkspaceTopNavInner() {
     try {
       const response = await apiClient.get(
         "/api/notifications",
-        NotificationListResponseSchema,
+        NotificationListResponseSchema
       );
       setNotificationCount(response.notifications.length);
     } catch (error) {
@@ -86,8 +87,8 @@ function WorkspaceTopNavInner() {
                 isNotificationOpen
                   ? "text-onetake-point"
                   : isDark
-                    ? "text-gray-400"
-                    : "text-gray-700"
+                  ? "text-gray-400"
+                  : "text-gray-700"
               )}
             />
           }
@@ -144,20 +145,29 @@ function WorkspaceTopNavInner() {
               <div
                 className={cn(
                   "px-2 py-2 border-b text-sm font-medium truncate",
-                  isDark ? "border-gray-700 text-gray-200" : "border-gray-100 text-gray-800"
+                  isDark
+                    ? "border-gray-700 text-gray-200"
+                    : "border-gray-100 text-gray-800"
                 )}
               >
                 {user?.nickname ?? "사용자"}
               </div>
               <DropdownMenuItem asChild>
-                <Link href="/mypage" className="flex items-center gap-2 cursor-pointer">
+                <Link
+                  href="/mypage"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
                   <User className="h-4 w-4 shrink-0" />
                   마이페이지
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link
-                  href={user?.userId ? `/workspace/${user.userId}/settings` : workspaceLink}
+                  href={
+                    user?.userId
+                      ? `/workspace/${user.userId}/settings`
+                      : workspaceLink
+                  }
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <Settings className="h-4 w-4 shrink-0" />
@@ -168,7 +178,7 @@ function WorkspaceTopNavInner() {
                 className="text-red-600 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400 cursor-pointer"
                 onSelect={() => {
                   logout();
-                  router.push("/login");
+                  window.location.href = "/?auth=login";
                 }}
               >
                 <LogOut className="h-4 w-4 shrink-0" />
@@ -184,10 +194,7 @@ function WorkspaceTopNavInner() {
             )}
             aria-hidden
           >
-            <Avatar
-              size="lg"
-              className="ring-0"
-            >
+            <Avatar size="lg" className="ring-0">
               <AvatarImage src={user?.profileImageUrl ?? undefined} />
               <AvatarFallback
                 className={cn(
@@ -200,7 +207,10 @@ function WorkspaceTopNavInner() {
                 {user?.nickname?.[0] ?? "U"}
               </AvatarFallback>
             </Avatar>
-            <ChevronDown className="w-4 h-4 shrink-0 text-gray-500" aria-hidden />
+            <ChevronDown
+              className="w-4 h-4 shrink-0 text-gray-500"
+              aria-hidden
+            />
           </div>
         )}
       </div>

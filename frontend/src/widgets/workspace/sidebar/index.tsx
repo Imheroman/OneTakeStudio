@@ -2,7 +2,7 @@
 
 import { memo, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { useCollapsible } from "@/hooks/useCollapsible";
@@ -88,7 +88,9 @@ function SidebarInner() {
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
   const prefersMotion = usePrefersMotion();
-  const workspaceLink = user?.userId ? `/workspace/${user.userId}` : "/login";
+  const workspaceLink = user?.userId
+    ? `/workspace/${user.userId}`
+    : "/?auth=login";
   const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
 
   const menus = useMemo<MenuItem[]>(
@@ -199,13 +201,12 @@ const SidebarFooter = memo(function SidebarFooter({
   isDark,
   shouldShowText,
 }: SidebarFooterProps) {
-  const router = useRouter();
   const { logout } = useAuthStore();
 
   const handleLogout = useCallback(() => {
     logout();
-    router.push("/login");
-  }, [logout, router]);
+    window.location.href = "/?auth=login";
+  }, [logout]);
 
   return (
     <div
