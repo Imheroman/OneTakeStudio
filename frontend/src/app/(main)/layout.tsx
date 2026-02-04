@@ -59,20 +59,22 @@ export default function MainLayout({
     setApiNotifications((prev) => prev.filter((n) => n.id !== notifId));
   }, []);
 
-  // 개별 알림 삭제 (shorts는 인덱스 기반, api는 id 기반)
+  // 개별 알림 삭제 (shorts는 인덱스 기반, api는 id 기반 + 백엔드 DELETE)
   const handleDismissNotification = useCallback((notifId: string) => {
     if (notifId.startsWith("shorts-")) {
       const index = parseInt(notifId.split("-")[1], 10);
       if (!isNaN(index)) removeShortsNotification(index);
     } else {
       removeNotification(notifId);
+      apiClient.delete(`/api/notifications/${notifId}`, MessageResponseSchema).catch(() => {});
     }
   }, [removeShortsNotification, removeNotification]);
 
-  // 전체 알림 삭제
+  // 전체 알림 삭제 (백엔드에서도 삭제)
   const handleClearAll = useCallback(() => {
     clearShortsNotifications();
     setApiNotifications([]);
+    apiClient.delete("/api/notifications", MessageResponseSchema).catch(() => {});
   }, [clearShortsNotifications]);
 
   // 알림 목록 조회

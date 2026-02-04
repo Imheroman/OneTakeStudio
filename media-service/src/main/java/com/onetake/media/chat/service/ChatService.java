@@ -101,8 +101,8 @@ public class ChatService {
             commentCounterService.incrementCount(studioId);
         }
 
-        log.debug("External chat broadcasted: studioId={}, platform={}, sender={}",
-                studioId, request.getPlatform(), request.getSenderName());
+        log.info("[ExternalChat] Broadcasted to /topic/chat/{}: platform={}, sender={}, msgId={}",
+                studioId, request.getPlatform(), request.getSenderName(), response.getMessageId());
     }
 
     public List<ChatMessageResponse> getMessages(String studioId, int limit) {

@@ -61,6 +61,14 @@ spring:
               filters:
                 - StripPrefix=0
 
+            # Media Service - OAuth Routes (YouTube/Chzzk 채팅 연동)
+            - id: media-service-oauth
+              uri: lb://media-service
+              predicates:
+                - Path=/api/oauth/**
+              filters:
+                - StripPrefix=0
+
             # Media Service - Recording Routes (별칭)
             - id: media-service-recording
               uri: lb://media-service

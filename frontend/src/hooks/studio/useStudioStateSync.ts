@@ -50,6 +50,8 @@ export interface UseStudioStateSyncOptions {
   onStateChange?: (message: StudioStateMessage) => void;
   onLockChange?: (message: StudioStateMessage) => void;
   onPresenceChange?: (message: StudioStateMessage) => void;
+  /** 채팅 메시지 수신 콜백 (항상 활성 구독) */
+  onChatMessage?: (message: unknown) => void;
 }
 
 const WS_URL =
@@ -69,6 +71,7 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
     onStateChange,
     onLockChange,
     onPresenceChange,
+    onChatMessage,
   } = options;
 
   const clientRef = useRef<Client | null>(null);
@@ -79,9 +82,11 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
   const onStateChangeRef = useRef(onStateChange);
   const onLockChangeRef = useRef(onLockChange);
   const onPresenceChangeRef = useRef(onPresenceChange);
+  const onChatMessageRef = useRef(onChatMessage);
   onStateChangeRef.current = onStateChange;
   onLockChangeRef.current = onLockChange;
   onPresenceChangeRef.current = onPresenceChange;
+  onChatMessageRef.current = onChatMessage;
 
   // WebSocket 연결
   useEffect(() => {
@@ -188,6 +193,19 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
               onPresenceChangeRef.current?.(presenceMessage);
             } catch (e) {
               console.error("[StudioStateSync] 프레즌스 메시지 파싱 실패:", e);
+            }
+          }
+        );
+
+        // 채팅 메시지 구독 (탭 상태와 무관하게 항상 활성)
+        client.subscribe(
+          `/topic/chat/${studioId}`,
+          (message: IMessage) => {
+            try {
+              const chatMsg = JSON.parse(message.body);
+              onChatMessageRef.current?.(chatMsg);
+            } catch (e) {
+              console.error("[StudioStateSync] 채팅 메시지 파싱 실패:", e);
             }
           }
         );

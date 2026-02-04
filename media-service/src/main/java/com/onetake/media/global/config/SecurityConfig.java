@@ -39,7 +39,8 @@ public class SecurityConfig {
                                 "/ws/**",           // WebSocket 엔드포인트
                                 "/actuator/health", // Health check
                                 "/error",
-                                "/api/media/record/files/**"  // 녹화 파일 서빙
+                                "/api/media/record/files/**",  // 녹화 파일 서빙
+                                "/api/oauth/*/callback"        // OAuth 콜백 (Google/Chzzk → JWT 없음)
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

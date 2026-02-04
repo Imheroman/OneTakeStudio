@@ -31,4 +31,19 @@ public class NotificationController {
         notificationService.markAsRead(userDetails.getUserId(), notificationId);
         return ResponseEntity.ok(Map.of("message", "알림을 읽음 처리했습니다."));
     }
+
+    @DeleteMapping("/{notificationId}")
+    public ResponseEntity<Map<String, String>> deleteNotification(
+            @CurrentUser CustomUserDetails userDetails,
+            @PathVariable String notificationId) {
+        notificationService.deleteNotification(userDetails.getUserId(), notificationId);
+        return ResponseEntity.ok(Map.of("message", "알림을 삭제했습니다."));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Map<String, String>> deleteAllNotifications(
+            @CurrentUser CustomUserDetails userDetails) {
+        notificationService.deleteAllNotifications(userDetails.getUserId());
+        return ResponseEntity.ok(Map.of("message", "모든 알림을 삭제했습니다."));
+    }
 }

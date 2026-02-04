@@ -186,7 +186,8 @@ export async function startChatIntegrationByDestinations(
     const res = await apiClient.post(
       `/api/media/chat/integration/auto/${studioId}/destinations`,
       ChatIntegrationResultsSchema,
-      { destinationIds }
+      { destinationIds },
+      { timeout: 60000 }
     );
     return res.data ?? [];
   } catch (error) {

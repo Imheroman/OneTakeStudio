@@ -184,15 +184,18 @@ public class ChatIntegrationService {
                 try {
                     List<ChatMessageRequest> messages = client.fetchNewMessages();
                     for (ChatMessageRequest message : messages) {
+                        log.info("[ChatPoll] Broadcasting message: studioId={}, platform={}, sender={}, content={}",
+                                studioId, client.getPlatform(), message.getSenderName(),
+                                message.getContent() != null ? message.getContent().substring(0, Math.min(50, message.getContent().length())) : "null");
                         chatService.receiveExternalMessage(studioId, message);
                     }
 
                     if (!messages.isEmpty()) {
-                        log.debug("Fetched {} messages from {}: studioId={}",
+                        log.info("[ChatPoll] Fetched {} messages from {}: studioId={}",
                                 messages.size(), client.getPlatform(), studioId);
                     }
                 } catch (Exception e) {
-                    log.error("Failed to fetch messages from {}: studioId={}",
+                    log.error("[ChatPoll] Failed to fetch messages from {}: studioId={}",
                             client.getPlatform(), studioId, e);
                 }
             }

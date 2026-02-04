@@ -112,9 +112,14 @@ public class OAuthService {
                         refreshToken,
                         LocalDateTime.now().plusSeconds(expiresIn)
                 );
+            } else {
+                log.error("[YouTube] Token exchange non-2xx response: status={}, body={}", response.getStatusCode(), response.getBody());
             }
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("[YouTube] Token exchange HTTP error: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("YouTube token exchange failed: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            log.error("[YouTube] Failed to exchange code for token: {}", e.getMessage());
+            log.error("[YouTube] Failed to exchange code for token: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to exchange YouTube authorization code", e);
         }
 

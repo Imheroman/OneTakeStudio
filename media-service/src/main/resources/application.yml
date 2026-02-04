@@ -60,9 +60,9 @@ core:
 # YouTube API
 youtube:
   oauth:
-    client-id: 131937565238-ullgqej3bktgfkkj441r7p2elvunfecl.apps.googleusercontent.com
-    client-secret: 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
-    redirect-uri: ${YOUTUBE_REDIRECT_URI:https://i14c206.p.ssafy.io/api/oauth/youtube/callback}
+    client-id: ${YOUTUBE_CLIENT_ID:51683382309-340jprf00qpfjggfv5jphuifk5jk1np0.apps.googleusercontent.com}
+    client-secret: ${YOUTUBE_CLIENT_SECRET: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}
+    redirect-uri: ${YOUTUBE_REDIRECT_URI:http://localhost:8082/api/oauth/youtube/callback}
     scope: https://www.googleapis.com/auth/youtube.readonly
 
 # 치지직 OAuth
@@ -70,11 +70,11 @@ chzzk:
   oauth:
     client-id: 0c2b66b0-f5ae-400b-9056-0bb9289954d1
     client-secret: NOJIPyg5MK2KqVhLb-OEPsKGxMyfm-P0OdeHQ3eWDng
-    redirect-uri: ${CHZZK_REDIRECT_URI:https://i14c206.p.ssafy.io/api/oauth/chzzk/callback}
+    redirect-uri: ${CHZZK_REDIRECT_URI:http://localhost:60000/api/oauth/chzzk/callback}
 
 # OAuth 공통 설정
 oauth:
-  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:https://i14c206.p.ssafy.io/oauth/callback}
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:http://localhost:3000/channels/oauth/callback}
 
 # Recording Storage
 recording:

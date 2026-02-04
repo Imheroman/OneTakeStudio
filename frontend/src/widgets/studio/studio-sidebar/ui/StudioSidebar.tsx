@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type MutableRefObject } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion } from "motion/react";
 import {
   MessageSquare,
@@ -13,7 +13,6 @@ import {
   Layers,
   Share2,
 } from "lucide-react";
-import type { Client } from "@stomp/stompjs";
 import { IconButton } from "@/shared/common";
 import { cn } from "@/shared/lib/utils";
 import { sidebarSpring, sidebarEaseReduced } from "@/shared/lib/sidebar-motion";
@@ -28,10 +27,14 @@ import { StudioRecordingPanel } from "../panels/StudioRecordingPanel";
 import { StudioDestinationsPanel } from "../panels/StudioDestinationsPanel";
 import { StudioInviteModal } from "@/widgets/studio/studio-invite-modal";
 import { usePrivateChatStore } from "@/stores/usePrivateChatStore";
+import { useChatMessageStore } from "@/stores/useChatMessageStore";
+import type { ChatMessage } from "@/entities/chat/model";
 import type { BannerItem } from "../panels/StudioBannerPanel";
 import type { AssetItem } from "../panels/StudioAssetPanel";
 import type { StudioStyleState } from "../panels/StudioStylePanel";
 import type { OnlineMember } from "@/hooks/studio";
+
+const EMPTY_MESSAGES: ChatMessage[] = [];
 
 const TABS = [
   { id: "destinations", icon: Share2, label: "연동 채널" },
@@ -76,8 +79,10 @@ interface StudioSidebarProps {
   onStopLocalRecording?: () => void;
   /** 현재 접속 중인 멤버 목록 */
   onlineMembers?: OnlineMember[];
-  /** STOMP WebSocket 클라이언트 (실시간 채팅용) */
-  stompClient?: MutableRefObject<Client | null>;
+  /** 채팅 오버레이 활성화 여부 */
+  isChatOverlayEnabled?: boolean;
+  /** 채팅 오버레이 토글 콜백 */
+  onChatOverlayToggle?: () => void;
 }
 
 export function StudioSidebar({
@@ -97,7 +102,8 @@ export function StudioSidebar({
   onStartLocalRecording,
   onStopLocalRecording,
   onlineMembers = [],
-  stompClient,
+  isChatOverlayEnabled,
+  onChatOverlayToggle,
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -105,52 +111,44 @@ export function StudioSidebar({
   const prefersMotion = usePrefersMotion();
   const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
 
-  const studioIdNum = studioId;
-  const unreadCount = usePrivateChatStore(
-    (state) => state.unreadCounts[studioIdNum] ?? 0
-  );
+  const studioIdStr = studioId;
   const markAsRead = usePrivateChatStore((state) => state.markAsRead);
-  const setUnreadCount = usePrivateChatStore((state) => state.setUnreadCount);
 
-  // 프라이빗 메시지 WebSocket 알림 (프라이빗 패널이 열려있지 않을 때 읽지 않은 수 추적)
+  // useChatMessageStore에서 INTERNAL 메시지 수를 세어 unread 카운트 관리
+  const rawMessages = useChatMessageStore(
+    (s) => s.messagesByStudio[studioIdStr] ?? EMPTY_MESSAGES,
+  );
+  const internalMessageCount = useMemo(
+    () => rawMessages.filter((m) => m.platform === "INTERNAL").length,
+    [rawMessages],
+  );
+  const [lastSeenCount, setLastSeenCount] = useState(0);
+
+  // 최초 히스토리 로드 시 기존 메시지를 전부 "읽음"으로 처리
+  // (0 → N 전환 감지: 마운트 직후 빈 스토어에서 히스토리가 채워질 때)
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (activeTab === "private" || !studioIdNum) return;
-    const client = stompClient?.current;
-    if (!client?.connected) return;
-
-    const sub = client.subscribe(
-      `/topic/chat/${studioIdNum}`,
-      (message) => {
-        try {
-          const chatMsg = JSON.parse(message.body);
-          if (chatMsg.platform === "INTERNAL") {
-            setUnreadCount(
-              studioIdNum,
-              (usePrivateChatStore.getState().unreadCounts[studioIdNum] ?? 0) + 1,
-            );
-          }
-        } catch {
-          // 조용히 실패
-        }
-      },
-    );
-
-    return () => {
-      sub.unsubscribe();
-    };
-  }, [studioIdNum, activeTab, stompClient?.current?.connected, setUnreadCount]);
-
-  // 프라이빗 패널 열면 읽음 처리 (WebSocket 기반이므로 별도 fetch 불필요)
-  useEffect(() => {
-    if (activeTab === "private" && studioIdNum) {
-      markAsRead(studioIdNum);
+    if (!initializedRef.current && internalMessageCount > 0) {
+      initializedRef.current = true;
+      setLastSeenCount(internalMessageCount);
     }
-  }, [activeTab, studioIdNum, markAsRead]);
+  }, [internalMessageCount]);
+
+  const unreadCount = activeTab === "private" ? 0 : Math.max(0, internalMessageCount - lastSeenCount);
+
+  // 프라이빗 패널 열면 읽음 처리
+  useEffect(() => {
+    if (activeTab === "private" && studioIdStr) {
+      markAsRead(studioIdStr);
+      setLastSeenCount(internalMessageCount);
+    }
+  }, [activeTab, studioIdStr, markAsRead, internalMessageCount]);
 
   const handleTabClick = (id: StudioSidebarTabId) => {
     // 프라이빗 탭 열면 읽음 처리
     if (id === "private") {
-      markAsRead(studioIdNum);
+      markAsRead(studioIdStr);
+      setLastSeenCount(internalMessageCount);
     }
     setActiveTab((prev) => (prev === id ? null : id));
   };
@@ -205,15 +203,16 @@ export function StudioSidebar({
             )}
             {activeTab === "chat" && (
               <StudioChatPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 filterPlatform={null}
-                stompClient={stompClient}
+                isChatOverlayEnabled={isChatOverlayEnabled}
+                onChatOverlayToggle={onChatOverlayToggle}
               />
             )}
             {activeTab === "banner" && (
               <StudioBannerPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 onSelectBanner={onSelectBanner}
                 selectedBannerId={activeBanner?.id ?? null}
@@ -222,7 +221,7 @@ export function StudioSidebar({
             )}
             {activeTab === "assets" && (
               <StudioAssetPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 onSelectAsset={onSelectAsset}
                 selectedAssetId={activeAsset?.id ?? null}
@@ -230,14 +229,14 @@ export function StudioSidebar({
             )}
             {activeTab === "style" && (
               <StudioStylePanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 onStyleChange={onStyleChange}
                 initialStyle={styleState}
               />
             )}
             {activeTab === "notes" && (
-              <StudioNotePanel studioId={studioIdNum} onClose={closePanel} />
+              <StudioNotePanel studioId={studioIdStr} onClose={closePanel} />
             )}
             {activeTab === "members" && (
               <StudioMemberPanel
@@ -250,15 +249,14 @@ export function StudioSidebar({
             )}
             {activeTab === "private" && (
               <StudioChatPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 filterPlatform="INTERNAL"
-                stompClient={stompClient}
               />
             )}
             {activeTab === "recording" && (
               <StudioRecordingPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 isRecordingLocal={isRecordingLocal}
                 onStartLocalRecording={onStartLocalRecording}

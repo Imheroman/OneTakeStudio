@@ -62,6 +62,9 @@ public class YouTubeBroadcastService {
             log.warn("No active YouTube broadcast found");
             return null;
 
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("YouTube API error (active): status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            return null;
         } catch (RestClientException e) {
             log.error("Failed to get YouTube broadcast info: {}", e.getMessage());
             return null;
@@ -100,6 +103,9 @@ public class YouTubeBroadcastService {
             log.warn("No upcoming YouTube broadcast found");
             return null;
 
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("YouTube API error (upcoming): status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            return null;
         } catch (RestClientException e) {
             log.error("Failed to get YouTube broadcast info: {}", e.getMessage());
             return null;
@@ -117,7 +123,62 @@ public class YouTubeBroadcastService {
         }
 
         // 없으면 예정된 방송 확인
-        return getUpcomingLiveChatId(accessToken);
+        liveChatId = getUpcomingLiveChatId(accessToken);
+        if (liveChatId != null) {
+            return liveChatId;
+        }
+
+        // 그래도 없으면 모든 방송 상태로 조회 (testing, ready 등 포함)
+        return getAllBroadcastsLiveChatId(accessToken);
+    }
+
+    /**
+     * 모든 상태의 방송 조회 (active, upcoming, ready, testing 포함)
+     */
+    private String getAllBroadcastsLiveChatId(String accessToken) {
+        try {
+            String url = UriComponentsBuilder.fromHttpUrl(LIVE_BROADCASTS_URL)
+                    .queryParam("part", "snippet,status")
+                    .queryParam("mine", "true")
+                    .queryParam("maxResults", "5")
+                    .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, String.class);
+
+            log.info("YouTube all broadcasts response: status={}, body={}", response.getStatusCode(), response.getBody());
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                // JSON 파싱해서 liveChatId 추출
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(response.getBody());
+                com.fasterxml.jackson.databind.JsonNode items = root.get("items");
+                if (items != null && items.isArray()) {
+                    for (com.fasterxml.jackson.databind.JsonNode item : items) {
+                        com.fasterxml.jackson.databind.JsonNode snippet = item.get("snippet");
+                        if (snippet != null && snippet.has("liveChatId") && !snippet.get("liveChatId").isNull()) {
+                            String chatId = snippet.get("liveChatId").asText();
+                            String title = snippet.has("title") ? snippet.get("title").asText() : "unknown";
+                            log.info("Found broadcast '{}' with liveChatId: {}", title, chatId);
+                            return chatId;
+                        }
+                    }
+                }
+            }
+
+            log.warn("No YouTube broadcast found with any status");
+            return null;
+
+        } catch (Exception e) {
+            log.error("Failed to get all YouTube broadcasts: {}", e.getMessage());
+            return null;
+        }
     }
 
     // ==================== DTOs ====================

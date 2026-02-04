@@ -37,6 +37,14 @@ import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBa
 import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
 import type { StudioStyleState } from "@/widgets/studio/studio-sidebar/panels/StudioStylePanel";
 
+/** 채팅 오버레이에 표시할 메시지 형태 */
+export interface ChatOverlayMessage {
+  messageId: string;
+  platform: string;
+  senderName: string;
+  content: string;
+}
+
 export type PreviewResolution = "720p" | "1080p";
 
 const RESOLUTION_SIZE: Record<
@@ -111,6 +119,8 @@ interface PreviewAreaProps {
   activeBanner?: BannerItem | null;
   activeAsset?: AssetItem | null;
   styleState?: StudioStyleState | null;
+  isChatOverlayEnabled?: boolean;
+  chatMessages?: ChatOverlayMessage[];
 }
 
 /** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. scheduleBatchDraw로 프레임당 1회만 그리기 요청. */
@@ -405,6 +415,142 @@ function AssetOverlayNode({
   );
 }
 
+/* ── 플랫폼별 뱃지 색상 & 라벨 ── */
+const PLATFORM_BADGE: Record<string, { color: string; label: string }> = {
+  YOUTUBE: { color: "#FF0000", label: "YT" },
+  TWITCH: { color: "#9146FF", label: "TW" },
+  CHZZK: { color: "#00FFA3", label: "CZ" },
+  HOST: { color: "#5d4cc7", label: "HOST" },
+};
+
+/** 채팅 오버레이 박스 크기 상수 (위치 계산 공용) */
+const CHAT_OV = {
+  MARGIN: 16,
+  BANNER_HEIGHT: 48,
+  LINE_HEIGHT: 24,
+  PADDING: 10,
+  MAX_LINES: 6,
+  BADGE_WIDTH: 32,
+  BADGE_HEIGHT: 16,
+  FONT_SIZE: 16,
+  BADGE_FONT_SIZE: 11,
+  WIDTH_RATIO: 0.25,
+} as const;
+
+function chatOverlayBoxSize(stageWidth: number) {
+  const w = Math.round(stageWidth * CHAT_OV.WIDTH_RATIO);
+  const h = CHAT_OV.PADDING * 2 + CHAT_OV.MAX_LINES * CHAT_OV.LINE_HEIGHT;
+  return { w, h };
+}
+
+/** 캔버스에 실시간 채팅을 오버레이로 표시. 편집 모드에서 드래그 이동 가능 */
+function ChatOverlayNode({
+  messages,
+  stageWidth,
+  stageHeight,
+  hasBanner,
+  position,
+  isEditMode = false,
+  onDragEnd,
+}: {
+  messages: ChatOverlayMessage[];
+  stageWidth: number;
+  stageHeight: number;
+  hasBanner: boolean;
+  position?: { x: number; y: number } | null;
+  isEditMode?: boolean;
+  onDragEnd?: (x: number, y: number) => void;
+}) {
+  const { w: boxWidth, h: boxHeight } = chatOverlayBoxSize(stageWidth);
+  const bottomOffset = hasBanner
+    ? CHAT_OV.BANNER_HEIGHT + CHAT_OV.MARGIN
+    : CHAT_OV.MARGIN;
+  const defaultX = stageWidth - boxWidth - CHAT_OV.MARGIN;
+  const defaultY = stageHeight - boxHeight - bottomOffset;
+  const boxX = position?.x ?? defaultX;
+  const boxY = position?.y ?? defaultY;
+
+  const visible = messages.slice(-CHAT_OV.MAX_LINES);
+
+  return (
+    <Group
+      x={boxX}
+      y={boxY}
+      clip={{ x: 0, y: 0, width: boxWidth, height: boxHeight }}
+      draggable={isEditMode}
+      listening={isEditMode}
+      onDragEnd={(e) => onDragEnd?.(e.target.x(), e.target.y())}
+    >
+      {/* 반투명 배경 — 편집 모드에서 히트 영역 역할 (드래그용) */}
+      <Rect
+        x={0}
+        y={0}
+        width={boxWidth}
+        height={boxHeight}
+        fill="black"
+        opacity={0.55}
+        cornerRadius={8}
+        listening={!!isEditMode}
+      />
+
+      {visible.map((msg, i) => {
+        const isTop = i === 0 && visible.length === CHAT_OV.MAX_LINES;
+        const yPos = CHAT_OV.PADDING + i * CHAT_OV.LINE_HEIGHT;
+        const badge = PLATFORM_BADGE[msg.platform] ?? {
+          color: "#888",
+          label: msg.platform?.slice(0, 2) ?? "?",
+        };
+        const nameText = `${msg.senderName}: `;
+        const textX = CHAT_OV.BADGE_WIDTH + 6;
+        const textWidth = boxWidth - CHAT_OV.PADDING - textX;
+
+        return (
+          <Group key={msg.messageId} opacity={isTop ? 0.5 : 1} listening={false}>
+            {/* 플랫폼 뱃지 */}
+            <Rect
+              x={CHAT_OV.PADDING}
+              y={yPos + (CHAT_OV.LINE_HEIGHT - CHAT_OV.BADGE_HEIGHT) / 2}
+              width={CHAT_OV.BADGE_WIDTH}
+              height={CHAT_OV.BADGE_HEIGHT}
+              fill={badge.color}
+              cornerRadius={3}
+              listening={false}
+            />
+            <Text
+              x={CHAT_OV.PADDING}
+              y={yPos + (CHAT_OV.LINE_HEIGHT - CHAT_OV.BADGE_HEIGHT) / 2 + 1}
+              width={CHAT_OV.BADGE_WIDTH}
+              height={CHAT_OV.BADGE_HEIGHT}
+              text={badge.label}
+              fontSize={CHAT_OV.BADGE_FONT_SIZE}
+              fontStyle="bold"
+              fontFamily="Arial"
+              fill="white"
+              align="center"
+              verticalAlign="middle"
+              listening={false}
+            />
+            {/* 닉네임 + 내용 */}
+            <Text
+              x={CHAT_OV.PADDING + textX}
+              y={yPos + (CHAT_OV.LINE_HEIGHT - CHAT_OV.FONT_SIZE) / 2}
+              width={textWidth}
+              height={CHAT_OV.LINE_HEIGHT}
+              text={nameText + msg.content}
+              fontSize={CHAT_OV.FONT_SIZE}
+              fontFamily="Arial"
+              fill="white"
+              ellipsis={true}
+              wrap="none"
+              listening={false}
+            />
+          </Group>
+        );
+      })}
+    </Group>
+  );
+}
+
 function PreviewAreaInner({
   className,
   layout = "full",
@@ -422,6 +568,8 @@ function PreviewAreaInner({
   activeBanner = null,
   activeAsset = null,
   styleState = null,
+  isChatOverlayEnabled = false,
+  chatMessages = [],
 }: PreviewAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<Konva.Layer>(null);
@@ -502,6 +650,10 @@ function PreviewAreaInner({
     [stageWidth]
   );
   const [assetTransform, setAssetTransform] = useState(defaultAssetTransform);
+  const [chatOverlayPos, setChatOverlayPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     if (activeAsset) setAssetTransform(defaultAssetTransform());
@@ -601,6 +753,12 @@ function PreviewAreaInner({
     }
     layerRef.current?.batchDraw();
   }, [selectedId]);
+
+  // 채팅 오버레이·에셋·배너 등 정적 오버레이 변경 시 캡처 레이어 강제 redraw
+  // (VideoSourceNode은 자체 RAF로 batchDraw를 호출하지만, 정적 노드는 그렇지 않음)
+  useEffect(() => {
+    scheduleCaptureBatchDraw();
+  }, [chatMessages, isChatOverlayEnabled, chatOverlayPos, scheduleCaptureBatchDraw]);
 
   useEffect(() => {
     if (!getPreviewStreamRef) return;
@@ -1018,6 +1176,17 @@ function PreviewAreaInner({
                 }
               />
             )}
+            {isChatOverlayEnabled && chatMessages.length > 0 && (
+              <ChatOverlayNode
+                messages={chatMessages}
+                stageWidth={stageWidth}
+                stageHeight={stageHeight}
+                hasBanner={!!activeBanner}
+                position={chatOverlayPos}
+                isEditMode={isEditMode}
+                onDragEnd={(x, y) => setChatOverlayPos({ x, y })}
+              />
+            )}
             {isEditMode && <Transformer ref={trRef} />}
           </Group>
         </Layer>
@@ -1156,6 +1325,15 @@ function PreviewAreaInner({
               groupRef={{ current: null }}
               onDragEnd={() => {}}
               onTransformEnd={() => {}}
+            />
+          )}
+          {isChatOverlayEnabled && chatMessages.length > 0 && (
+            <ChatOverlayNode
+              messages={chatMessages}
+              stageWidth={stageWidth}
+              stageHeight={stageHeight}
+              hasBanner={!!activeBanner}
+              position={chatOverlayPos}
             />
           )}
         </Layer>

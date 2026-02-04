@@ -196,7 +196,9 @@ public class OAuthController {
 
     private ResponseEntity<Void> redirectToFrontend(String status, String message) {
         String frontendUri = oAuthService.getFrontendRedirectUri();
-        String redirectUrl = frontendUri + "?status=" + status + "&message=" + message;
+        String safeMessage = (message != null) ? message : "unknown_error";
+        String encodedMessage = java.net.URLEncoder.encode(safeMessage, java.nio.charset.StandardCharsets.UTF_8);
+        String redirectUrl = frontendUri + "?status=" + status + "&message=" + encodedMessage;
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(redirectUrl))
                 .build();

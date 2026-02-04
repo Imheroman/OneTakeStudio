@@ -76,6 +76,10 @@ export const CreateDestinationRequestSchema = z.object({
   channelName: z.string().optional(),
   rtmpUrl: z.string().optional(),
   streamKey: z.string().optional(),
+  /** OAuth access token (YouTube 등 외부 채팅 연동용) */
+  accessToken: z.string().optional(),
+  /** OAuth refresh token */
+  refreshToken: z.string().optional(),
 });
 
 export const ApiResponseDestinationSchema = z.object({

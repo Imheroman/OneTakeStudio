@@ -40,6 +40,8 @@ import {
   startChatIntegrationByDestinations,
   stopAllChatIntegrations,
 } from "@/shared/api/chat-integration";
+import { useChatMessageStore } from "@/stores/useChatMessageStore";
+import type { ChatMessage } from "@/entities/chat/model";
 import {
   Room,
   RoomEvent,
@@ -311,6 +313,18 @@ export function useStudioMain(
     []
   );
 
+  // 채팅 메시지 스토어 연결
+  const addChatMessage = useChatMessageStore((s) => s.addMessage);
+  const handleChatMessage = useCallback(
+    (raw: unknown) => {
+      const msg = raw as ChatMessage;
+      if (msg?.messageId && studioId) {
+        addChatMessage(String(studioId), msg);
+      }
+    },
+    [studioId, addChatMessage],
+  );
+
   // 실시간 상태 동기화
   const {
     isConnected: isStateSyncConnected,
@@ -328,6 +342,7 @@ export function useStudioMain(
     onStateChange: handleRemoteStateChange,
     onLockChange: handleRemoteLockChange,
     onPresenceChange: handleRemotePresenceChange,
+    onChatMessage: handleChatMessage,
   });
 
   // 화면 공유 종료 시 콜백 (브라우저에서 "공유 중지" 클릭 시)
@@ -863,24 +878,42 @@ export function useStudioMain(
         }
 
         // Konva 캔버스 스트림 publish (레이아웃 적용된 최종 화면)
-        const canvasStream = getPreviewStreamRef?.current?.();
-        if (canvasStream) {
-          const videoTracks = canvasStream.getVideoTracks();
-          if (videoTracks.length > 0) {
-            await roomToUse.localParticipant.publishTrack(videoTracks[0], {
+        let canvasStream = getPreviewStreamRef?.current?.();
+
+        // 캔버스 스트림이 아직 준비되지 않았으면 최대 3초 대기
+        if (!canvasStream || canvasStream.getVideoTracks().length === 0) {
+          for (let i = 0; i < 6; i++) {
+            await new Promise((r) => setTimeout(r, 500));
+            canvasStream = getPreviewStreamRef?.current?.() ?? null;
+            if (canvasStream && canvasStream.getVideoTracks().length > 0) break;
+          }
+        }
+
+        if (canvasStream && canvasStream.getVideoTracks().length > 0) {
+          await roomToUse.localParticipant.publishTrack(
+            canvasStream.getVideoTracks()[0],
+            {
               name: "canvas",
               source: Track.Source.Camera,
-            });
-            console.log("Published Konva canvas video track");
-          }
+            }
+          );
+          console.log("Published Konva canvas video track");
         } else {
+          // 카메라 fallback (권한 거부 시에도 Go Live 진행)
           console.warn("Canvas stream not available, falling back to camera");
-          const videoTrack = await createLocalTracks({
-            video: true,
-            audio: false,
-          });
-          for (const track of videoTrack) {
-            await roomToUse.localParticipant.publishTrack(track);
+          try {
+            const videoTrack = await createLocalTracks({
+              video: true,
+              audio: false,
+            });
+            for (const track of videoTrack) {
+              await roomToUse.localParticipant.publishTrack(track);
+            }
+          } catch (videoErr) {
+            console.warn(
+              "카메라 권한 없음 — 비디오 없이 오디오만 송출합니다:",
+              videoErr
+            );
           }
         }
 
@@ -909,36 +942,49 @@ export function useStudioMain(
           destinationIds: destIds,
         });
 
-        // 3. 채팅 연동 자동 시작 (YouTube, Twitch, Chzzk)
-        try {
-          const chatResults = await startChatIntegrationByDestinations(
-            studioId,
-            destIds
-          );
-          chatResults.forEach((result) => {
-            if (result.success) {
-              console.log(`${result.platform} 채팅 연동 성공`);
-            } else {
-              console.warn(
-                `${result.platform} 채팅 연동 실패: ${result.message}`
-              );
-            }
-          });
-        } catch (chatError) {
-          console.warn("채팅 연동 시작 실패 (송출은 계속됨):", chatError);
-        }
-
         setIsPublishing(true);
         setIsLive(true);
         setIsEditMode(false);
         console.log("Publishing started to destinations:", destIds);
 
+        // 3. 채팅 연동 자동 시작 (비동기 — 송출 UI를 먼저 반영 후 백그라운드 처리)
+        //    YouTube는 RTMP 수신 후 방송 활성화까지 시간이 걸리므로 15초 대기 후 시도
+        setTimeout(() => {
+          console.log("채팅 연동 시도 시작 (송출 후 15초 대기 완료)");
+          startChatIntegrationByDestinations(studioId, destIds)
+            .then((chatResults) => {
+              chatResults.forEach((result) => {
+                if (result.success) {
+                  console.log(`${result.platform} 채팅 연동 성공`);
+                } else {
+                  console.warn(
+                    `${result.platform} 채팅 연동 실패: ${result.message}`
+                  );
+                }
+              });
+            })
+            .catch((chatError) => {
+              console.warn("채팅 연동 시작 실패 (송출은 계속됨):", chatError);
+            });
+        }, 15000);
+
         // 4. 자동 녹화 시작 (recordingStorage가 LOCAL인 경우)
         if (studio?.recordingStorage === "LOCAL") {
-          // 약간의 딜레이 후 녹화 시작 (스트림 안정화)
-          setTimeout(() => {
-            startAutoRecording();
-          }, 500);
+          // 캔버스 스트림 안정화 대기 후 녹화 시작 (최대 3회 재시도)
+          const tryAutoRecord = (attempt: number) => {
+            setTimeout(() => {
+              const stream = getPreviewStreamRef?.current?.();
+              if (stream && stream.getVideoTracks().length > 0) {
+                startAutoRecording();
+              } else if (attempt < 3) {
+                console.warn(`자동 녹화: 스트림 미준비, 재시도 ${attempt + 1}/3`);
+                tryAutoRecord(attempt + 1);
+              } else {
+                console.error("자동 녹화: 스트림을 가져올 수 없어 녹화를 시작하지 못했습니다.");
+              }
+            }, 2000);
+          };
+          tryAutoRecord(0);
         }
       } catch (error) {
         console.error("Go live failed:", error);
