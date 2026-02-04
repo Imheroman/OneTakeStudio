@@ -5,7 +5,6 @@ import com.onetake.media.chat.integration.ChatIntegrationService;
 import com.onetake.media.chat.integration.PlatformCredentials;
 import com.onetake.media.chat.integration.YouTubeBroadcastService;
 import com.onetake.media.global.common.ApiResponse;
-import com.onetake.media.global.resolver.StudioIdResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +29,6 @@ public class ChatIntegrationController {
 
     private final ChatIntegrationService chatIntegrationService;
     private final YouTubeBroadcastService youTubeBroadcastService;
-    private final StudioIdResolver studioIdResolver;
 
     /**
      * YouTube 채팅 연동 시작 (DB 토큰 사용)
@@ -41,14 +39,12 @@ public class ChatIntegrationController {
             @PathVariable String studioId,
             @RequestParam Long userId) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-
         if (!chatIntegrationService.hasValidToken(userId, ChatPlatform.YOUTUBE)) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("YouTube OAuth 인증이 필요합니다. /api/oauth/youtube/authorize 를 먼저 호출하세요."));
         }
 
-        chatIntegrationService.startIntegrationWithStoredToken(userId, resolvedStudioId, ChatPlatform.YOUTUBE);
+        chatIntegrationService.startIntegrationWithStoredToken(userId, studioId, ChatPlatform.YOUTUBE);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -61,14 +57,12 @@ public class ChatIntegrationController {
             @PathVariable String studioId,
             @RequestParam Long userId) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-
         if (!chatIntegrationService.hasValidToken(userId, ChatPlatform.CHZZK)) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("치지직 OAuth 인증이 필요합니다. /api/oauth/chzzk/authorize 를 먼저 호출하세요."));
         }
 
-        chatIntegrationService.startIntegrationWithStoredToken(userId, resolvedStudioId, ChatPlatform.CHZZK);
+        chatIntegrationService.startIntegrationWithStoredToken(userId, studioId, ChatPlatform.CHZZK);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -82,16 +76,14 @@ public class ChatIntegrationController {
             @PathVariable String studioId,
             @RequestBody YouTubeIntegrationRequest request) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-
         PlatformCredentials credentials = PlatformCredentials.forYouTube(
-                resolvedStudioId,
+                studioId,
                 request.accessToken(),
                 request.refreshToken(),
                 request.liveChatId()
         );
 
-        chatIntegrationService.startIntegration(resolvedStudioId, credentials);
+        chatIntegrationService.startIntegration(studioId, credentials);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -105,25 +97,23 @@ public class ChatIntegrationController {
             @PathVariable String studioId,
             @RequestBody YouTubeAutoStartRequest request) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-
         String liveChatId = youTubeBroadcastService.getLiveChatId(request.accessToken());
 
         if (liveChatId == null) {
-            log.warn("No active YouTube broadcast found for studioId={}", resolvedStudioId);
+            log.warn("No active YouTube broadcast found for studioId={}", studioId);
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("활성 또는 예정된 YouTube 라이브 방송이 없습니다."));
         }
 
         PlatformCredentials credentials = PlatformCredentials.forYouTube(
-                resolvedStudioId,
+                studioId,
                 request.accessToken(),
                 request.refreshToken(),
                 liveChatId
         );
 
-        chatIntegrationService.startIntegration(resolvedStudioId, credentials);
-        log.info("YouTube Chat auto-connected: studioId={}, liveChatId={}", resolvedStudioId, liveChatId);
+        chatIntegrationService.startIntegration(studioId, credentials);
+        log.info("YouTube Chat auto-connected: studioId={}, liveChatId={}", studioId, liveChatId);
 
         return ResponseEntity.ok(ApiResponse.success(
                 new YouTubeAutoStartResponse(liveChatId, "YouTube 채팅 연동 성공")
@@ -140,14 +130,12 @@ public class ChatIntegrationController {
             @PathVariable String studioId,
             @RequestBody ChzzkIntegrationRequest request) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-
         PlatformCredentials credentials = PlatformCredentials.forChzzk(
-                resolvedStudioId,
+                studioId,
                 request.channelId()
         );
 
-        chatIntegrationService.startIntegration(resolvedStudioId, credentials);
+        chatIntegrationService.startIntegration(studioId, credentials);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -159,8 +147,7 @@ public class ChatIntegrationController {
             @PathVariable String studioId,
             @PathVariable ChatPlatform platform) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        chatIntegrationService.stopIntegration(resolvedStudioId, platform);
+        chatIntegrationService.stopIntegration(studioId, platform);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -171,8 +158,7 @@ public class ChatIntegrationController {
     public ResponseEntity<ApiResponse<Void>> stopAllIntegrations(
             @PathVariable String studioId) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        chatIntegrationService.stopAllIntegrations(resolvedStudioId);
+        chatIntegrationService.stopAllIntegrations(studioId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -183,15 +169,14 @@ public class ChatIntegrationController {
     public ResponseEntity<ApiResponse<IntegrationStatusResponse>> getIntegrationStatus(
             @PathVariable String studioId) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        List<ChatPlatform> activePlatforms = chatIntegrationService.getActiveIntegrations(resolvedStudioId);
+        List<ChatPlatform> activePlatforms = chatIntegrationService.getActiveIntegrations(studioId);
 
         IntegrationStatusResponse response = new IntegrationStatusResponse(
-                resolvedStudioId,
+                studioId,
                 activePlatforms,
                 Map.of(
-                        ChatPlatform.YOUTUBE, chatIntegrationService.isIntegrationActive(resolvedStudioId, ChatPlatform.YOUTUBE),
-                        ChatPlatform.CHZZK, chatIntegrationService.isIntegrationActive(resolvedStudioId, ChatPlatform.CHZZK)
+                        ChatPlatform.YOUTUBE, chatIntegrationService.isIntegrationActive(studioId, ChatPlatform.YOUTUBE),
+                        ChatPlatform.CHZZK, chatIntegrationService.isIntegrationActive(studioId, ChatPlatform.CHZZK)
                 )
         );
 
@@ -222,7 +207,7 @@ public class ChatIntegrationController {
 
     // Response DTO
     public record IntegrationStatusResponse(
-            Long studioId,
+            String studioId,
             List<ChatPlatform> activePlatforms,
             Map<ChatPlatform, Boolean> platformStatus
     ) {}

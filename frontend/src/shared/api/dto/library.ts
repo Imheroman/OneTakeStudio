@@ -16,7 +16,7 @@ export const RecordingStatusSchema = z.enum([
 
 export const RecordingSchema = z.object({
   recordingId: z.string(),
-  studioId: z.number(),
+  studioId: z.union([z.string(), z.number()]),
   userId: z.string(),
   title: z.string(),
   description: z.string().nullable().optional(),

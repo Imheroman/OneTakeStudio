@@ -13,9 +13,9 @@ public interface PublishSessionRepository extends JpaRepository<PublishSession, 
 
     Optional<PublishSession> findByPublishSessionId(String publishSessionId);
 
-    Optional<PublishSession> findByStudioIdAndStatus(Long studioId, PublishStatus status);
+    Optional<PublishSession> findByStudioIdAndStatus(String studioId, PublishStatus status);
 
-    List<PublishSession> findByStudioIdOrderByCreatedAtDesc(Long studioId);
+    List<PublishSession> findByStudioIdOrderByCreatedAtDesc(String studioId);
 
     Optional<PublishSession> findByEgressId(String egressId);
 }

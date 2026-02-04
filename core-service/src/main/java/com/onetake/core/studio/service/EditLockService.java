@@ -43,7 +43,7 @@ public class EditLockService {
      * @param nickname 사용자 닉네임
      * @return 락 획득 결과
      */
-    public EditLockResponse acquireLock(Long studioId, String userId, String nickname) {
+    public EditLockResponse acquireLock(String studioId, String userId, String nickname) {
         String lockKey = LOCK_KEY_PREFIX + studioId;
 
         // 기존 락 확인
@@ -105,7 +105,7 @@ public class EditLockService {
     /**
      * 편집 락 갱신 (heartbeat)
      */
-    public EditLockResponse extendLock(Long studioId, String userId, String nickname) {
+    public EditLockResponse extendLock(String studioId, String userId, String nickname) {
         String lockKey = LOCK_KEY_PREFIX + studioId;
 
         String existingLock = redisTemplate.opsForValue().get(lockKey);
@@ -139,7 +139,7 @@ public class EditLockService {
     /**
      * 편집 락 해제
      */
-    public void releaseLock(Long studioId, String userId) {
+    public void releaseLock(String studioId, String userId) {
         String lockKey = LOCK_KEY_PREFIX + studioId;
 
         String existingLock = redisTemplate.opsForValue().get(lockKey);
@@ -167,7 +167,7 @@ public class EditLockService {
     /**
      * 편집 락 상태 조회
      */
-    public EditLockResponse getLockStatus(Long studioId, String currentUserId) {
+    public EditLockResponse getLockStatus(String studioId, String currentUserId) {
         String lockKey = LOCK_KEY_PREFIX + studioId;
 
         String existingLock = redisTemplate.opsForValue().get(lockKey);
@@ -188,7 +188,7 @@ public class EditLockService {
     /**
      * 편집 락 강제 해제 (관리자/호스트용)
      */
-    public void forceReleaseLock(Long studioId) {
+    public void forceReleaseLock(String studioId) {
         String lockKey = LOCK_KEY_PREFIX + studioId;
 
         // 기존 락 정보 조회 (브로드캐스트용)
@@ -214,7 +214,7 @@ public class EditLockService {
      * 락 획득 브로드캐스트 (media-service로 전송)
      */
     @Async
-    public void broadcastLockAcquired(Long studioId, String userId, String nickname) {
+    public void broadcastLockAcquired(String studioId, String userId, String nickname) {
         try {
             String url = mediaServiceUrl + "/api/internal/studio/" + studioId + "/lock/acquired";
 
@@ -238,7 +238,7 @@ public class EditLockService {
      * 락 해제 브로드캐스트 (media-service로 전송)
      */
     @Async
-    public void broadcastLockReleased(Long studioId, String userId, String nickname) {
+    public void broadcastLockReleased(String studioId, String userId, String nickname) {
         try {
             String url = mediaServiceUrl + "/api/internal/studio/" + studioId + "/lock/released";
 

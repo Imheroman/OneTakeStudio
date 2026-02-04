@@ -24,7 +24,7 @@ public interface ShortsJobRepository extends JpaRepository<ShortsJob, Long> {
     /**
      * 스튜디오별 조회 (최신순)
      */
-    List<ShortsJob> findByStudioIdOrderByCreatedAtDesc(Long studioId);
+    List<ShortsJob> findByStudioIdOrderByCreatedAtDesc(String studioId);
 
     /**
      * 사용자별 조회 (최신순)

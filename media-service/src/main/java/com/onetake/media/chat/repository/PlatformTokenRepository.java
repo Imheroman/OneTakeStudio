@@ -15,7 +15,7 @@ public interface PlatformTokenRepository extends JpaRepository<PlatformToken, Lo
 
     List<PlatformToken> findByUserId(Long userId);
 
-    List<PlatformToken> findByStudioIdAndPlatform(Long studioId, ChatPlatform platform);
+    List<PlatformToken> findByStudioIdAndPlatform(String studioId, ChatPlatform platform);
 
     void deleteByUserIdAndPlatform(Long userId, ChatPlatform platform);
 

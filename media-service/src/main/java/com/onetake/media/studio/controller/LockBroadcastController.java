@@ -26,7 +26,7 @@ public class LockBroadcastController {
      */
     @PostMapping("/{studioId}/lock/acquired")
     public ResponseEntity<Map<String, Object>> broadcastLockAcquired(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestBody LockBroadcastRequest request) {
 
         log.info("락 획득 브로드캐스트 요청: studioId={}, userId={}, nickname={}",
@@ -43,7 +43,7 @@ public class LockBroadcastController {
      */
     @PostMapping("/{studioId}/lock/released")
     public ResponseEntity<Map<String, Object>> broadcastLockReleased(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestBody LockBroadcastRequest request) {
 
         log.info("락 해제 브로드캐스트 요청: studioId={}, userId={}, nickname={}",

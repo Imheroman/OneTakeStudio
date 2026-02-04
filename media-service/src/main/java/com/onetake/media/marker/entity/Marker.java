@@ -27,7 +27,7 @@ public class Marker extends BaseTimeEntity {
     private String markerId;
 
     @Column(name = "studio_id", nullable = false)
-    private Long studioId;
+    private String studioId;
 
     @Column(name = "recording_id", length = 36)
     private String recordingId;

@@ -13,7 +13,7 @@ import java.util.Map;
 @Builder
 public class ChatStatsResponse {
 
-    private Long studioId;
+    private String studioId;
     private Long totalMessages;
     private Long messagesLastMinute;
     private Map<String, Long> messagesByPlatform;

@@ -1,7 +1,6 @@
 package com.onetake.media.settings.controller;
 
 import com.onetake.media.global.common.ApiResponse;
-import com.onetake.media.global.resolver.StudioIdResolver;
 import com.onetake.media.settings.dto.MediaStateUpdateRequest;
 import com.onetake.media.settings.dto.SessionMediaStateResponse;
 import com.onetake.media.settings.dto.UserMediaSettingsRequest;
@@ -20,7 +19,6 @@ import java.util.List;
 public class MediaSettingsController {
 
     private final MediaSettingsService mediaSettingsService;
-    private final StudioIdResolver studioIdResolver;
 
     // ===================== User Media Settings =====================
 
@@ -46,8 +44,7 @@ public class MediaSettingsController {
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable String studioId,
             @RequestParam(required = false) Long streamSessionId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        SessionMediaStateResponse response = mediaSettingsService.initializeSessionState(userId, resolvedStudioId, streamSessionId);
+        SessionMediaStateResponse response = mediaSettingsService.initializeSessionState(userId, studioId, streamSessionId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -55,8 +52,7 @@ public class MediaSettingsController {
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> getSessionState(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        SessionMediaStateResponse response = mediaSettingsService.getSessionState(resolvedStudioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.getSessionState(studioId, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -72,8 +68,7 @@ public class MediaSettingsController {
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> toggleVideo(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        SessionMediaStateResponse response = mediaSettingsService.toggleVideo(resolvedStudioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.toggleVideo(studioId, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -81,8 +76,7 @@ public class MediaSettingsController {
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> toggleAudio(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        SessionMediaStateResponse response = mediaSettingsService.toggleAudio(resolvedStudioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.toggleAudio(studioId, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -90,16 +84,14 @@ public class MediaSettingsController {
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> toggleMute(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        SessionMediaStateResponse response = mediaSettingsService.toggleMute(resolvedStudioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.toggleMute(studioId, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/session/{studioId}/participants")
     public ResponseEntity<ApiResponse<List<SessionMediaStateResponse>>> getParticipantsState(
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        List<SessionMediaStateResponse> response = mediaSettingsService.getParticipantsState(resolvedStudioId);
+        List<SessionMediaStateResponse> response = mediaSettingsService.getParticipantsState(studioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -107,8 +99,7 @@ public class MediaSettingsController {
     public ResponseEntity<ApiResponse<Void>> terminateSessionState(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        mediaSettingsService.terminateSessionState(resolvedStudioId, userId);
+        mediaSettingsService.terminateSessionState(studioId, userId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }

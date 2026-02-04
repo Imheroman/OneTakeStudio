@@ -37,12 +37,12 @@ public class ChatIntegrationService {
     private final ChzzkChatClientFactory chzzkChatClientFactory;
 
     // 스튜디오별 활성 연동 상태: studioId -> (platform -> client)
-    private final Map<Long, Map<ChatPlatform, ExternalChatClient>> activeIntegrations = new ConcurrentHashMap<>();
+    private final Map<String, Map<ChatPlatform, ExternalChatClient>> activeIntegrations = new ConcurrentHashMap<>();
 
     /**
      * 플랫폼 채팅 연동 시작 (기존 방식 - credentials 직접 전달)
      */
-    public void startIntegration(Long studioId, PlatformCredentials credentials) {
+    public void startIntegration(String studioId, PlatformCredentials credentials) {
         // 기존 연동이 있으면 먼저 종료
         stopIntegration(studioId, credentials.getPlatform());
 
@@ -68,7 +68,7 @@ public class ChatIntegrationService {
     /**
      * 플랫폼 채팅 연동 시작 (DB 토큰 사용)
      */
-    public void startIntegrationWithStoredToken(Long userId, Long studioId, ChatPlatform platform) {
+    public void startIntegrationWithStoredToken(Long userId, String studioId, ChatPlatform platform) {
         // DB에서 유효한 토큰 조회 (만료 임박 시 자동 갱신)
         PlatformToken token = oAuthService.getValidToken(userId, platform);
 
@@ -79,7 +79,7 @@ public class ChatIntegrationService {
     /**
      * PlatformToken → PlatformCredentials 변환
      */
-    private PlatformCredentials buildCredentialsFromToken(PlatformToken token, Long studioId) {
+    private PlatformCredentials buildCredentialsFromToken(PlatformToken token, String studioId) {
         return switch (token.getPlatform()) {
             case YOUTUBE -> PlatformCredentials.builder()
                     .platform(ChatPlatform.YOUTUBE)
@@ -109,7 +109,7 @@ public class ChatIntegrationService {
     /**
      * 플랫폼 채팅 연동 종료
      */
-    public void stopIntegration(Long studioId, ChatPlatform platform) {
+    public void stopIntegration(String studioId, ChatPlatform platform) {
         Map<ChatPlatform, ExternalChatClient> studioIntegrations = activeIntegrations.get(studioId);
         if (studioIntegrations == null) {
             return;
@@ -130,7 +130,7 @@ public class ChatIntegrationService {
     /**
      * 스튜디오의 모든 플랫폼 채팅 연동 종료
      */
-    public void stopAllIntegrations(Long studioId) {
+    public void stopAllIntegrations(String studioId) {
         Map<ChatPlatform, ExternalChatClient> studioIntegrations = activeIntegrations.remove(studioId);
         if (studioIntegrations != null) {
             studioIntegrations.values().forEach(client -> {
@@ -145,7 +145,7 @@ public class ChatIntegrationService {
     /**
      * 연동 상태 확인
      */
-    public boolean isIntegrationActive(Long studioId, ChatPlatform platform) {
+    public boolean isIntegrationActive(String studioId, ChatPlatform platform) {
         Map<ChatPlatform, ExternalChatClient> studioIntegrations = activeIntegrations.get(studioId);
         if (studioIntegrations == null) {
             return false;
@@ -157,7 +157,7 @@ public class ChatIntegrationService {
     /**
      * 활성 연동 목록 조회
      */
-    public List<ChatPlatform> getActiveIntegrations(Long studioId) {
+    public List<ChatPlatform> getActiveIntegrations(String studioId) {
         Map<ChatPlatform, ExternalChatClient> studioIntegrations = activeIntegrations.get(studioId);
         if (studioIntegrations == null) {
             return List.of();
@@ -173,8 +173,8 @@ public class ChatIntegrationService {
      */
     @Scheduled(fixedDelay = 5000)
     public void fetchAndBroadcast() {
-        for (Map.Entry<Long, Map<ChatPlatform, ExternalChatClient>> studioEntry : activeIntegrations.entrySet()) {
-            Long studioId = studioEntry.getKey();
+        for (Map.Entry<String, Map<ChatPlatform, ExternalChatClient>> studioEntry : activeIntegrations.entrySet()) {
+            String studioId = studioEntry.getKey();
 
             for (ExternalChatClient client : studioEntry.getValue().values()) {
                 if (!client.isConnected()) {

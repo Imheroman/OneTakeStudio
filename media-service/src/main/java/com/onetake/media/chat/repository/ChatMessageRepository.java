@@ -18,30 +18,30 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     Optional<ChatMessage> findByMessageId(String messageId);
 
-    List<ChatMessage> findByStudioIdAndIsDeletedFalseOrderByCreatedAtDesc(Long studioId);
+    List<ChatMessage> findByStudioIdAndIsDeletedFalseOrderByCreatedAtDesc(String studioId);
 
-    Page<ChatMessage> findByStudioIdAndIsDeletedFalseOrderByCreatedAtDesc(Long studioId, Pageable pageable);
+    Page<ChatMessage> findByStudioIdAndIsDeletedFalseOrderByCreatedAtDesc(String studioId, Pageable pageable);
 
     List<ChatMessage> findByStudioIdAndPlatformAndIsDeletedFalseOrderByCreatedAtDesc(
-            Long studioId, ChatPlatform platform);
+            String studioId, ChatPlatform platform);
 
     @Query("SELECT c FROM ChatMessage c WHERE c.studioId = :studioId " +
            "AND c.createdAt >= :since AND c.isDeleted = false ORDER BY c.createdAt ASC")
     List<ChatMessage> findRecentMessages(
-            @Param("studioId") Long studioId,
+            @Param("studioId") String studioId,
             @Param("since") LocalDateTime since);
 
     @Query("SELECT c FROM ChatMessage c WHERE c.studioId = :studioId " +
            "AND c.isHighlighted = true AND c.isDeleted = false ORDER BY c.createdAt DESC")
-    List<ChatMessage> findHighlightedMessages(@Param("studioId") Long studioId);
+    List<ChatMessage> findHighlightedMessages(@Param("studioId") String studioId);
 
     @Query("SELECT COUNT(c) FROM ChatMessage c WHERE c.studioId = :studioId " +
            "AND c.createdAt >= :since AND c.isDeleted = false")
-    Long countMessagesSince(@Param("studioId") Long studioId, @Param("since") LocalDateTime since);
+    Long countMessagesSince(@Param("studioId") String studioId, @Param("since") LocalDateTime since);
 
     @Query("SELECT c.platform, COUNT(c) FROM ChatMessage c WHERE c.studioId = :studioId " +
            "AND c.isDeleted = false GROUP BY c.platform")
-    List<Object[]> countByPlatform(@Param("studioId") Long studioId);
+    List<Object[]> countByPlatform(@Param("studioId") String studioId);
 
     boolean existsByExternalMessageId(String externalMessageId);
 }

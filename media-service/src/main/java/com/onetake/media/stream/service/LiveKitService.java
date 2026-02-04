@@ -24,7 +24,7 @@ public class LiveKitService {
     private final LiveKitConfig liveKitConfig;
     private final RoomServiceClient roomServiceClient;
 
-    public StreamTokenResponse generateToken(Long userId, Long studioId, StreamTokenRequest request) {
+    public StreamTokenResponse generateToken(Long userId, String studioId, StreamTokenRequest request) {
         try {
             String roomName = generateRoomName(studioId);
             String participantIdentity = generateParticipantIdentity(userId, request.getParticipantName());
@@ -115,7 +115,7 @@ public class LiveKitService {
         }
     }
 
-    private String generateRoomName(Long studioId) {
+    private String generateRoomName(String studioId) {
         return "studio-" + studioId;
     }
 

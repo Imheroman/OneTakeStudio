@@ -20,6 +20,8 @@ interface ShortsStore {
   // 단순 상태 변경 액션들만 남김
   setShortsStatus: (shorts: ShortItem[]) => void;
   addNotification: (msg: string) => void;
+  removeNotification: (index: number) => void;
+  clearNotifications: () => void;
   openResultModal: () => void;
   closeResultModal: () => void;
   reset: () => void;
@@ -38,6 +40,11 @@ export const useShortsStore = create<ShortsStore>((set) => ({
   closeResultModal: () => set({ isModalOpen: false }),
   addNotification: (msg) =>
     set((state) => ({ notifications: [msg, ...state.notifications] })),
+  removeNotification: (index) =>
+    set((state) => ({
+      notifications: state.notifications.filter((_, i) => i !== index),
+    })),
+  clearNotifications: () => set({ notifications: [] }),
 
   // 서버에서 받은 shorts 배열 기반으로 상태 업데이트
   setShortsStatus: (serverShorts) =>

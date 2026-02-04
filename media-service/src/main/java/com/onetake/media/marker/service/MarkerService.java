@@ -24,7 +24,7 @@ public class MarkerService {
      * 수동 마커 생성 (사용자가 버튼 클릭)
      */
     @Transactional
-    public MarkerResponse createManualMarker(Long userId, Long studioId, CreateMarkerRequest request) {
+    public MarkerResponse createManualMarker(Long userId, String studioId, CreateMarkerRequest request) {
         log.info("수동 마커 생성: studioId={}, timestamp={}", studioId, request.getTimestampSec());
 
         Marker marker = Marker.builder()
@@ -44,7 +44,7 @@ public class MarkerService {
      * 채팅 급증으로 자동 마커 생성
      */
     @Transactional
-    public MarkerResponse createChatSpikeMarker(Long studioId, String recordingId,
+    public MarkerResponse createChatSpikeMarker(String studioId, String recordingId,
                                                  Double timestampSec, Double spikeRatio) {
         log.info("채팅 급증 마커 생성: studioId={}, timestamp={}, spikeRatio={}",
                 studioId, timestampSec, spikeRatio);
@@ -66,7 +66,7 @@ public class MarkerService {
      * 스튜디오의 마커 목록 조회
      */
     @Transactional(readOnly = true)
-    public List<MarkerResponse> getMarkersByStudio(Long studioId) {
+    public List<MarkerResponse> getMarkersByStudio(String studioId) {
         return markerRepository.findByStudioIdOrderByTimestampSecAsc(studioId)
                 .stream()
                 .map(MarkerResponse::from)

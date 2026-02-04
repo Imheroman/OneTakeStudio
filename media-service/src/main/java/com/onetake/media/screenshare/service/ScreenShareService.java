@@ -27,7 +27,7 @@ public class ScreenShareService {
     private final StreamSessionRepository streamSessionRepository;
 
     @Transactional
-    public ScreenShareResponse startScreenShare(Long userId, Long studioId, ScreenShareStartRequest request) {
+    public ScreenShareResponse startScreenShare(Long userId, String studioId, ScreenShareStartRequest request) {
         // 이미 화면 공유 중인지 확인
         if (screenShareSessionRepository.existsByStudioIdAndStatus(studioId, ScreenShareStatus.ACTIVE)) {
             throw new BusinessException(ErrorCode.SCREEN_SHARE_ALREADY_ACTIVE);
@@ -84,7 +84,7 @@ public class ScreenShareService {
         return ScreenShareResponse.from(screenShareSession);
     }
 
-    public ScreenShareResponse getActiveScreenShare(Long studioId) {
+    public ScreenShareResponse getActiveScreenShare(String studioId) {
         ScreenShareSession screenShareSession = screenShareSessionRepository
                 .findByStudioIdAndStatus(studioId, ScreenShareStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCREEN_SHARE_NOT_ACTIVE));

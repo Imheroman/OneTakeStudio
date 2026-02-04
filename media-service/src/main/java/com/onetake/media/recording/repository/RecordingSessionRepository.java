@@ -13,15 +13,15 @@ public interface RecordingSessionRepository extends JpaRepository<RecordingSessi
 
     Optional<RecordingSession> findByRecordingId(String recordingId);
 
-    Optional<RecordingSession> findByStudioIdAndStatus(Long studioId, RecordingStatus status);
+    Optional<RecordingSession> findByStudioIdAndStatus(String studioId, RecordingStatus status);
 
     Optional<RecordingSession> findByEgressId(String egressId);
 
-    List<RecordingSession> findByStudioIdOrderByCreatedAtDesc(Long studioId);
+    List<RecordingSession> findByStudioIdOrderByCreatedAtDesc(String studioId);
 
     List<RecordingSession> findByUserIdOrderByCreatedAtDesc(Long userId);
 
-    boolean existsByStudioIdAndStatus(Long studioId, RecordingStatus status);
+    boolean existsByStudioIdAndStatus(String studioId, RecordingStatus status);
 
     List<RecordingSession> findByStatus(RecordingStatus status);
 }

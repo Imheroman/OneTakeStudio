@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/**",
+                                "/api/internal/**",  // 서비스 간 내부 통신 (인증 없이)
                                 "/api/destinations/internal/**",
                                 "/api/ai/webhook",  // AI 서비스 Webhook (인증 없이)
                                 "/api/ai/shorts/stream/**",  // 숏츠 비디오 스트리밍 (video 태그 재생)

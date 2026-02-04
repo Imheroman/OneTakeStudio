@@ -34,7 +34,7 @@ public class OAuthService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    public String getAuthorizationUrl(ChatPlatform platform, Long userId, Long studioId) {
+    public String getAuthorizationUrl(ChatPlatform platform, Long userId, String studioId) {
         String state = encodeState(userId, studioId);
 
         return switch (platform) {
@@ -257,7 +257,7 @@ public class OAuthService {
     }
 
     @Transactional
-    public PlatformToken saveToken(Long userId, Long studioId, ChatPlatform platform,
+    public PlatformToken saveToken(Long userId, String studioId, ChatPlatform platform,
                                    String accessToken, String refreshToken, LocalDateTime expiresAt) {
         PlatformToken token = platformTokenRepository.findByUserIdAndPlatform(userId, platform)
                 .orElse(PlatformToken.builder()
@@ -345,7 +345,7 @@ public class OAuthService {
     }
 
     // State 인코딩/디코딩 (userId:studioId:uuid)
-    private String encodeState(Long userId, Long studioId) {
+    private String encodeState(Long userId, String studioId) {
         return userId + ":" + (studioId != null ? studioId : "0") + ":" + UUID.randomUUID();
     }
 
@@ -355,7 +355,7 @@ public class OAuthService {
             throw new IllegalArgumentException("Invalid state format");
         }
         Long userId = Long.parseLong(parts[0]);
-        Long studioId = "0".equals(parts[1]) ? null : Long.parseLong(parts[1]);
+        String studioId = "0".equals(parts[1]) ? null : parts[1];
         return new StateInfo(userId, studioId);
     }
 
@@ -363,5 +363,5 @@ public class OAuthService {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    private record StateInfo(Long userId, Long studioId) {}
+    private record StateInfo(Long userId, String studioId) {}
 }

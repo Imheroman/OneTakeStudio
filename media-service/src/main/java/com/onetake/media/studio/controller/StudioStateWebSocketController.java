@@ -37,7 +37,7 @@ public class StudioStateWebSocketController {
      */
     @MessageMapping("/studio/{studioId}/state")
     public void broadcastState(
-            @DestinationVariable Long studioId,
+            @DestinationVariable String studioId,
             @Payload StudioStateMessage message,
             SimpMessageHeaderAccessor headerAccessor) {
 
@@ -67,7 +67,7 @@ public class StudioStateWebSocketController {
      */
     @MessageMapping("/studio/{studioId}/lock")
     public void broadcastLockStatus(
-            @DestinationVariable Long studioId,
+            @DestinationVariable String studioId,
             @Payload StudioStateMessage message) {
 
         log.debug("편집 락 상태 브로드캐스트: studioId={}, type={}, user={}",
@@ -86,7 +86,7 @@ public class StudioStateWebSocketController {
      */
     @MessageMapping("/studio/{studioId}/presence")
     public void broadcastPresence(
-            @DestinationVariable Long studioId,
+            @DestinationVariable String studioId,
             @Payload StudioStateMessage message) {
 
         log.debug("멤버 프레즌스 수신: studioId={}, type={}, user={}",

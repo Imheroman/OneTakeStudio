@@ -40,7 +40,7 @@ public class RecordingService {
     private final ChunkedUploadService chunkedUploadService;
 
     @Transactional
-    public RecordingResponse startRecording(Long userId, Long studioId, RecordingStartRequest request) {
+    public RecordingResponse startRecording(Long userId, String studioId, RecordingStartRequest request) {
         // 이미 녹화 중인지 확인
         if (recordingSessionRepository.existsByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)) {
             throw new BusinessException(ErrorCode.RECORDING_ALREADY_IN_PROGRESS);
@@ -77,7 +77,7 @@ public class RecordingService {
     }
 
     @Transactional
-    public RecordingResponse stopRecording(Long studioId) {
+    public RecordingResponse stopRecording(String studioId) {
         RecordingSession recordingSession = recordingSessionRepository
                 .findByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_IN_PROGRESS));
@@ -94,7 +94,7 @@ public class RecordingService {
     }
 
     @Transactional
-    public RecordingResponse pauseRecording(Long studioId) {
+    public RecordingResponse pauseRecording(String studioId) {
         RecordingSession recordingSession = recordingSessionRepository
                 .findByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_IN_PROGRESS));
@@ -111,7 +111,7 @@ public class RecordingService {
     }
 
     @Transactional
-    public RecordingResponse resumeRecording(Long studioId) {
+    public RecordingResponse resumeRecording(String studioId) {
         RecordingSession recordingSession = recordingSessionRepository
                 .findByStudioIdAndStatus(studioId, RecordingStatus.PAUSED)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_PAUSED));
@@ -205,22 +205,22 @@ public class RecordingService {
         return RecordingResponse.from(recordingSession);
     }
 
-    public RecordingResponse getActiveRecording(Long studioId) {
+    public RecordingResponse getActiveRecording(String studioId) {
         RecordingSession recordingSession = recordingSessionRepository
                 .findByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_IN_PROGRESS));
         return RecordingResponse.from(recordingSession);
     }
 
-    public List<RecordingResponse> getRecordingsByStudio(Long studioId) {
+    public List<RecordingResponse> getRecordingsByStudio(String studioId) {
         return recordingSessionRepository.findByStudioIdOrderByCreatedAtDesc(studioId).stream()
                 .map(RecordingResponse::from)
                 .toList();
     }
 
-    private String generateFileName(Long studioId, String format) {
+    private String generateFileName(String studioId, String format) {
         String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String extension = format != null ? format : "mp4";
-        return String.format("studio_%d_%s_%s.%s", studioId, timestamp, UUID.randomUUID().toString().substring(0, 8), extension);
+        return String.format("studio_%s_%s_%s.%s", studioId, timestamp, UUID.randomUUID().toString().substring(0, 8), extension);
     }
 }

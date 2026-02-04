@@ -102,7 +102,7 @@ export function StudioSidebar({
   const prefersMotion = usePrefersMotion();
   const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
 
-  const studioIdNum = Number(studioId) || 0;
+  const studioIdNum = studioId;
   const unreadCount = usePrivateChatStore(
     (state) => state.unreadCounts[studioIdNum] ?? 0
   );
@@ -117,7 +117,7 @@ export function StudioSidebar({
 
   // 프라이빗 메시지 폴링 (프라이빗 패널이 열려있지 않을 때만)
   useEffect(() => {
-    if (activeTab === "private" || studioIdNum === 0) return;
+    if (activeTab === "private" || !studioIdNum) return;
 
     const checkNewPrivateMessages = async () => {
       try {
@@ -167,7 +167,7 @@ export function StudioSidebar({
 
   // 프라이빗 패널 열면 lastSeenId 업데이트
   useEffect(() => {
-    if (activeTab !== "private" || studioIdNum === 0) return;
+    if (activeTab !== "private" || !studioIdNum) return;
 
     const updateLastSeen = async () => {
       try {

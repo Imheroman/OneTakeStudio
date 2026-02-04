@@ -36,7 +36,7 @@ export type StudioStateType =
 
 export interface StudioStateMessage {
   type: StudioStateType;
-  studioId: number;
+  studioId: string;
   userId: string;
   nickname: string;
   payload?: Record<string, unknown>;
@@ -44,7 +44,7 @@ export interface StudioStateMessage {
 }
 
 export interface UseStudioStateSyncOptions {
-  studioId: number;
+  studioId: string;
   userId: string;
   nickname: string;
   onStateChange?: (message: StudioStateMessage) => void;
@@ -85,7 +85,7 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
 
   // WebSocket 연결
   useEffect(() => {
-    if (!studioId || studioId === 0) return;
+    if (!studioId) return;
     if (!userId) {
       console.warn("[StudioStateSync] userId가 없어서 WebSocket 연결 스킵");
       return;

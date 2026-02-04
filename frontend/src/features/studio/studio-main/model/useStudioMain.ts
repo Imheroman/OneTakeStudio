@@ -138,7 +138,7 @@ export function useStudioMain(
     forceRelease: forceReleaseLock,
     refresh: refreshLockStatus,
   } = useEditLock({
-    studioId: Number(studioId) || 0,
+    studioId: studioId || "",
     userId: user?.userId || "",
     autoExtend: true,
     extendInterval: 2 * 60 * 1000, // 2분마다 갱신
@@ -321,7 +321,7 @@ export function useStudioMain(
     broadcastSceneSelected,
     broadcastSceneRecommended,
   } = useStudioStateSync({
-    studioId: Number(studioId) || 0,
+    studioId: studioId || "",
     userId: user?.userId || "",
     nickname: user?.nickname || "Guest",
     onStateChange: handleRemoteStateChange,
@@ -362,7 +362,7 @@ export function useStudioMain(
     unpublishTrack,
     getRemoteStream,
   } = useStudioLiveKit({
-    studioId: Number(studioId) || 0,
+    studioId: studioId || "",
     userId: user?.userId || "",
     nickname: user?.nickname || "Guest",
     enabled: !isLoading && !!studio, // 스튜디오 로드 후 연결
@@ -791,8 +791,7 @@ export function useStudioMain(
 
   const handleGoLive = useCallback(
     async (destinationIds?: number[]) => {
-      const sid = Number(studioId);
-      if (Number.isNaN(sid)) return;
+      if (!studioId) return;
 
       // 송출할 채널이 없으면 경고
       const destIds = destinationIds ?? selectedDestinationIds;
@@ -815,7 +814,7 @@ export function useStudioMain(
         if (!room) {
           weCreatedRoomRef.current = true;
           const tokenResponse = await joinStream({
-            studioId: sid,
+            studioId: studioId,
             participantName: user?.nickname || "Host",
           });
 
@@ -905,14 +904,14 @@ export function useStudioMain(
 
         // 2. RTMP 송출 시작
         await startPublish({
-          studioId: sid,
+          studioId: studioId,
           destinationIds: destIds,
         });
 
         // 3. 채팅 연동 자동 시작 (YouTube, Twitch, Chzzk)
         try {
           const chatResults = await startChatIntegrationByDestinations(
-            sid,
+            studioId,
             destIds
           );
           chatResults.forEach((result) => {
@@ -971,8 +970,7 @@ export function useStudioMain(
 
   // 송출 중지 및 LiveKit 연결 해제
   const handleEndLive = useCallback(async () => {
-    const sid = Number(studioId);
-    if (Number.isNaN(sid)) return;
+    if (!studioId) return;
 
     try {
       // 0. 자동 녹화 중지 (가장 먼저 실행하여 녹화 데이터 손실 방지)
@@ -982,7 +980,7 @@ export function useStudioMain(
 
       // 1. RTMP 송출 중지
       if (isPublishing) {
-        await stopPublish(sid);
+        await stopPublish(studioId);
         setIsPublishing(false);
       }
 
@@ -1003,10 +1001,10 @@ export function useStudioMain(
       }
 
       // 3. 채팅 연동 종료
-      await stopAllChatIntegrations(sid).catch(console.error);
+      await stopAllChatIntegrations(studioId).catch(console.error);
 
       // 4. 서버에 스트림 퇴장 알림
-      await leaveStream(sid).catch(console.error);
+      await leaveStream(studioId).catch(console.error);
 
       setIsLive(false);
       console.log("Live ended");
@@ -1026,11 +1024,10 @@ export function useStudioMain(
 
   // 송출 상태 조회
   const checkPublishStatus = useCallback(async () => {
-    const sid = Number(studioId);
-    if (Number.isNaN(sid) || !isPublishing) return null;
+    if (!studioId || !isPublishing) return null;
 
     try {
-      return await getPublishStatus(sid);
+      return await getPublishStatus(studioId);
     } catch (error) {
       console.error("Failed to get publish status:", error);
       return null;
@@ -1101,12 +1098,11 @@ export function useStudioMain(
 
   const handleAddScene = useCallback(
     async (name: string) => {
-      const sid = Number(studioId);
       const trimmed = name?.trim();
-      if (Number.isNaN(sid) || !trimmed) return;
+      if (!studioId || !trimmed) return;
       try {
         const response = await apiClient.post(
-          `/api/studios/${sid}/scenes`,
+          `/api/studios/${studioId}/scenes`,
           ApiResponseSceneSchema,
           { name: trimmed } as z.infer<typeof CreateSceneRequestSchema>
         );
@@ -1124,13 +1120,12 @@ export function useStudioMain(
   );
 
   const handleRemoveScene = async (sceneId: string) => {
-    const sid = Number(studioId);
     const sceneIdNum = Number(sceneId);
-    if (Number.isNaN(sid) || Number.isNaN(sceneIdNum)) return;
+    if (!studioId || Number.isNaN(sceneIdNum)) return;
     if (!confirm("이 씬을 삭제할까요?")) return;
     try {
       await apiClient.delete(
-        `/api/studios/${sid}/scenes/${sceneIdNum}`,
+        `/api/studios/${studioId}/scenes/${sceneIdNum}`,
         z.object({ success: z.boolean(), message: z.string().optional() })
       );
       await fetchStudio();
@@ -1143,12 +1138,11 @@ export function useStudioMain(
     sceneId: string,
     payload: { name?: string }
   ) => {
-    const sid = Number(studioId);
     const sceneIdNum = Number(sceneId);
-    if (Number.isNaN(sid) || Number.isNaN(sceneIdNum)) return;
+    if (!studioId || Number.isNaN(sceneIdNum)) return;
     try {
       await apiClient.put(
-        `/api/studios/${sid}/scenes/${sceneIdNum}`,
+        `/api/studios/${studioId}/scenes/${sceneIdNum}`,
         ApiResponseSceneSchema,
         payload as z.infer<typeof UpdateSceneRequestSchema>
       );
@@ -1400,9 +1394,8 @@ export function useStudioMain(
   );
 
   const handleSaveSceneLayout = useCallback(async () => {
-    const sid = Number(studioId);
     const sceneIdNum = Number(previewSceneId);
-    if (Number.isNaN(sid) || Number.isNaN(sceneIdNum) || !previewSceneId)
+    if (!studioId || Number.isNaN(sceneIdNum) || !previewSceneId)
       return;
     try {
       const layout = {
@@ -1430,7 +1423,7 @@ export function useStudioMain(
         }),
       };
       await apiClient.put(
-        `/api/studios/${sid}/scenes/${sceneIdNum}`,
+        `/api/studios/${studioId}/scenes/${sceneIdNum}`,
         z.object({
           success: z.boolean(),
           message: z.string().optional(),
@@ -1510,11 +1503,10 @@ export function useStudioMain(
   }, []);
 
   const handleStartCloudRecording = useCallback(async () => {
-    const sid = Number(studioId);
-    if (Number.isNaN(sid)) return;
+    if (!studioId) return;
     try {
       const body: RecordingStartRequest = {
-        studioId: sid,
+        studioId: studioId,
         outputFormat: "mp4",
         quality: "1080p",
       };
@@ -1530,11 +1522,10 @@ export function useStudioMain(
   }, [studioId]);
 
   const handleStopCloudRecording = useCallback(async () => {
-    const sid = Number(studioId);
-    if (Number.isNaN(sid)) return;
+    if (!studioId) return;
     try {
       await apiClient.post(
-        `/api/recordings/${sid}/stop`,
+        `/api/recordings/${studioId}/stop`,
         ApiResponseRecordingSchema
       );
       setIsRecordingCloud(false);

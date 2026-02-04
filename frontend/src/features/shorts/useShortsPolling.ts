@@ -7,12 +7,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 // AI 쇼츠 상태 응답 스키마
 const ShortsStatusResponseSchema = z.object({
-  jobId: z.string().optional(),
+  jobId: z.string().nullable().optional(),
   status: z.string(),
   totalCount: z.number(),
   completedCount: z.number(),
   shorts: z.array(z.object({
-    videoId: z.string().optional(),
+    videoId: z.string().nullable().optional(),
     status: z.string(),
     outputPath: z.string().nullable().optional(),
     thumbnailPath: z.string().nullable().optional(),
@@ -21,7 +21,7 @@ const ShortsStatusResponseSchema = z.object({
     currentStep: z.number().nullable().optional(),
     totalSteps: z.number().nullable().optional(),
     currentStepKey: z.string().nullable().optional(),
-  })).optional(),
+  })).nullable().optional(),
 });
 
 export const useShortsPolling = () => {

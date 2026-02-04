@@ -47,7 +47,7 @@ public class StreamService {
     private String turnCredential;
 
     @Transactional
-    public StreamTokenResponse joinStream(Long userId, Long studioId, StreamTokenRequest request) {
+    public StreamTokenResponse joinStream(Long userId, String studioId, StreamTokenRequest request) {
         String roomName = "studio-" + studioId;
 
         // LiveKit 토큰 생성 (participantIdentity 필요)
@@ -95,7 +95,7 @@ public class StreamService {
             // 동시 요청 등으로 중복 키 발생 시 새 트랜잭션에서 기존 행 재사용 후 토큰 반환
             String participantIdentity = tokenResponse.getParticipantIdentity();
             String metadata = request.getMetadata();
-            final Long finalStudioId = studioId;
+            final String finalStudioId = studioId;
             DefaultTransactionDefinition def = new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
             TransactionStatus txStatus = transactionManager.getTransaction(def);
             try {
@@ -133,7 +133,7 @@ public class StreamService {
     }
 
     @Transactional
-    public void leaveStream(Long studioId, Long userId) {
+    public void leaveStream(String studioId, Long userId) {
         // CONNECTING 또는 ACTIVE 상태인 세션 모두 처리
         streamSessionRepository.findByStudioIdAndUserIdAndStatusIn(
                 studioId, userId, List.of(SessionStatus.CONNECTING, SessionStatus.ACTIVE))
@@ -148,7 +148,7 @@ public class StreamService {
     }
 
     @Transactional
-    public void endStream(Long studioId) {
+    public void endStream(String studioId) {
         streamSessionRepository.findByStudioIdAndStatus(studioId, SessionStatus.ACTIVE)
                 .ifPresent(session -> {
                     session.close();
@@ -161,13 +161,13 @@ public class StreamService {
                 });
     }
 
-    public StreamSessionResponse getActiveSession(Long studioId) {
+    public StreamSessionResponse getActiveSession(String studioId) {
         return streamSessionRepository.findByStudioIdAndStatus(studioId, SessionStatus.ACTIVE)
                 .map(StreamSessionResponse::from)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
     }
 
-    public List<StreamSessionResponse> getSessionHistory(Long studioId) {
+    public List<StreamSessionResponse> getSessionHistory(String studioId) {
         return streamSessionRepository.findByStudioId(studioId).stream()
                 .map(StreamSessionResponse::from)
                 .toList();

@@ -23,7 +23,7 @@ public class PublishSession extends BaseTimeEntity {
     private String publishSessionId;
 
     @Column(name = "studio_id", nullable = false)
-    private Long studioId;
+    private String studioId;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;

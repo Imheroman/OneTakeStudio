@@ -47,7 +47,7 @@ public class StudioController {
     @GetMapping("/{studioId}")
     public ResponseEntity<ApiResponse<StudioDetailResponse>> getStudioDetail(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
         log.debug("스튜디오 상세 조회 요청: studioId={}", studioId);
         StudioDetailResponse studio = studioService.getStudioDetail(userDetails.getUserId(), studioId);
@@ -58,7 +58,7 @@ public class StudioController {
     @PatchMapping("/{studioId}")
     public ResponseEntity<ApiResponse<StudioDetailResponse>> updateStudio(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @Valid @RequestBody UpdateStudioRequest request) {
 
         log.debug("스튜디오 수정 요청: studioId={}", studioId);
@@ -70,7 +70,7 @@ public class StudioController {
     @DeleteMapping("/{studioId}")
     public ResponseEntity<ApiResponse<Void>> deleteStudio(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
         log.debug("스튜디오 삭제 요청: studioId={}", studioId);
         studioService.deleteStudio(userDetails.getUserId(), studioId);
@@ -82,7 +82,7 @@ public class StudioController {
 
     @GetMapping("/{studioId}/note")
     public ResponseEntity<ApiResponse<NoteResponse>> getNote(
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
         log.debug("스튜디오 노트 조회: studioId={}", studioId);
         NoteResponse note = studioService.getNote(studioId);
@@ -92,7 +92,7 @@ public class StudioController {
 
     @PutMapping("/{studioId}/note")
     public ResponseEntity<ApiResponse<NoteResponse>> updateNote(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestBody NoteRequest request) {
 
         log.debug("스튜디오 노트 업데이트: studioId={}", studioId);

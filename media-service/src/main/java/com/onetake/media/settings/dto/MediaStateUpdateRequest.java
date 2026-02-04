@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class MediaStateUpdateRequest {
 
     @NotNull
-    private Long studioId;
+    private String studioId;
 
     private Boolean videoEnabled;
 

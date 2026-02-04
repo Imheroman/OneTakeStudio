@@ -20,7 +20,7 @@ public class ChatWebSocketController {
 
     @MessageMapping("/chat/{studioId}/send")
     public void sendMessage(
-            @DestinationVariable Long studioId,
+            @DestinationVariable String studioId,
             @Payload ChatMessageRequest request,
             SimpMessageHeaderAccessor headerAccessor) {
 
@@ -45,7 +45,7 @@ public class ChatWebSocketController {
 
     @MessageMapping("/chat/{studioId}/typing")
     public void handleTyping(
-            @DestinationVariable Long studioId,
+            @DestinationVariable String studioId,
             @Payload TypingNotification notification,
             SimpMessageHeaderAccessor headerAccessor) {
 

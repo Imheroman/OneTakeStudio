@@ -23,7 +23,7 @@ public class ScreenShareSession extends BaseTimeEntity {
     private String screenShareSessionId;
 
     @Column(name = "studio_id", nullable = false)
-    private Long studioId;
+    private String studioId;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;

@@ -6,7 +6,6 @@ import com.onetake.media.chat.repository.CommentStatsRepository;
 import com.onetake.media.chat.service.CommentCounterService;
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
-import com.onetake.media.global.resolver.StudioIdResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +28,6 @@ public class CommentStatsController {
 
     private final CommentStatsRepository commentStatsRepository;
     private final CommentCounterService commentCounterService;
-    private final StudioIdResolver studioIdResolver;
 
     /**
      * 녹화별 분당 댓글 수 조회
@@ -56,8 +54,7 @@ public class CommentStatsController {
     public ResponseEntity<CommentCountsResponse> getCommentCountsByStudio(
             @PathVariable String studioId) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        CommentStats stats = commentStatsRepository.findFirstByStudioIdOrderByCreatedAtDesc(resolvedStudioId)
+        CommentStats stats = commentStatsRepository.findFirstByStudioIdOrderByCreatedAtDesc(studioId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
         return ResponseEntity.ok(CommentCountsResponse.from(stats));
@@ -72,13 +69,12 @@ public class CommentStatsController {
     public ResponseEntity<Map<String, Object>> getLiveCommentCounts(
             @PathVariable String studioId) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        boolean isActive = commentCounterService.isCountingActive(resolvedStudioId);
-        List<Integer> counts = commentCounterService.getCurrentCounts(resolvedStudioId);
+        boolean isActive = commentCounterService.isCountingActive(studioId);
+        List<Integer> counts = commentCounterService.getCurrentCounts(studioId);
         int totalCount = counts.stream().mapToInt(Integer::intValue).sum();
 
         return ResponseEntity.ok(Map.of(
-                "studioId", resolvedStudioId,
+                "studioId", studioId,
                 "isActive", isActive,
                 "currentMinute", counts.size(),
                 "counts", counts,

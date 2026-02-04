@@ -7,7 +7,7 @@ import { apiClient } from "./client";
 
 const AssetSchema = z.object({
   id: z.union([z.string(), z.number()]),
-  studioId: z.number().optional(),
+  studioId: z.union([z.string(), z.number()]).optional(),
   type: z.enum(["logo", "overlay", "video"]),
   name: z.string(),
   fileUrl: z.string().nullable().optional(),

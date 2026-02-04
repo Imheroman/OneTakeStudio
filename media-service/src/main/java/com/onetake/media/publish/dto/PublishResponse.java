@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class PublishResponse {
 
     private String publishSessionId;
-    private Long studioId;
+    private String studioId;
     private PublishStatus status;
     private String destinationIds;
     private LocalDateTime startedAt;

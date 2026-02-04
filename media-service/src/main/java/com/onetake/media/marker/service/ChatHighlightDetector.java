@@ -25,10 +25,10 @@ public class ChatHighlightDetector {
     private final MarkerService markerService;
 
     // 스튜디오별 채팅 카운트 윈도우 (studioId -> 시간대별 채팅 수)
-    private final Map<Long, LinkedList<ChatWindow>> chatWindows = new ConcurrentHashMap<>();
+    private final Map<String, LinkedList<ChatWindow>> chatWindows = new ConcurrentHashMap<>();
 
     // 이미 마킹된 시간대 (중복 방지)
-    private final Map<Long, Set<Long>> markedTimestamps = new ConcurrentHashMap<>();
+    private final Map<String, Set<Long>> markedTimestamps = new ConcurrentHashMap<>();
 
     // 설정
     private static final int WINDOW_SIZE_SECONDS = 10;      // 윈도우 크기 (10초)
@@ -39,7 +39,7 @@ public class ChatHighlightDetector {
     /**
      * 채팅 메시지 추가 (실시간 호출)
      */
-    public void onChatMessage(Long studioId, String recordingId) {
+    public void onChatMessage(String studioId, String recordingId) {
         long currentWindow = System.currentTimeMillis() / (WINDOW_SIZE_SECONDS * 1000);
 
         chatWindows.computeIfAbsent(studioId, k -> new LinkedList<>());
@@ -66,8 +66,8 @@ public class ChatHighlightDetector {
      */
     @Scheduled(fixedRate = 10000)
     public void checkForSpikes() {
-        for (Map.Entry<Long, LinkedList<ChatWindow>> entry : chatWindows.entrySet()) {
-            Long studioId = entry.getKey();
+        for (Map.Entry<String, LinkedList<ChatWindow>> entry : chatWindows.entrySet()) {
+            String studioId = entry.getKey();
             LinkedList<ChatWindow> windows = entry.getValue();
 
             if (windows.size() < 3) continue;  // 최소 데이터 필요
@@ -121,7 +121,7 @@ public class ChatHighlightDetector {
     /**
      * 스튜디오 세션 종료 시 정리
      */
-    public void clearStudio(Long studioId) {
+    public void clearStudio(String studioId) {
         chatWindows.remove(studioId);
         markedTimestamps.remove(studioId);
     }

@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 public class RecordingStoppedEvent {
 
     private Long recordingId;
-    private Long studioId;
+    private String studioId;
     private Long userId;
     private String filePath;
     private String fileUrl;

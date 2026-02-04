@@ -94,11 +94,11 @@ public class StudioService {
                 .toList();
     }
 
-    public StudioDetailResponse getStudioDetail(String userId, Long studioId) {
+    public StudioDetailResponse getStudioDetail(String userId, String studioId) {
         log.debug("스튜디오 상세 조회: userId={}, studioId={}", userId, studioId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateMemberAccess(studio.getId(), internalUserId);
@@ -116,11 +116,11 @@ public class StudioService {
     }
 
     @Transactional
-    public StudioDetailResponse updateStudio(String userId, Long studioId, UpdateStudioRequest request) {
+    public StudioDetailResponse updateStudio(String userId, String studioId, UpdateStudioRequest request) {
         log.debug("스튜디오 수정 요청: userId={}, studioId={}", userId, studioId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         StudioMember currentMember = studioMemberRepository.findByStudioIdAndUserId(studio.getId(), internalUserId)
@@ -137,11 +137,11 @@ public class StudioService {
     }
 
     @Transactional
-    public void deleteStudio(String userId, Long studioId) {
+    public void deleteStudio(String userId, String studioId) {
         log.debug("스튜디오 삭제 요청: userId={}, studioId={}", userId, studioId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         if (!studio.getOwnerId().equals(internalUserId)) {
@@ -189,15 +189,15 @@ public class StudioService {
 
     // ==================== Note ====================
 
-    public NoteResponse getNote(Long studioId) {
-        Studio studio = studioRepository.findById(studioId)
+    public NoteResponse getNote(String studioId) {
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
         return NoteResponse.of(studio.getNote());
     }
 
     @Transactional
-    public NoteResponse updateNote(Long studioId, String content) {
-        Studio studio = studioRepository.findById(studioId)
+    public NoteResponse updateNote(String studioId, String content) {
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         studio.updateNote(content);

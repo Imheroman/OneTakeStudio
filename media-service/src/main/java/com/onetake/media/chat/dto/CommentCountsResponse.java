@@ -25,7 +25,7 @@ public class CommentCountsResponse {
     /**
      * 스튜디오 ID
      */
-    private Long studioId;
+    private String studioId;
 
     /**
      * 총 방송 시간 (분)

@@ -23,7 +23,7 @@ class CommentCounterServiceTest {
     @DisplayName("카운터 시작 - 성공")
     void startCounting_Success() {
         // given
-        Long studioId = 100L;
+        String studioId = "100";
 
         // when
         commentCounterService.startCounting(studioId);
@@ -39,7 +39,7 @@ class CommentCounterServiceTest {
     @DisplayName("카운트 증가 - 성공")
     void incrementCount_Success() {
         // given
-        Long studioId = 101L;
+        String studioId = "101";
         commentCounterService.startCounting(studioId);
 
         // when
@@ -60,7 +60,7 @@ class CommentCounterServiceTest {
     @DisplayName("카운터 중지 - 성공")
     void stopCounting_Success() {
         // given
-        Long studioId = 102L;
+        String studioId = "102";
         commentCounterService.startCounting(studioId);
 
         // when
@@ -74,7 +74,7 @@ class CommentCounterServiceTest {
     @DisplayName("카운터가 없을 때 incrementCount 호출 - 자동 시작")
     void incrementCount_AutoStart() {
         // given
-        Long studioId = 103L;
+        String studioId = "103";
 
         // when
         commentCounterService.incrementCount(studioId);
@@ -92,7 +92,7 @@ class CommentCounterServiceTest {
     @DisplayName("비활성 카운터의 카운트 조회 - 빈 리스트 반환")
     void getCurrentCounts_InactiveCounter() {
         // given
-        Long studioId = 104L;
+        String studioId = "104";
 
         // when
         List<Integer> counts = commentCounterService.getCurrentCounts(studioId);

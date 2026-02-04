@@ -34,7 +34,7 @@ public class ChatService {
     private static final String CHAT_TOPIC = "/topic/chat/";
 
     @Transactional
-    public ChatMessageResponse sendMessage(Long userId, Long studioId, ChatMessageRequest request) {
+    public ChatMessageResponse sendMessage(Long userId, String studioId, ChatMessageRequest request) {
         // 외부 메시지 중복 체크
         if (request.getExternalMessageId() != null &&
                 chatMessageRepository.existsByExternalMessageId(request.getExternalMessageId())) {
@@ -76,7 +76,7 @@ public class ChatService {
      * 외부 플랫폼(YouTube, Chzzk 등)에서 수신한 메시지 처리
      * DB 저장 없이 WebSocket 브로드캐스트 + 분당 댓글 수 카운팅
      */
-    public void receiveExternalMessage(Long studioId, ChatMessageRequest request) {
+    public void receiveExternalMessage(String studioId, ChatMessageRequest request) {
         ChatMessageResponse response = ChatMessageResponse.builder()
                 .messageId(request.getExternalMessageId() != null
                         ? request.getExternalMessageId()
@@ -105,7 +105,7 @@ public class ChatService {
                 studioId, request.getPlatform(), request.getSenderName());
     }
 
-    public List<ChatMessageResponse> getMessages(Long studioId, int limit) {
+    public List<ChatMessageResponse> getMessages(String studioId, int limit) {
         Page<ChatMessage> messages = chatMessageRepository
                 .findByStudioIdAndIsDeletedFalseOrderByCreatedAtDesc(
                         studioId, PageRequest.of(0, limit));
@@ -115,7 +115,7 @@ public class ChatService {
                 .toList();
     }
 
-    public List<ChatMessageResponse> getMessagesByPlatform(Long studioId, ChatPlatform platform) {
+    public List<ChatMessageResponse> getMessagesByPlatform(String studioId, ChatPlatform platform) {
         return chatMessageRepository
                 .findByStudioIdAndPlatformAndIsDeletedFalseOrderByCreatedAtDesc(studioId, platform)
                 .stream()
@@ -123,7 +123,7 @@ public class ChatService {
                 .toList();
     }
 
-    public List<ChatMessageResponse> getRecentMessages(Long studioId, int minutes) {
+    public List<ChatMessageResponse> getRecentMessages(String studioId, int minutes) {
         LocalDateTime since = LocalDateTime.now().minusMinutes(minutes);
         return chatMessageRepository.findRecentMessages(studioId, since)
                 .stream()
@@ -131,7 +131,7 @@ public class ChatService {
                 .toList();
     }
 
-    public List<ChatMessageResponse> getHighlightedMessages(Long studioId) {
+    public List<ChatMessageResponse> getHighlightedMessages(String studioId) {
         return chatMessageRepository.findHighlightedMessages(studioId)
                 .stream()
                 .map(ChatMessageResponse::from)
@@ -166,7 +166,7 @@ public class ChatService {
         log.info("Message deleted: messageId={}", messageId);
     }
 
-    public ChatStatsResponse getChatStats(Long studioId) {
+    public ChatStatsResponse getChatStats(String studioId) {
         LocalDateTime oneMinuteAgo = LocalDateTime.now().minusMinutes(1);
 
         Long totalMessages = chatMessageRepository.countMessagesSince(
@@ -187,12 +187,12 @@ public class ChatService {
                 .build();
     }
 
-    private void broadcastMessage(Long studioId, ChatMessageResponse message) {
+    private void broadcastMessage(String studioId, ChatMessageResponse message) {
         messagingTemplate.convertAndSend(CHAT_TOPIC + studioId, message);
     }
 
     @Transactional
-    public void sendSystemMessage(Long studioId, String content) {
+    public void sendSystemMessage(String studioId, String content) {
         ChatMessageRequest request = ChatMessageRequest.builder()
                 .studioId(String.valueOf(studioId))
                 .platform(ChatPlatform.INTERNAL)

@@ -1,7 +1,6 @@
 package com.onetake.media.stream.controller;
 
 import com.onetake.media.global.common.ApiResponse;
-import com.onetake.media.global.resolver.StudioIdResolver;
 import com.onetake.media.stream.dto.IceServerResponse;
 import com.onetake.media.stream.dto.StreamSessionResponse;
 import com.onetake.media.stream.dto.StreamTokenRequest;
@@ -20,13 +19,12 @@ import java.util.List;
 public class StreamController {
 
     private final StreamService streamService;
-    private final StudioIdResolver studioIdResolver;
 
     @PostMapping("/stream/join")
     public ResponseEntity<ApiResponse<StreamTokenResponse>> joinStream(
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody StreamTokenRequest request) {
-        Long studioId = studioIdResolver.resolveStudioId(request.getStudioId());
+        String studioId = request.getStudioId();
         StreamTokenResponse response = streamService.joinStream(userId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -35,32 +33,28 @@ public class StreamController {
     public ResponseEntity<ApiResponse<Void>> leaveStream(
             @RequestHeader("X-User-Id") Long userId,
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        streamService.leaveStream(resolvedStudioId, userId);
+        streamService.leaveStream(studioId, userId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
     @PostMapping("/stream/{studioId}/end")
     public ResponseEntity<ApiResponse<Void>> endStream(
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        streamService.endStream(resolvedStudioId);
+        streamService.endStream(studioId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
     @GetMapping("/stream/{studioId}/session")
     public ResponseEntity<ApiResponse<StreamSessionResponse>> getActiveSession(
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        StreamSessionResponse response = streamService.getActiveSession(resolvedStudioId);
+        StreamSessionResponse response = streamService.getActiveSession(studioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/stream/{studioId}/history")
     public ResponseEntity<ApiResponse<List<StreamSessionResponse>>> getSessionHistory(
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        List<StreamSessionResponse> response = streamService.getSessionHistory(resolvedStudioId);
+        List<StreamSessionResponse> response = streamService.getSessionHistory(studioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

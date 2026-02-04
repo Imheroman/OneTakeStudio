@@ -16,7 +16,7 @@ import java.util.Map;
 @Builder
 public class ViewerStatsResponse {
 
-    private Long studioId;
+    private String studioId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private Long averageViewers;

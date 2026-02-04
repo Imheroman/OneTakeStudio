@@ -13,7 +13,7 @@ public class ScreenShareResponse {
 
     private Long id;
     private String shareId;
-    private Long studioId;
+    private String studioId;
     private Long userId;
     private ScreenShareStatus status;
     private String sourceType;

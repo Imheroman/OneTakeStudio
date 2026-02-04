@@ -24,7 +24,7 @@ public class StudioStateService {
     /**
      * 상태 변경 브로드캐스트
      */
-    public void broadcastState(Long studioId, StudioStateMessage message) {
+    public void broadcastState(String studioId, StudioStateMessage message) {
         String destination = "/topic/studio/" + studioId + "/state";
 
         log.debug("상태 브로드캐스트: studioId={}, type={}, destination={}",
@@ -36,7 +36,7 @@ public class StudioStateService {
     /**
      * 편집 락 상태 브로드캐스트
      */
-    public void broadcastLockAcquired(Long studioId, String userId, String nickname) {
+    public void broadcastLockAcquired(String studioId, String userId, String nickname) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.LOCK_ACQUIRED)
                 .studioId(studioId)
@@ -52,7 +52,7 @@ public class StudioStateService {
     /**
      * 편집 락 해제 브로드캐스트
      */
-    public void broadcastLockReleased(Long studioId, String userId, String nickname) {
+    public void broadcastLockReleased(String studioId, String userId, String nickname) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.LOCK_RELEASED)
                 .studioId(studioId)
@@ -68,7 +68,7 @@ public class StudioStateService {
     /**
      * 레이아웃 변경 브로드캐스트
      */
-    public void broadcastLayoutChange(Long studioId, String userId, String nickname, String layout) {
+    public void broadcastLayoutChange(String studioId, String userId, String nickname, String layout) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.LAYOUT_CHANGE)
                 .studioId(studioId)
@@ -84,7 +84,7 @@ public class StudioStateService {
     /**
      * 소스 변환(위치/크기) 브로드캐스트
      */
-    public void broadcastSourceTransform(Long studioId, String userId, String nickname,
+    public void broadcastSourceTransform(String studioId, String userId, String nickname,
                                           String sourceId, Map<String, Object> transform) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.SOURCE_TRANSFORM)
@@ -101,7 +101,7 @@ public class StudioStateService {
     /**
      * 배너 선택 브로드캐스트
      */
-    public void broadcastBannerSelected(Long studioId, String userId, String nickname, Object banner) {
+    public void broadcastBannerSelected(String studioId, String userId, String nickname, Object banner) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.BANNER_SELECTED)
                 .studioId(studioId)
@@ -117,7 +117,7 @@ public class StudioStateService {
     /**
      * 에셋 선택 브로드캐스트
      */
-    public void broadcastAssetSelected(Long studioId, String userId, String nickname, Object asset) {
+    public void broadcastAssetSelected(String studioId, String userId, String nickname, Object asset) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.ASSET_SELECTED)
                 .studioId(studioId)
@@ -133,7 +133,7 @@ public class StudioStateService {
     /**
      * 멤버 입장 브로드캐스트
      */
-    public void broadcastMemberJoined(Long studioId, String userId, String nickname) {
+    public void broadcastMemberJoined(String studioId, String userId, String nickname) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.MEMBER_JOINED)
                 .studioId(studioId)
@@ -149,7 +149,7 @@ public class StudioStateService {
     /**
      * 멤버 퇴장 브로드캐스트
      */
-    public void broadcastMemberLeft(Long studioId, String userId, String nickname) {
+    public void broadcastMemberLeft(String studioId, String userId, String nickname) {
         StudioStateMessage message = StudioStateMessage.builder()
                 .type(StudioStateMessage.StudioStateType.MEMBER_LEFT)
                 .studioId(studioId)

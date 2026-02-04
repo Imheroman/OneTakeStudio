@@ -17,7 +17,7 @@ public class SessionMediaStateResponse {
     private String stateId;
     private Long streamSessionId;
     private Long userId;
-    private Long studioId;
+    private String studioId;
     private Boolean videoEnabled;
     private Boolean audioEnabled;
     private String currentVideoDeviceId;

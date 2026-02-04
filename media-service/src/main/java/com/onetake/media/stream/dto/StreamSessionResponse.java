@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class StreamSessionResponse {
 
     private Long id;
-    private Long studioId;
+    private String studioId;
     private Long userId;
     private String roomName;
     private String participantIdentity;

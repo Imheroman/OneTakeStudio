@@ -35,7 +35,7 @@ public class ShortsResponse {
     /**
      * 스튜디오 ID
      */
-    private Long studioId;
+    private String studioId;
 
     /**
      * 작업 상태

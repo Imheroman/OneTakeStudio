@@ -23,7 +23,7 @@ public class StudioInviteController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<InviteResponse>>> getStudioInvites(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
         log.debug("스튜디오 초대 목록 조회 요청: studioId={}", studioId);
         List<InviteResponse> invites = studioMemberService.getStudioInvites(userDetails.getUserId(), studioId);
@@ -34,7 +34,7 @@ public class StudioInviteController {
     @DeleteMapping("/{inviteId}")
     public ResponseEntity<ApiResponse<Void>> cancelInvite(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable String inviteId) {
 
         log.debug("초대 취소 요청: studioId={}, inviteId={}", studioId, inviteId);

@@ -29,7 +29,7 @@ public class SessionMediaState extends BaseTimeEntity {
     private Long userId;
 
     @Column(name = "studio_id", nullable = false)
-    private Long studioId;
+    private String studioId;
 
     @Column(name = "video_enabled")
     @Builder.Default

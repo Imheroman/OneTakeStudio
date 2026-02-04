@@ -29,7 +29,7 @@ public class OAuthController {
     public ResponseEntity<ApiResponse<AuthorizeResponse>> getAuthorizationUrl(
             @PathVariable String platform,
             @RequestParam Long userId,
-            @RequestParam(required = false) Long studioId) {
+            @RequestParam(required = false) String studioId) {
 
         ChatPlatform chatPlatform = parsePlatform(platform);
         String authUrl = oAuthService.getAuthorizationUrl(chatPlatform, userId, studioId);

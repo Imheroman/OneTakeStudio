@@ -12,11 +12,11 @@ public interface SessionMediaStateRepository extends JpaRepository<SessionMediaS
 
     Optional<SessionMediaState> findByStateId(String stateId);
 
-    Optional<SessionMediaState> findByStudioIdAndUserIdAndIsActiveTrue(Long studioId, Long userId);
+    Optional<SessionMediaState> findByStudioIdAndUserIdAndIsActiveTrue(String studioId, Long userId);
 
-    List<SessionMediaState> findByStudioIdAndIsActiveTrue(Long studioId);
+    List<SessionMediaState> findByStudioIdAndIsActiveTrue(String studioId);
 
     Optional<SessionMediaState> findByStreamSessionIdAndIsActiveTrue(Long streamSessionId);
 
-    boolean existsByStudioIdAndUserIdAndIsActiveTrue(Long studioId, Long userId);
+    boolean existsByStudioIdAndUserIdAndIsActiveTrue(String studioId, Long userId);
 }

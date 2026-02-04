@@ -25,14 +25,14 @@ export async function joinStream(
   return res.data;
 }
 
-export async function leaveStream(studioId: number): Promise<void> {
+export async function leaveStream(studioId: string | number): Promise<void> {
   await apiClient.post(
     `${STREAMS_BASE}/${studioId}/leave`,
     z.object({ success: z.boolean(), message: z.string().optional() }),
   );
 }
 
-export async function endStream(studioId: number): Promise<void> {
+export async function endStream(studioId: string | number): Promise<void> {
   await apiClient.post(
     `${STREAMS_BASE}/${studioId}/end`,
     z.object({ success: z.boolean(), message: z.string().optional() }),
@@ -40,7 +40,7 @@ export async function endStream(studioId: number): Promise<void> {
 }
 
 export async function getActiveSession(
-  studioId: number,
+  studioId: string | number,
 ): Promise<StreamSessionResponseDto> {
   const res = await apiClient.get(
     `${STREAMS_BASE}/${studioId}/session`,

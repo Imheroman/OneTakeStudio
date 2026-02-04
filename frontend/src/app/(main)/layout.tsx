@@ -40,7 +40,7 @@ export default function MainLayout({
   const [apiNotifications, setApiNotifications] = useState<
     NotificationWithActions[]
   >([]);
-  const { notifications: shortsMsgs, openResultModal } = useShortsStore();
+  const { notifications: shortsMsgs, openResultModal, removeNotification: removeShortsNotification, clearNotifications: clearShortsNotifications } = useShortsStore();
 
   useEffect(() => {
     if (!showNotifications) return;
@@ -58,6 +58,22 @@ export default function MainLayout({
   const removeNotification = useCallback((notifId: string) => {
     setApiNotifications((prev) => prev.filter((n) => n.id !== notifId));
   }, []);
+
+  // 개별 알림 삭제 (shorts는 인덱스 기반, api는 id 기반)
+  const handleDismissNotification = useCallback((notifId: string) => {
+    if (notifId.startsWith("shorts-")) {
+      const index = parseInt(notifId.split("-")[1], 10);
+      if (!isNaN(index)) removeShortsNotification(index);
+    } else {
+      removeNotification(notifId);
+    }
+  }, [removeShortsNotification, removeNotification]);
+
+  // 전체 알림 삭제
+  const handleClearAll = useCallback(() => {
+    clearShortsNotifications();
+    setApiNotifications([]);
+  }, [clearShortsNotifications]);
 
   // 알림 목록 조회
   const fetchNotifications = useCallback(async () => {
@@ -243,6 +259,8 @@ export default function MainLayout({
                 onClose={closeNotifications}
                 onAccept={noop}
                 onDecline={noop}
+                onDismiss={handleDismissNotification}
+                onClearAll={handleClearAll}
               />
             </div>
           )}
