@@ -182,6 +182,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
     // 상태 동기화 관련
     isStateSyncConnected,
     onlineMembers,
+    stompClient,
     // 실시간 미디어 공유 관련
     isLiveKitConnected,
     remoteSources,
@@ -604,6 +605,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
           onStartLocalRecording={handleStartLocalRecording}
           onStopLocalRecording={handleStopLocalRecording}
           onlineMembers={onlineMembers}
+          stompClient={stompClient}
         />
       </div>
     </LayoutGroup>

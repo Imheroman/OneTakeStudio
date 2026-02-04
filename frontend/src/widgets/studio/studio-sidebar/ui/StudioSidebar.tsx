@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MutableRefObject } from "react";
 import { motion } from "motion/react";
 import {
   MessageSquare,
@@ -13,6 +13,7 @@ import {
   Layers,
   Share2,
 } from "lucide-react";
+import type { Client } from "@stomp/stompjs";
 import { IconButton } from "@/shared/common";
 import { cn } from "@/shared/lib/utils";
 import { sidebarSpring, sidebarEaseReduced } from "@/shared/lib/sidebar-motion";
@@ -27,7 +28,6 @@ import { StudioRecordingPanel } from "../panels/StudioRecordingPanel";
 import { StudioDestinationsPanel } from "../panels/StudioDestinationsPanel";
 import { StudioInviteModal } from "@/widgets/studio/studio-invite-modal";
 import { usePrivateChatStore } from "@/stores/usePrivateChatStore";
-import { getChatHistory } from "@/shared/api/studio-chat";
 import type { BannerItem } from "../panels/StudioBannerPanel";
 import type { AssetItem } from "../panels/StudioAssetPanel";
 import type { StudioStyleState } from "../panels/StudioStylePanel";
@@ -76,6 +76,8 @@ interface StudioSidebarProps {
   onStopLocalRecording?: () => void;
   /** 현재 접속 중인 멤버 목록 */
   onlineMembers?: OnlineMember[];
+  /** STOMP WebSocket 클라이언트 (실시간 채팅용) */
+  stompClient?: MutableRefObject<Client | null>;
 }
 
 export function StudioSidebar({
@@ -95,6 +97,7 @@ export function StudioSidebar({
   onStartLocalRecording,
   onStopLocalRecording,
   onlineMembers = [],
+  stompClient,
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -106,85 +109,43 @@ export function StudioSidebar({
   const unreadCount = usePrivateChatStore(
     (state) => state.unreadCounts[studioIdNum] ?? 0
   );
-  const lastSeenId = usePrivateChatStore(
-    (state) => state.lastSeenMessageIds[studioIdNum]
-  );
   const markAsRead = usePrivateChatStore((state) => state.markAsRead);
   const setUnreadCount = usePrivateChatStore((state) => state.setUnreadCount);
-  const setLastSeenMessageId = usePrivateChatStore(
-    (state) => state.setLastSeenMessageId
-  );
 
-  // 프라이빗 메시지 폴링 (프라이빗 패널이 열려있지 않을 때만)
+  // 프라이빗 메시지 WebSocket 알림 (프라이빗 패널이 열려있지 않을 때 읽지 않은 수 추적)
   useEffect(() => {
     if (activeTab === "private" || !studioIdNum) return;
+    const client = stompClient?.current;
+    if (!client?.connected) return;
 
-    const checkNewPrivateMessages = async () => {
-      try {
-        const messages = await getChatHistory(studioIdNum);
-        const privateMessages = messages.filter(
-          (m) => m.platform === "INTERNAL"
-        );
-
-        if (privateMessages.length === 0) return;
-
-        // 가장 최근 메시지 ID
-        const latestMessageId = privateMessages[0]?.messageId;
-
-        // 처음 로드 시 lastSeenId 설정
-        if (!lastSeenId && latestMessageId) {
-          setLastSeenMessageId(studioIdNum, latestMessageId);
-          return;
-        }
-
-        // 새 메시지가 있으면 카운트 업데이트
-        if (latestMessageId && latestMessageId !== lastSeenId) {
-          const lastSeenIndex = privateMessages.findIndex(
-            (m) => m.messageId === lastSeenId
-          );
-          const newCount =
-            lastSeenIndex === -1 ? privateMessages.length : lastSeenIndex;
-          if (newCount > 0) {
-            setUnreadCount(studioIdNum, newCount);
+    const sub = client.subscribe(
+      `/topic/chat/${studioIdNum}`,
+      (message) => {
+        try {
+          const chatMsg = JSON.parse(message.body);
+          if (chatMsg.platform === "INTERNAL") {
+            setUnreadCount(
+              studioIdNum,
+              (usePrivateChatStore.getState().unreadCounts[studioIdNum] ?? 0) + 1,
+            );
           }
+        } catch {
+          // 조용히 실패
         }
-      } catch (e) {
-        // 조용히 실패
-      }
+      },
+    );
+
+    return () => {
+      sub.unsubscribe();
     };
+  }, [studioIdNum, activeTab, stompClient?.current?.connected, setUnreadCount]);
 
-    checkNewPrivateMessages();
-    const interval = setInterval(checkNewPrivateMessages, 5000); // 5초마다 체크
-
-    return () => clearInterval(interval);
-  }, [
-    studioIdNum,
-    activeTab,
-    lastSeenId,
-    setUnreadCount,
-    setLastSeenMessageId,
-  ]);
-
-  // 프라이빗 패널 열면 lastSeenId 업데이트
+  // 프라이빗 패널 열면 읽음 처리 (WebSocket 기반이므로 별도 fetch 불필요)
   useEffect(() => {
-    if (activeTab !== "private" || !studioIdNum) return;
-
-    const updateLastSeen = async () => {
-      try {
-        const messages = await getChatHistory(studioIdNum);
-        const privateMessages = messages.filter(
-          (m) => m.platform === "INTERNAL"
-        );
-        if (privateMessages.length > 0) {
-          setLastSeenMessageId(studioIdNum, privateMessages[0].messageId);
-        }
-      } catch (e) {
-        // 조용히 실패
-      }
-    };
-
-    updateLastSeen();
-  }, [activeTab, studioIdNum, setLastSeenMessageId]);
+    if (activeTab === "private" && studioIdNum) {
+      markAsRead(studioIdNum);
+    }
+  }, [activeTab, studioIdNum, markAsRead]);
 
   const handleTabClick = (id: StudioSidebarTabId) => {
     // 프라이빗 탭 열면 읽음 처리
@@ -247,6 +208,7 @@ export function StudioSidebar({
                 studioId={studioIdNum}
                 onClose={closePanel}
                 filterPlatform={null}
+                stompClient={stompClient}
               />
             )}
             {activeTab === "banner" && (
@@ -291,6 +253,7 @@ export function StudioSidebar({
                 studioId={studioIdNum}
                 onClose={closePanel}
                 filterPlatform="INTERNAL"
+                stompClient={stompClient}
               />
             )}
             {activeTab === "recording" && (

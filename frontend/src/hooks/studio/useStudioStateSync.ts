@@ -334,6 +334,7 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
   return {
     isConnected,
     onlineMembers,
+    stompClient: clientRef,
     broadcastState,
     broadcastLayoutChange,
     broadcastSourceTransform,

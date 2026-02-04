@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type MutableRefObject } from "react";
 import { List } from "react-window";
 import { MessageSquare, Send } from "lucide-react";
+import type { Client, StompSubscription } from "@stomp/stompjs";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { getChatHistory, sendChatMessage } from "@/shared/api/studio-chat";
@@ -50,15 +51,28 @@ function ChatMessageRow({
 }
 
 interface StudioChatPanelProps {
-  studioId: number;
+  studioId: number | string;
   onClose?: () => void;
   filterPlatform?: "INTERNAL" | null; // null = 전체(공개), INTERNAL = 프라이빗만
+  /** STOMP WebSocket 클라이언트 (실시간 메시지 수신용) */
+  stompClient?: MutableRefObject<Client | null>;
+}
+
+/** 플랫폼 필터 적용 */
+function filterMessages(
+  list: ChatMessage[],
+  filterPlatform: "INTERNAL" | null,
+): ChatMessage[] {
+  return filterPlatform === "INTERNAL"
+    ? list.filter((m) => m.platform === "INTERNAL")
+    : list.filter((m) => m.platform !== "INTERNAL");
 }
 
 export function StudioChatPanel({
   studioId,
   onClose,
   filterPlatform = null,
+  stompClient,
 }: StudioChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -79,28 +93,62 @@ export function StudioChatPanel({
     return () => ro.disconnect();
   }, []);
 
-  const fetchHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      const list = await getChatHistory(studioId);
-      setMessages(
-        filterPlatform === "INTERNAL"
-          ? list.filter((m) => m.platform === "INTERNAL") // 프라이빗: INTERNAL만
-          : list.filter((m) => m.platform !== "INTERNAL"), // 전체: INTERNAL 제외 (HOST, YOUTUBE 등 포함)
-      );
-    } catch (e) {
-      console.error("채팅 히스토리 조회 실패:", e);
-    } finally {
-      setLoading(false);
-    }
+  // 초기 히스토리 로드 (1회)
+  useEffect(() => {
+    let cancelled = false;
+    const loadHistory = async () => {
+      try {
+        setLoading(true);
+        const list = await getChatHistory(studioId);
+        if (!cancelled) {
+          setMessages(filterMessages(list, filterPlatform));
+        }
+      } catch (e) {
+        console.error("채팅 히스토리 조회 실패:", e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadHistory();
+    return () => {
+      cancelled = true;
+    };
   }, [studioId, filterPlatform]);
 
+  // WebSocket 실시간 메시지 구독
   useEffect(() => {
-    fetchHistory();
-    // 5초마다 자동 새로고침
-    const interval = setInterval(fetchHistory, 5000);
-    return () => clearInterval(interval);
-  }, [fetchHistory]);
+    const client = stompClient?.current;
+    if (!client?.connected) return;
+
+    const sub: StompSubscription = client.subscribe(
+      `/topic/chat/${studioId}`,
+      (message) => {
+        try {
+          const chatMsg: ChatMessage = JSON.parse(message.body);
+          // 필터 조건에 맞는 메시지만 추가
+          const passes =
+            filterPlatform === "INTERNAL"
+              ? chatMsg.platform === "INTERNAL"
+              : chatMsg.platform !== "INTERNAL";
+          if (passes) {
+            setMessages((prev) => {
+              // 중복 방지
+              if (prev.some((m) => m.messageId === chatMsg.messageId)) {
+                return prev;
+              }
+              return [...prev, chatMsg];
+            });
+          }
+        } catch (e) {
+          console.error("[Chat] WebSocket 메시지 파싱 실패:", e);
+        }
+      },
+    );
+
+    return () => {
+      sub.unsubscribe();
+    };
+  }, [studioId, filterPlatform, stompClient?.current?.connected]);
 
   const handleSend = async () => {
     const content = input.trim();
@@ -115,7 +163,7 @@ export function StudioChatPanel({
         platform: filterPlatform === "INTERNAL" ? "INTERNAL" : "HOST",
       });
       setInput("");
-      await fetchHistory();
+      // WebSocket으로 메시지가 바로 돌아오므로 fetchHistory 불필요
     } catch (e) {
       console.error("채팅 전송 실패:", e);
     } finally {

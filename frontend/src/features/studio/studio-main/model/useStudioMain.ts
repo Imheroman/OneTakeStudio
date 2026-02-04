@@ -315,6 +315,7 @@ export function useStudioMain(
   const {
     isConnected: isStateSyncConnected,
     onlineMembers,
+    stompClient,
     broadcastState,
     broadcastLayoutChange,
     broadcastSourceTransform,
@@ -1648,6 +1649,7 @@ export function useStudioMain(
     // 상태 동기화 관련
     isStateSyncConnected,
     onlineMembers,
+    stompClient,
     // 실시간 미디어 공유 관련
     isLiveKitConnected,
     remoteSources,
