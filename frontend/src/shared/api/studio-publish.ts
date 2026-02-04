@@ -1,5 +1,5 @@
 /**
- * 스튜디오 송출 API (Gateway: /api/publish/**)
+ * 스튜디오 송출 API (Gateway: /api/v1/media/publish 또는 /api/publish)
  * FSD: shared는 entities 미참조. dto/publish 사용.
  */
 import { apiClient } from "./client";
@@ -11,7 +11,7 @@ import {
   type PublishStatusResponseDto,
 } from "./dto/publish";
 
-const PUBLISH_BASE = "/api/publish";
+const PUBLISH_BASE = "/api/v1/media/publish";
 
 export async function startPublish(
   body: PublishStartRequestDto,

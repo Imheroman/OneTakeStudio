@@ -6,6 +6,7 @@ import React, {
   useState,
   useCallback,
   useLayoutEffect,
+  useMemo,
 } from "react";
 import {
   Stage,
@@ -27,6 +28,8 @@ import type {
 import {
   arrangeSourcesInLayout,
   computeSourceFitRect,
+  toPixelTransform,
+  toNormalizedTransform,
 } from "@/shared/lib/canvas";
 import type { SourceFitMode } from "@/shared/lib/canvas";
 import {
@@ -96,12 +99,20 @@ interface PreviewAreaProps {
   layout?: LayoutType;
   sources?: Source[];
   availableStreamIds?: string[];
+  /** setupSources 재실행 트리거: ID 집합이 실제로 바뀔 때만 변경 (배열 ref만 바뀌는 것 방지 → 화면공유 새로고침/끊김 방지) */
+  streamIdsKey?: string;
+  /** Phase 4: 송출 중이면 표시용 Stage RAF 스로틀 (메인 스레드 부하 감소) */
+  isStreaming?: boolean;
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
   isEditMode?: boolean;
   resolution?: PreviewResolution;
   getSourceStream?: (sourceId: string) => MediaStream | undefined;
   getPreviewStreamRef?: GetPreviewStreamRef | null;
+  /** Go Live 직전 캡처용 레이어를 1회 그리기 (화면공유 포함 프레임 확보) */
+  requestCaptureDrawRef?: React.MutableRefObject<
+    (() => Promise<void>) | null
+  > | null;
   sourceTransforms?: Record<string, SourceTransform>;
   setSourceTransform?: (
     sourceId: string,
@@ -113,7 +124,7 @@ interface PreviewAreaProps {
   styleState?: StudioStyleState | null;
 }
 
-/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. scheduleBatchDraw로 프레임당 1회만 그리기 요청. */
+/** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. scheduleBatchDraw로 프레임당 1회만 그리기 요청. registerExternalUpdate 있으면 단일 RAF에서 호출됨(캡처용). */
 function VideoSourceNode({
   sourceId,
   video,
@@ -122,6 +133,9 @@ function VideoSourceNode({
   fit,
   scheduleBatchDraw,
   isVisible,
+  registerExternalUpdate,
+  /** Phase 4: true면 표시용 RAF에서 매 2프레임마다만 갱신 (30fps) */
+  throttlePreview = false,
 }: {
   sourceId: string;
   video: HTMLVideoElement;
@@ -130,6 +144,10 @@ function VideoSourceNode({
   fit: SourceFitMode;
   scheduleBatchDraw: () => void;
   isVisible: boolean;
+  /** 캡처용: 부모 단일 RAF에서 이 노드 갱신 호출 (자체 RAF 미사용) */
+  registerExternalUpdate?: (fn: () => void) => () => void;
+  /** Phase 4: true면 표시용 RAF에서 매 2프레임마다만 갱신 */
+  throttlePreview?: boolean;
 }) {
   const imageRef = useRef<Konva.Image>(null);
   const [sourceSize, setSourceSize] = useState({
@@ -157,11 +175,29 @@ function VideoSourceNode({
   const sourceH = sourceSize.h || boxHeight;
   const rect = computeSourceFitRect(fit, boxWidth, boxHeight, sourceW, sourceH);
 
-  useLayoutEffect(() => {
-    if (!video || !isVisible) return;
-    let rafId: number;
+  /** Phase 2: 캡처용 — 부모 단일 RAF에 업데이트 함수 등록 */
+  useEffect(() => {
+    if (!registerExternalUpdate || !video || !isVisible) return;
+    const update = () => {
+      const img = imageRef.current;
+      if (img && video.readyState >= 2) img.image(video);
+    };
+    const unregister = registerExternalUpdate(update);
+    return unregister;
+  }, [registerExternalUpdate, video, isVisible]);
 
+  /** 표시용 또는 캡처용(registerExternalUpdate 없을 때): 자체 RAF */
+  useLayoutEffect(() => {
+    if (registerExternalUpdate || !video || !isVisible) return;
+    let rafId: number;
+    let frameCount = 0;
     const tick = () => {
+      frameCount += 1;
+      // Phase 4: 송출 중이면 매 2프레임마다만 갱신 (30fps)
+      if (throttlePreview && frameCount % 2 !== 0) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
       const img = imageRef.current;
       if (img && video.readyState >= 2) {
         img.image(video);
@@ -171,7 +207,7 @@ function VideoSourceNode({
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [video, scheduleBatchDraw, isVisible]);
+  }, [video, scheduleBatchDraw, isVisible, registerExternalUpdate, throttlePreview]);
 
   if (!isVisible) return null;
   return (
@@ -410,22 +446,26 @@ function PreviewAreaInner({
   layout = "full",
   sources = [],
   availableStreamIds = [],
+  streamIdsKey,
   isVideoEnabled = true,
   isAudioEnabled = true,
   isEditMode = true,
   resolution = "720p",
   getSourceStream,
   getPreviewStreamRef,
+  requestCaptureDrawRef,
   sourceTransforms = {},
   setSourceTransform,
   onBringSourceToFront,
   activeBanner = null,
   activeAsset = null,
   styleState = null,
+  isStreaming = false,
 }: PreviewAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<Konva.Layer>(null);
   const captureLayerRef = useRef<Konva.Layer>(null);
+  const captureStageRef = useRef<Konva.Stage>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef<Map<string, Konva.Group>>(new Map());
   const assetGroupRef = useRef<Konva.Group>(null);
@@ -434,9 +474,12 @@ function PreviewAreaInner({
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [effectivePixelRatio, setEffectivePixelRatio] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showCapturePreview, setShowCapturePreview] = useState(false);
   const [sourceElements, setSourceElements] = useState<
     Map<string, HTMLVideoElement | HTMLImageElement>
   >(new Map());
+  const capturePreviewVideoRef = useRef<HTMLVideoElement>(null);
+  const capturePreviewStreamRef = useRef<MediaStream | null>(null);
 
   const batchDrawScheduledRef = useRef(false);
   const scheduleBatchDraw = useCallback(() => {
@@ -456,6 +499,15 @@ function PreviewAreaInner({
       captureLayerRef.current?.batchDraw();
       captureBatchDrawScheduledRef.current = false;
     });
+  }, []);
+
+  /** Phase 2: 캡처용 Stage — 소스별 RAF 대신 단일 RAF에서 한 번에 갱신 후 1회 그리기 */
+  const captureUpdatersRef = useRef<Set<() => void>>(new Set());
+  const registerCaptureUpdate = useCallback((fn: () => void) => {
+    captureUpdatersRef.current.add(fn);
+    return () => {
+      captureUpdatersRef.current.delete(fn);
+    };
   }, []);
 
   /** 줌 시 DPR만 갱신. containerSize는 ResizeObserver에서만 갱신해 충돌 방지. Stage key 제거로 리마운트 없이 RAF 유지. */
@@ -517,7 +569,9 @@ function PreviewAreaInner({
   const displayOffsetX = Math.floor(
     (displayWidth - stageWidth * displayScale) / 2
   );
-  const displayOffsetY = 0;
+  const displayOffsetY = Math.floor(
+    (displayHeight - stageHeight * displayScale) / 2
+  );
 
   const displaySources = sources.filter((s) => s.isVisible);
   /** 1=맨 앞(상단), 숫자 커질수록 뒤: 낮은 zIndex 먼저 그려서 높은 zIndex가 위에 오도록 */
@@ -526,6 +580,7 @@ function PreviewAreaInner({
       (sourceTransforms[a.id]?.zIndex ?? 0) -
       (sourceTransforms[b.id]?.zIndex ?? 0)
   );
+  
   const arranged = arrangeSourcesInLayout(
     layout,
     sortedSources.map((s, i) => ({ source: s, index: i })),
@@ -537,27 +592,91 @@ function PreviewAreaInner({
     (sourceId: string, index: number) => {
       const t = sourceTransforms[sourceId];
       const cell = arranged[index];
-      if (t && t.width > 0 && t.height > 0) return t;
-      if (cell)
-        return {
-          x: cell.x,
-          y: cell.y,
-          width: cell.width,
-          height: cell.height,
-          zIndex: index,
-        };
-      return {
-        x: 0,
-        y: 0,
-        width: stageWidth,
-        height: stageHeight,
-        zIndex: index,
-      };
+      let result;
+      // 저장된 정규화 좌표가 있으면 픽셀 변환 (clamp 포함)
+      if (t && t.width > 0 && t.height > 0) {
+        result = toPixelTransform(t, stageWidth, stageHeight);
+      }
+      // 레이아웃 셀을 정규화로 변환 후 픽셀 변환 (항상 가시 영역 내)
+      else if (cell) {
+        const normalized = toNormalizedTransform(
+          {
+            x: cell.x,
+            y: cell.y,
+            width: cell.width,
+            height: cell.height,
+            zIndex: index,
+          },
+          stageWidth,
+          stageHeight
+        );
+        result = toPixelTransform(normalized, stageWidth, stageHeight);
+      }
+      // 기본값: 전체 영역 (정규화: 0,0,1,1)
+      else {
+        result = toPixelTransform(
+          { x: 0, y: 0, width: 1, height: 1, zIndex: index },
+          stageWidth,
+          stageHeight
+        );
+      }
+      
+      // 디버깅: 좌표 변환 확인
+      if (index === 0) {
+        console.log(`[PreviewArea] getTransform(${sourceId}):`, {
+          normalized: t,
+          pixel: result,
+          stageSize: { width: stageWidth, height: stageHeight },
+        });
+      }
+      
+      return result;
     },
     [sourceTransforms, arranged, stageWidth, stageHeight]
   );
 
   const hasSources = sources.length > 0 && sources.some((s) => s.isVisible);
+
+  /** Phase 2: 캡처용 Stage 단일 RAF — hasSources 선언 이후에 배치 */
+  useLayoutEffect(() => {
+    if (!hasSources) return;
+    let rafId: number;
+    const tick = () => {
+      captureUpdatersRef.current.forEach((update) => update());
+      captureLayerRef.current?.batchDraw();
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [hasSources]);
+
+  /** Phase 1: UI Stage와 Virtual Canvas Stage 동기화 — sourceElements/sortedSources/sourceTransforms 변경 시 즉시 캡처 레이어 갱신 */
+  const sourceElementsKey = useMemo(
+    () =>
+      Array.from(sourceElements.keys())
+        .sort()
+        .map((id) => `${id}:${sourceElements.get(id)?.constructor.name ?? ""}`)
+        .join("|"),
+    [sourceElements]
+  );
+  const sortedSourcesKey = useMemo(
+    () => sortedSources.map((s) => s.id).join(","),
+    [sortedSources]
+  );
+  const sourceTransformsSyncKey = useMemo(
+    () =>
+      sortedSources
+        .map((s) => `${s.id}:${sourceTransforms[s.id]?.x ?? ""},${sourceTransforms[s.id]?.y ?? ""},${sourceTransforms[s.id]?.width ?? ""},${sourceTransforms[s.id]?.height ?? ""}`)
+        .join("|"),
+    [sortedSources, sourceTransforms]
+  );
+  useLayoutEffect(() => {
+    if (!hasSources) return;
+    // sourceElements, sortedSources, 또는 sourceTransforms가 변경되면 즉시 캡처 레이어를 갱신하여 UI Stage와 동기화
+    // useLayoutEffect를 사용하여 React 렌더링 직후 동기적으로 실행 (DOM 업데이트 전)
+    captureUpdatersRef.current.forEach((update) => update());
+    scheduleCaptureBatchDraw();
+  }, [hasSources, sourceElementsKey, sortedSourcesKey, sourceTransformsSyncKey, scheduleCaptureBatchDraw]);
 
   /** hasSources가 true일 때만 containerRef가 마운트됨. 의존성에 포함해 컨테이너가 렌더된 후 ResizeObserver 설정 */
   useEffect(() => {
@@ -610,31 +729,161 @@ function PreviewAreaInner({
     layerRef.current?.batchDraw();
   }, [selectedId]);
 
+  /** 송출/녹화에 사용하는 캔버스는 캡처용 Stage 하나뿐. 표시용 Stage(layerRef)는 절대 captureStream 하지 않음. */
   useEffect(() => {
     if (!getPreviewStreamRef) return;
     getPreviewStreamRef.current = () => {
-      const layer = captureLayerRef.current;
-      if (!layer) return null;
-      const canvas = (layer.getCanvas() as { _canvas?: HTMLCanvasElement })
+      const captureStage = captureStageRef.current;
+      const captureLayer = captureLayerRef.current;
+      const uiStage = stageRef.current;
+      const uiLayer = layerRef.current;
+      if (!captureStage || !captureLayer) {
+        console.error("[PreviewArea] Virtual Canvas Stage 또는 Layer가 없습니다.");
+        return null;
+      }
+      // UI Stage와 혼동 방지: Stage/Layer가 완전히 분리되어 있는지 검증
+      if (captureStage === uiStage) {
+        console.error("[PreviewArea] 치명적 오류: captureStageRef와 stageRef가 같은 Stage를 참조합니다!");
+        return null;
+      }
+      if (captureLayer === uiLayer) {
+        console.error("[PreviewArea] 치명적 오류: captureLayerRef와 layerRef가 같은 Layer를 참조합니다!");
+        return null;
+      }
+      // Virtual Canvas Stage 해상도 검증 (720p/1080p만 허용)
+      const expectedWidths = [1280, 1920];
+      const expectedHeights = [720, 1080];
+      const isValidSize =
+        expectedWidths.includes(captureStage.width()) &&
+        expectedHeights.includes(captureStage.height());
+      if (!isValidSize) {
+        console.warn(
+          "[PreviewArea] 경고: Virtual Canvas Stage 해상도가 예상과 다릅니다:",
+          captureStage.width(),
+          "x",
+          captureStage.height(),
+          "(예상: 1280x720 또는 1920x1080)"
+        );
+      }
+      const canvas = (captureLayer.getCanvas() as { _canvas?: HTMLCanvasElement })
         ?._canvas;
-      return canvas?.captureStream?.(30) ?? null;
+      if (!canvas) {
+        console.error("[PreviewArea] Virtual Canvas Stage의 canvas를 찾을 수 없습니다.");
+        return null;
+      }
+      // Phase 3: 24fps로 부하 완화 (30→24)
+      const stream = canvas.captureStream?.(24) ?? null;
+      if (stream) {
+        console.log(
+          "[PreviewArea] Virtual Canvas Stage에서 스트림 생성:",
+          canvas.width,
+          "x",
+          canvas.height,
+          "@ 24fps"
+        );
+      }
+      return stream;
     };
     return () => {
       getPreviewStreamRef.current = null;
     };
   }, [getPreviewStreamRef]);
 
+  /** 로컬에서 캡처 스트림 미러(디버그용) */
+  useEffect(() => {
+    if (!isStreaming || !showCapturePreview) {
+      if (capturePreviewStreamRef.current) {
+        capturePreviewStreamRef.current
+          .getTracks()
+          .forEach((t) => t.stop());
+        capturePreviewStreamRef.current = null;
+      }
+      if (capturePreviewVideoRef.current) {
+        capturePreviewVideoRef.current.srcObject = null;
+      }
+      return;
+    }
+    const stream = getPreviewStreamRef?.current?.() ?? null;
+    capturePreviewStreamRef.current = stream;
+    const videoEl = capturePreviewVideoRef.current;
+    if (videoEl && stream) {
+      videoEl.srcObject = stream;
+      videoEl.play().catch(() => {});
+    }
+    return () => {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      if (videoEl) videoEl.srcObject = null;
+      capturePreviewStreamRef.current = null;
+    };
+  }, [isStreaming, showCapturePreview, getPreviewStreamRef]);
+
+  /** Phase 1: Go Live 직전 캡처용 레이어를 명시적으로 1회 그린 뒤 다음 프레임까지 대기 */
+  useEffect(() => {
+    if (!requestCaptureDrawRef) return;
+    requestCaptureDrawRef.current = async () => {
+      scheduleCaptureBatchDraw();
+      await new Promise<void>((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => r()))
+      );
+    };
+    return () => {
+      requestCaptureDrawRef.current = null;
+    };
+  }, [requestCaptureDrawRef, scheduleCaptureBatchDraw]);
+
+  /** 송출 중 편집 시 캡처 레이어 즉시 동기화(레이아웃/트랜스폼 변경 반영) */
+  const sourceTransformsKey = useMemo(
+    () =>
+      sortedSources
+        .map((s) => `${s.id}:${sourceTransforms[s.id]?.x ?? ""},${sourceTransforms[s.id]?.y ?? ""},${sourceTransforms[s.id]?.width ?? ""},${sourceTransforms[s.id]?.height ?? ""}`)
+        .join("|"),
+    [sortedSources, sourceTransforms]
+  );
+  useEffect(() => {
+    if (!isStreaming || !hasSources) return;
+    scheduleCaptureBatchDraw();
+  }, [isStreaming, hasSources, sourceTransformsKey, scheduleCaptureBatchDraw]);
+
   const streamsMap = useRef<Map<string, MediaStream>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
-    setSourceElements(new Map());
+    const sourceIds = new Set(sources.map((s) => s.id));
+    // 제거된 소스만 삭제 (전체 클리어 X → 캡처 시점 공백 방지)
+    setSourceElements((prev) => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Map(prev);
+      next.forEach((_, id) => {
+        if (!sourceIds.has(id)) {
+          next.delete(id);
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
 
     const addElement = (
       sourceId: string,
       element: HTMLVideoElement | HTMLImageElement
     ) => {
       if (cancelled) return;
+      
+      // 소스 엘리먼트 정보 확인
+      if (element instanceof HTMLVideoElement && element.srcObject) {
+        const stream = element.srcObject as MediaStream;
+        const videoTrack = stream.getVideoTracks()[0];
+        console.log(`[PreviewArea] 비디오 소스 추가:`, {
+          sourceId,
+          trackLabel: videoTrack?.label,
+          trackSettings: videoTrack?.getSettings(),
+          videoSize: {
+            width: element.videoWidth,
+            height: element.videoHeight,
+          },
+        });
+      }
+      
       setSourceElements((prev) => new Map(prev).set(sourceId, element));
     };
 
@@ -749,7 +998,7 @@ function PreviewAreaInner({
       );
       streamsMap.current.clear();
     };
-  }, [sources, availableStreamIds, getSourceStream]);
+  }, [sources, streamIdsKey ?? availableStreamIds, getSourceStream]);
 
   if (!hasSources) {
     return (
@@ -794,6 +1043,33 @@ function PreviewAreaInner({
       >
         {isEditMode ? resolution : `Live ${resolution}`}
       </span>
+      {isStreaming && (
+        <div className="absolute top-2 right-2 z-20 flex items-center gap-2">
+          <button
+            type="button"
+            className={cn(
+              "px-2 py-1 rounded text-xs font-semibold border",
+              showCapturePreview
+                ? "bg-emerald-500/90 text-emerald-950 border-emerald-400"
+                : "bg-gray-800/80 text-gray-200 border-gray-600"
+            )}
+            onClick={() => setShowCapturePreview((v) => !v)}
+            title="송출 캡처 미리보기 토글"
+          >
+            송출 미리보기
+          </button>
+        </div>
+      )}
+      {isStreaming && showCapturePreview && (
+        <div className="absolute top-10 right-2 z-20 w-48 aspect-video bg-black/80 border border-gray-700 rounded overflow-hidden shadow-lg">
+          <video
+            ref={capturePreviewVideoRef}
+            muted
+            playsInline
+            className="w-full h-full object-contain"
+          />
+        </div>
+      )}
       {/* 표시용 Stage: 컨테이너 크기, 비율 유지(레터박스) */}
       <Stage
         ref={stageRef}
@@ -901,6 +1177,7 @@ function PreviewAreaInner({
                   draggable={isEditMode}
                   onDragEnd={(e) => {
                     const node = e.target;
+                    // Group 내부의 논리 좌표 (스케일 적용 전)
                     const tx = node.x();
                     const ty = node.y();
                     const snapped = snapPosition(
@@ -911,6 +1188,7 @@ function PreviewAreaInner({
                       stageWidth,
                       stageHeight
                     );
+                    // 픽셀 좌표로 setSourceTransform 호출 (내부에서 정규화 변환)
                     setSourceTransform?.(source.id, {
                       x: snapped.x,
                       y: snapped.y,
@@ -918,22 +1196,34 @@ function PreviewAreaInner({
                   }}
                   onTransformEnd={(e) => {
                     const node = e.target as Konva.Group;
-                    const rect = node.getClientRect();
+                    // getClientRect는 스케일/회전을 포함한 절대 좌표를 반환
+                    // 하지만 우리는 Group 내부의 논리 좌표가 필요함
+                    const scaleX = node.scaleX();
+                    const scaleY = node.scaleY();
+                    const width = transform.width * scaleX;
+                    const height = transform.height * scaleY;
+                    const x = node.x();
+                    const y = node.y();
+                    
                     const snappedPos = snapPosition(
-                      rect.x,
-                      rect.y,
-                      rect.width,
-                      rect.height,
+                      x,
+                      y,
+                      width,
+                      height,
                       stageWidth,
                       stageHeight
                     );
-                    const snappedSize = snapSize(rect.width, rect.height);
+                    const snappedSize = snapSize(width, height);
+                    
+                    // 픽셀 좌표로 setSourceTransform 호출 (내부에서 정규화 변환)
                     setSourceTransform?.(source.id, {
                       x: snappedPos.x,
                       y: snappedPos.y,
                       width: snappedSize.width,
                       height: snappedSize.height,
                     });
+                    
+                    // 노드 스케일 리셋
                     node.scaleX(1);
                     node.scaleY(1);
                     node.position({ x: snappedPos.x, y: snappedPos.y });
@@ -953,6 +1243,7 @@ function PreviewAreaInner({
                         fit="contain"
                         scheduleBatchDraw={scheduleBatchDraw}
                         isVisible={source.isVisible}
+                        throttlePreview={isStreaming}
                       />
                     ) : (
                       <Rect
@@ -1046,6 +1337,7 @@ function PreviewAreaInner({
 
       {/* 송출/녹화용 Stage: 720p/1080p 고정 해상도, 화면 밖에 숨김 */}
       <Stage
+        ref={captureStageRef}
         width={stageWidth}
         height={stageHeight}
         pixelRatio={1}
@@ -1130,6 +1422,7 @@ function PreviewAreaInner({
                       fit="contain"
                       scheduleBatchDraw={scheduleCaptureBatchDraw}
                       isVisible={source.isVisible}
+                      registerExternalUpdate={registerCaptureUpdate}
                     />
                   ) : (
                     <Rect

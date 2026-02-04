@@ -25,7 +25,7 @@ spring:
             - id: media-service-publish
               uri: lb://media-service
               predicates:
-                - Path=/api/publish/**
+                - Path=/api/publish,/api/publish/**
               filters:
                 - RewritePath=/api/publish(?<segment>.*),/api/media/publish${segment}
 
@@ -67,7 +67,7 @@ spring:
               predicates:
                 - Path=/api/recordings/**
               filters:
-                - RewritePath=/api/recordings/(?<segment>.*), /api/media/record/${segment}
+                - RewritePath=/api/recordings/(?<segment>.*),/api/media/record/${segment}
 
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE

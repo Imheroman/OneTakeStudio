@@ -46,6 +46,7 @@ interface StudioMainProps {
 
 export function StudioMain({ studioId }: StudioMainProps) {
   const getPreviewStreamRef = useRef<(() => MediaStream | null) | null>(null);
+  const requestCaptureDrawRef = useRef<(() => Promise<void>) | null>(null);
   const [toolbarExpanded, setToolbarExpanded] = useState(true);
   const [activeBanner, setActiveBanner] = useState<BannerItem | null>(null);
   const [bannerRemainingSeconds, setBannerRemainingSeconds] = useState<
@@ -184,7 +185,11 @@ export function StudioMain({ studioId }: StudioMainProps) {
     isLiveKitConnected,
     remoteSources,
     publishedTracks,
-  } = useStudioMain(studioId, { getPreviewStreamRef });
+    localPublishedStreamsRef,
+  } = useStudioMain(studioId, {
+    getPreviewStreamRef,
+    requestCaptureDrawRef,
+  });
 
   // 편집 모드 진입 시 락 획득 시도
   const handleEditModeToggle = async () => {
@@ -268,12 +273,14 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const {
     getStream: getSourceStream,
     streamIds: availableStreamIds,
+    streamIdsKey,
     streamsMap,
   } = useSourceStreams(sources, {
     isVideoEnabled,
     isAudioEnabled,
     remoteSources,
     publishedTracks,
+    localPublishedStreamsRef,
   });
 
   const streamsWithAudio = useMemo(
@@ -384,12 +391,15 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 layout={currentLayout}
                 sources={displaySources}
                 availableStreamIds={availableStreamIds}
+                streamIdsKey={streamIdsKey}
+                isStreaming={isPublishing}
                 isVideoEnabled={isVideoEnabled}
                 isAudioEnabled={isAudioEnabled}
                 isEditMode={canEdit}
                 resolution={previewResolution}
                 getSourceStream={getSourceStream}
                 getPreviewStreamRef={getPreviewStreamRef}
+                requestCaptureDrawRef={requestCaptureDrawRef}
                 sourceTransforms={sourceTransforms}
                 setSourceTransform={setSourceTransform}
                 onBringSourceToFront={handleBringSourceToFront}

@@ -2,7 +2,7 @@
  * 스튜디오 LiveKit 연결 및 미디어 공유 훅
  * 스튜디오 입장 시 자동으로 LiveKit Room에 연결하고 미디어를 공유합니다.
  */
-import { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Room,
   RoomEvent,
@@ -49,18 +49,22 @@ export interface UseStudioLiveKitReturn {
   isConnected: boolean;
   /** Room 객체 */
   room: Room | null;
+  /** 현재 Room 가져오기 (handleGoLive 등에서 최신 참조용) */
+  getRoom: () => Room | null;
   /** 원격 소스 목록 (다른 참가자가 공유한 미디어) */
   remoteSources: RemoteSource[];
   /** 내가 publish한 트랙 목록 */
   publishedTracks: LocalPublishedTrack[];
+  /** 로컬 publish 스트림 캐시 (Go Live 시 캔버스가 화면공유를 그리기 위해 유지) */
+  localPublishedStreamsRef: React.MutableRefObject<Map<string, MediaStream>>;
   /** 비디오 트랙 publish */
   publishVideoTrack: (sourceId: string, deviceId?: string) => Promise<string | null>;
   /** 오디오 트랙 publish */
   publishAudioTrack: (sourceId: string, deviceId?: string) => Promise<string | null>;
   /** 화면 공유 트랙 publish */
   publishScreenTrack: (sourceId: string) => Promise<string | null>;
-  /** 트랙 unpublish */
-  unpublishTrack: (sourceId: string) => Promise<void>;
+  /** 트랙 unpublish. keepTrackAlive=true면 track.stop() 생략 (캔버스 그리기용 유지) */
+  unpublishTrack: (sourceId: string, options?: { keepTrackAlive?: boolean }) => Promise<void>;
   /** 특정 원격 소스의 MediaStream 가져오기 */
   getRemoteStream: (trackSid: string) => MediaStream | null;
 }
@@ -72,6 +76,8 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
   const [isConnected, setIsConnected] = useState(false);
   const [remoteSources, setRemoteSources] = useState<RemoteSource[]>([]);
   const [publishedTracks, setPublishedTracks] = useState<LocalPublishedTrack[]>([]);
+  /** Go Live 시 캔버스가 화면공유/웹캠을 그리기 위해 유지 (unpublish 후에도 사용) */
+  const localPublishedStreamsRef = useRef<Map<string, MediaStream>>(new Map());
 
   // LiveKit Room 연결
   useEffect(() => {
@@ -242,6 +248,9 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
         const trackSid = publication.trackSid;
         console.log("[StudioLiveKit] 비디오 트랙 publish 완료:", trackSid);
 
+        if (track.mediaStreamTrack) {
+          localPublishedStreamsRef.current.set(sourceId, new MediaStream([track.mediaStreamTrack]));
+        }
         setPublishedTracks((prev) => [...prev, { sourceId, track, trackSid }]);
 
         return trackSid;
@@ -310,11 +319,11 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
         // 화면 공유 중지 감지 (브라우저에서 "공유 중지" 클릭 시)
         const mediaStreamTrack = videoTrack.mediaStreamTrack;
         if (mediaStreamTrack) {
+          localPublishedStreamsRef.current.set(sourceId, new MediaStream([mediaStreamTrack]));
           mediaStreamTrack.addEventListener("ended", () => {
             console.log("[StudioLiveKit] 화면 공유 트랙 ended:", sourceId);
-            // publishedTracks에서 제거
+            localPublishedStreamsRef.current.delete(sourceId);
             setPublishedTracks((prev) => prev.filter((t) => t.sourceId !== sourceId));
-            // 콜백 호출 (소스 제거 및 브로드캐스트)
             onTrackEnded?.(sourceId);
           });
         }
@@ -338,25 +347,39 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
     [onTrackEnded]
   );
 
-  // 트랙 unpublish
-  const unpublishTrack = useCallback(async (sourceId: string): Promise<void> => {
-    const room = roomRef.current;
-    if (!room) return;
+  // 트랙 unpublish. keepTrackAlive=true면 track.stop() 생략 (Go Live 시 캔버스 그리기용 유지)
+  const unpublishTrack = useCallback(
+    async (
+      sourceId: string,
+      options?: { keepTrackAlive?: boolean }
+    ): Promise<void> => {
+      const room = roomRef.current;
+      if (!room) return;
 
-    const publishedTrack = publishedTracks.find((t) => t.sourceId === sourceId);
-    if (!publishedTrack) return;
+      const publishedTrack = publishedTracks.find((t) => t.sourceId === sourceId);
+      if (!publishedTrack) return;
 
-    try {
-      await room.localParticipant.unpublishTrack(publishedTrack.track);
-      publishedTrack.track.stop();
+      try {
+        await room.localParticipant.unpublishTrack(publishedTrack.track);
+        if (!options?.keepTrackAlive) {
+          publishedTrack.track.stop();
+        }
 
-      setPublishedTracks((prev) => prev.filter((t) => t.sourceId !== sourceId));
+        setPublishedTracks((prev) =>
+          prev.filter((t) => t.sourceId !== sourceId)
+        );
 
-      console.log("[StudioLiveKit] 트랙 unpublish 완료:", sourceId);
-    } catch (error) {
-      console.error("[StudioLiveKit] 트랙 unpublish 실패:", error);
-    }
-  }, [publishedTracks]);
+        console.log(
+          "[StudioLiveKit] 트랙 unpublish 완료:",
+          sourceId,
+          options?.keepTrackAlive ? "(track 유지)" : ""
+        );
+      } catch (error) {
+        console.error("[StudioLiveKit] 트랙 unpublish 실패:", error);
+      }
+    },
+    [publishedTracks]
+  );
 
   // 원격 소스의 MediaStream 가져오기
   const getRemoteStream = useCallback((trackSid: string): MediaStream | null => {
@@ -373,11 +396,15 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
     return null;
   }, [remoteSources]);
 
+  const getRoom = useCallback(() => roomRef.current, []);
+
   return {
     isConnected,
     room: roomRef.current,
+    getRoom,
     remoteSources,
     publishedTracks,
+    localPublishedStreamsRef,
     publishVideoTrack,
     publishAudioTrack,
     publishScreenTrack,
