@@ -15,7 +15,13 @@ export function AuthModal() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // SSR 시 document 미존재 → 클라이언트 마운트 후에만 포탈 렌더
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (authModal) {
@@ -45,6 +51,8 @@ export function AuthModal() {
     el.addEventListener("scroll", handleScroll);
     return () => el.removeEventListener("scroll", handleScroll);
   }, [handleScroll, authModal]);
+
+  if (!mounted) return null;
 
   return createPortal(
     <AnimatePresence>

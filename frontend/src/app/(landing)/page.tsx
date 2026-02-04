@@ -189,29 +189,6 @@ export default function LandingPage() {
               </motion.span>
             </Link>
           </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
-            className={cn(
-              "absolute bottom-12 w-6 h-10 border-2 rounded-full flex items-start justify-center p-1 transition-colors duration-300",
-              isDark ? "border-white/30" : "border-gray-400"
-            )}
-          >
-            <motion.div
-              animate={{ y: [0, 12, 0] }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className={cn(
-                "w-1 h-1.5 rounded-full",
-                isDark ? "bg-white/50" : "bg-gray-500"
-              )}
-            />
-          </motion.div>
         </div>
       </section>
 
