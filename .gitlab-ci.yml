@@ -124,8 +124,10 @@ build-core:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - core-service/**/*
-        - common/**/*
+        compare_to: refs/heads/master
+        paths:
+          - core-service/**/*
+          - common/**/*
 
 build-media:
   stage: build
@@ -140,8 +142,10 @@ build-media:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - media-service/**/*
-        - common/**/*
+        compare_to: refs/heads/master
+        paths:
+          - media-service/**/*
+          - common/**/*
 
 # ─────────────────────────────────────────────
 # Stage 3: Docker 이미지 빌드 & 푸시 (AWS ECR)
@@ -167,8 +171,10 @@ docker-core:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - core-service/**/*
-        - common/**/*
+        compare_to: refs/heads/master
+        paths:
+          - core-service/**/*
+          - common/**/*
 
 docker-media:
   stage: docker
@@ -191,8 +197,10 @@ docker-media:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - media-service/**/*
-        - common/**/*
+        compare_to: refs/heads/master
+        paths:
+          - media-service/**/*
+          - common/**/*
 
 # ─────────────────────────────────────────────
 # Stage 4: Kubernetes 배포
@@ -220,7 +228,9 @@ deploy-core:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - core-service/**/*
+        compare_to: refs/heads/master
+        paths:
+          - core-service/**/*
 
 deploy-media:
   stage: deploy
@@ -246,7 +256,9 @@ deploy-media:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - media-service/**/*
+        compare_to: refs/heads/master
+        paths:
+          - media-service/**/*
 
 deploy-livekit:
   stage: deploy
@@ -276,7 +288,9 @@ deploy-livekit:
   rules:
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
-        - infra/k8s/livekit/**/*
+        compare_to: refs/heads/master
+        paths:
+          - infra/k8s/livekit/**/*
       when: manual
 
 # ─────────────────────────────────────────────
@@ -298,4 +312,6 @@ deploy-frontend:
     # main, master 브랜치이면서 'frontend' 폴더 내부에 변경이 있을 때만 실행
     - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"  # TODO: infra 추후 제거
       changes:
-        - frontend/**/* ```
+        compare_to: refs/heads/master
+        paths:
+          - frontend/**/*
