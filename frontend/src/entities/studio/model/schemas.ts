@@ -111,7 +111,7 @@ export const StudioSchema = z.object({
   updatedAt: z.string().nullable().optional(),
 });
 
-// 최근 스튜디오 스키마 (워크스페이스용 - id가 number, date 필드 포함)
+// 최근 스튜디오 스키마 (워크스페이스용 - id는 string UUID, date 필드 포함)
 export const RecentStudioSchema = z.object({
   id: z.string(),
   title: z.string(),
