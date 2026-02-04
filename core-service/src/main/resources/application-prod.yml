@@ -44,6 +44,26 @@ eureka:
   client:
     enabled: false
 
+# AI Service
+ai:
+  service:
+    url: ${AI_SERVICE_URL}
+  webhook:
+    url: ${AI_WEBHOOK_URL}
+
+# Media Service
+media:
+  service:
+    url: ${MEDIA_SERVICE_URL}
+
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:/usr/bin/ffmpeg}
+
+# Storage
+storage:
+  base-path: ${STORAGE_BASE_PATH:/data/storage}
+
 logging:
   level:
     com.onetake: INFO

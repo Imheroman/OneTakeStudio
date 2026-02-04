@@ -31,10 +31,31 @@ livekit:
   api:
     key: ${LIVEKIT_API_KEY}
     secret: ${LIVEKIT_API_SECRET}
+  egress:
+    output-path: ${LIVEKIT_EGRESS_OUTPUT_PATH:/recordings/}
 
 core:
   service:
     url: ${CORE_SERVICE_URL}
+
+# YouTube API (채팅 연동)
+youtube:
+  oauth:
+    client-id: ${YOUTUBE_CLIENT_ID}
+    client-secret: ${YOUTUBE_CLIENT_SECRET}
+    redirect-uri: ${YOUTUBE_REDIRECT_URI}
+    scope: https://www.googleapis.com/auth/youtube.readonly
+
+# 치지직 OAuth (채팅 연동)
+chzzk:
+  oauth:
+    client-id: ${CHZZK_CLIENT_ID}
+    client-secret: ${CHZZK_CLIENT_SECRET}
+    redirect-uri: ${CHZZK_REDIRECT_URI}
+
+# OAuth 공통 설정
+oauth:
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI}
 
 recording:
   storage:
