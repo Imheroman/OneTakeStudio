@@ -304,7 +304,6 @@ deploy-livekit:
 deploy-frontend:
   stage: deploy
   image: node:20 # Vercel CLI 실행을 위한 Node 환경
-  needs: []  # 다른 잡에 의존하지 않고 독립 실행
   script:
     - npm install --global vercel
     - cd frontend
