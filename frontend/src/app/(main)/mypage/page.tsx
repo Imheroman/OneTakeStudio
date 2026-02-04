@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useWorkspaceThemeStore } from "@/stores/useWorkspaceThemeStore";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { updateProfile } from "@/shared/api/users";
 
 import { Button } from "@/shared/ui/button";
@@ -57,8 +57,8 @@ const passwordSchema = z
 
 export default function MyPage() {
   const router = useRouter();
-  const theme = useWorkspaceThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
   const { user, logout, updateUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
 

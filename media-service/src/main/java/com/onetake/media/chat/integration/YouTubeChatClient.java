@@ -1,17 +1,14 @@
 package com.onetake.media.chat.integration;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onetake.media.chat.dto.ChatMessageRequest;
 import com.onetake.media.chat.entity.ChatPlatform;
 import com.onetake.media.chat.entity.MessageType;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,22 +23,35 @@ import java.util.List;
  * 필요한 OAuth Scope:
  * - https://www.googleapis.com/auth/youtube.readonly (읽기)
  * - https://www.googleapis.com/auth/youtube (쓰기)
+ *
+ * 주의: 이 클래스는 싱글톤이 아닙니다.
+ * YouTubeChatClientFactory를 통해 스튜디오별로 새 인스턴스를 생성하세요.
  */
 @Slf4j
-@Component
 public class YouTubeChatClient implements ExternalChatClient {
 
-    private static final String YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
-    private static final String LIVE_CHAT_MESSAGES_URL = YOUTUBE_API_BASE + "/liveChat/messages";
+    private static final String YOUTUBE_API_BASE_URL = "https://www.googleapis.com/youtube/v3";
+    private static final String LIVE_CHAT_MESSAGES_ENDPOINT = "/liveChat/messages";
+    private static final String OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
+    private final String clientId;
+    private final String clientSecret;
 
     private PlatformCredentials credentials;
     private boolean connected = false;
     private String nextPageToken;
+    private long pollingIntervalMillis = 5000;
 
-    public YouTubeChatClient() {
+    /**
+     * YouTubeChatClientFactory를 통해 생성하세요.
+     */
+    public YouTubeChatClient(ObjectMapper objectMapper, String clientId, String clientSecret) {
         this.restTemplate = new RestTemplate();
+        this.objectMapper = objectMapper;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
     }
 
     @Override
@@ -54,27 +64,39 @@ public class YouTubeChatClient implements ExternalChatClient {
         this.credentials = credentials;
         this.nextPageToken = null;
 
-        // 연결 검증: 첫 API 호출로 확인
         try {
-            String url = UriComponentsBuilder.fromHttpUrl(LIVE_CHAT_MESSAGES_URL)
-                    .queryParam("liveChatId", credentials.getLiveChatId())
-                    .queryParam("part", "snippet,authorDetails")
-                    .queryParam("maxResults", 1)
-                    .toUriString();
+            // API 연결 검증 - 첫 번째 메시지 조회 시도
+            String url = buildMessagesUrl(false);
+            HttpEntity<Void> entity = new HttpEntity<>(createAuthHeaders());
 
-            HttpHeaders headers = createAuthHeaders();
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<YouTubeLiveChatResponse> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity, YouTubeLiveChatResponse.class);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 this.connected = true;
-                log.info("YouTube Chat connected: liveChatId={}, studioId={}",
-                        credentials.getLiveChatId(), credentials.getStudioId());
+                JsonNode root = objectMapper.readTree(response.getBody());
+
+                // 다음 페이지 토큰 저장
+                if (root.has("nextPageToken")) {
+                    this.nextPageToken = root.get("nextPageToken").asText();
+                }
+
+                // 폴링 간격 업데이트
+                if (root.has("pollingIntervalMillis")) {
+                    this.pollingIntervalMillis = root.get("pollingIntervalMillis").asLong();
+                }
+
+                log.info("[YouTube] Connected successfully: liveChatId={}", credentials.getLiveChatId());
             }
-        } catch (RestClientException e) {
-            log.error("YouTube Chat connection failed: {}", e.getMessage());
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.warn("[YouTube] Token expired, attempting refresh");
+            if (refreshAccessToken()) {
+                connect(this.credentials);
+            } else {
+                log.error("[YouTube] Failed to connect: token refresh failed");
+            }
+        } catch (Exception e) {
+            log.error("[YouTube] Failed to connect: {}", e.getMessage());
             this.connected = false;
         }
     }
@@ -84,7 +106,8 @@ public class YouTubeChatClient implements ExternalChatClient {
         this.connected = false;
         this.credentials = null;
         this.nextPageToken = null;
-        log.info("YouTube Chat disconnected");
+
+        log.info("[YouTube] Disconnected");
     }
 
     @Override
@@ -101,50 +124,46 @@ public class YouTubeChatClient implements ExternalChatClient {
         List<ChatMessageRequest> messages = new ArrayList<>();
 
         try {
-            UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(LIVE_CHAT_MESSAGES_URL)
-                    .queryParam("liveChatId", credentials.getLiveChatId())
-                    .queryParam("part", "snippet,authorDetails")
-                    .queryParam("maxResults", 200);
+            String url = buildMessagesUrl(true);
+            HttpEntity<Void> entity = new HttpEntity<>(createAuthHeaders());
 
-            // 이전 페이지 토큰이 있으면 추가 (중복 방지)
-            if (nextPageToken != null) {
-                uriBuilder.queryParam("pageToken", nextPageToken);
-            }
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, String.class);
 
-            HttpHeaders headers = createAuthHeaders();
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                JsonNode root = objectMapper.readTree(response.getBody());
 
-            ResponseEntity<YouTubeLiveChatResponse> response = restTemplate.exchange(
-                    uriBuilder.toUriString(), HttpMethod.GET, entity, YouTubeLiveChatResponse.class);
+                // 다음 페이지 토큰 업데이트
+                if (root.has("nextPageToken")) {
+                    this.nextPageToken = root.get("nextPageToken").asText();
+                }
 
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                YouTubeLiveChatResponse body = response.getBody();
+                // 폴링 간격 업데이트
+                if (root.has("pollingIntervalMillis")) {
+                    this.pollingIntervalMillis = root.get("pollingIntervalMillis").asLong();
+                }
 
-                // 다음 페이지 토큰 저장
-                this.nextPageToken = body.getNextPageToken();
-
-                // 메시지 변환
-                if (body.getItems() != null) {
-                    for (YouTubeLiveChatMessage item : body.getItems()) {
-                        ChatMessageRequest message = convertToRequest(item);
+                // 메시지 파싱
+                JsonNode items = root.get("items");
+                if (items != null && items.isArray()) {
+                    for (JsonNode item : items) {
+                        ChatMessageRequest message = parseMessage(item);
                         if (message != null) {
                             messages.add(message);
                         }
                     }
                 }
-            }
 
-            if (!messages.isEmpty()) {
-                log.debug("YouTube Chat fetched {} messages", messages.size());
+                log.debug("[YouTube] Fetched {} messages", messages.size());
             }
-
-        } catch (RestClientException e) {
-            log.error("YouTube Chat fetch failed: {}", e.getMessage());
-            // 401/403 에러 시 연결 해제
-            if (e.getMessage() != null && (e.getMessage().contains("401") || e.getMessage().contains("403"))) {
-                log.warn("YouTube token expired or invalid, disconnecting...");
-                this.connected = false;
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.warn("[YouTube] Token expired during fetch, attempting refresh");
+            if (refreshAccessToken()) {
+                return fetchNewMessages();
             }
+            this.connected = false;
+        } catch (Exception e) {
+            log.error("[YouTube] Failed to fetch messages: {}", e.getMessage());
         }
 
         return messages;
@@ -157,167 +176,168 @@ public class YouTubeChatClient implements ExternalChatClient {
         }
 
         try {
+            String url = YOUTUBE_API_BASE_URL + LIVE_CHAT_MESSAGES_ENDPOINT + "?part=snippet";
+
+            String requestBody = objectMapper.writeValueAsString(new SendMessageBody(
+                    new Snippet(
+                            credentials.getLiveChatId(),
+                            "textMessageEvent",
+                            new TextMessageDetails(message)
+                    )
+            ));
+
             HttpHeaders headers = createAuthHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // 요청 본문 구성
-            YouTubeSendMessageRequest requestBody = new YouTubeSendMessageRequest();
-            requestBody.setSnippet(new YouTubeSendMessageRequest.Snippet(
-                    credentials.getLiveChatId(),
-                    "textMessageEvent",
-                    new YouTubeSendMessageRequest.TextMessageDetails(message)
-            ));
-
-            String url = UriComponentsBuilder.fromHttpUrl(LIVE_CHAT_MESSAGES_URL)
-                    .queryParam("part", "snippet")
-                    .toUriString();
-
-            HttpEntity<YouTubeSendMessageRequest> entity = new HttpEntity<>(requestBody, headers);
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
 
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.POST, entity, String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("YouTube Chat message sent successfully");
+                log.info("[YouTube] Message sent successfully");
                 return true;
             }
-
-        } catch (RestClientException e) {
-            log.error("YouTube Chat send failed: {}", e.getMessage());
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.warn("[YouTube] Token expired during send, attempting refresh");
+            if (refreshAccessToken()) {
+                return sendMessage(message);
+            }
+        } catch (Exception e) {
+            log.error("[YouTube] Failed to send message: {}", e.getMessage());
         }
 
         return false;
     }
 
+    /**
+     * 권장 폴링 간격 반환 (밀리초)
+     */
+    public long getPollingIntervalMillis() {
+        return pollingIntervalMillis;
+    }
+
+    private String buildMessagesUrl(boolean usePageToken) {
+        StringBuilder url = new StringBuilder(YOUTUBE_API_BASE_URL)
+                .append(LIVE_CHAT_MESSAGES_ENDPOINT)
+                .append("?liveChatId=").append(credentials.getLiveChatId())
+                .append("&part=snippet,authorDetails")
+                .append("&maxResults=200");
+
+        if (usePageToken && nextPageToken != null) {
+            url.append("&pageToken=").append(nextPageToken);
+        }
+
+        return url.toString();
+    }
+
     private HttpHeaders createAuthHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(credentials.getAccessToken());
-        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         return headers;
     }
 
-    private ChatMessageRequest convertToRequest(YouTubeLiveChatMessage item) {
-        if (item.getSnippet() == null || item.getAuthorDetails() == null) {
+    private ChatMessageRequest parseMessage(JsonNode item) {
+        try {
+            String messageId = item.get("id").asText();
+            JsonNode snippet = item.get("snippet");
+            JsonNode authorDetails = item.get("authorDetails");
+
+            String type = snippet.get("type").asText();
+            String displayName = authorDetails.get("displayName").asText();
+            String profileImageUrl = authorDetails.has("profileImageUrl")
+                    ? authorDetails.get("profileImageUrl").asText() : null;
+
+            String content;
+            Integer donationAmount = null;
+            String donationCurrency = null;
+            MessageType messageType = MessageType.CHAT;
+
+            if ("superChatEvent".equals(type)) {
+                JsonNode superChatDetails = snippet.get("superChatDetails");
+                content = superChatDetails.has("userComment")
+                        ? superChatDetails.get("userComment").asText() : "";
+                donationAmount = (int) (superChatDetails.get("amountMicros").asLong() / 1_000_000);
+                donationCurrency = superChatDetails.get("currency").asText();
+                messageType = MessageType.SUPER_CHAT;
+            } else if ("superStickerEvent".equals(type)) {
+                JsonNode superStickerDetails = snippet.get("superStickerDetails");
+                content = "[Super Sticker]";
+                donationAmount = (int) (superStickerDetails.get("amountMicros").asLong() / 1_000_000);
+                donationCurrency = superStickerDetails.get("currency").asText();
+                messageType = MessageType.SUPER_CHAT;
+            } else {
+                JsonNode textMessageDetails = snippet.get("textMessageDetails");
+                content = textMessageDetails != null
+                        ? textMessageDetails.get("messageText").asText() : "";
+            }
+
+            return ChatMessageRequest.builder()
+                    .studioId(String.valueOf(credentials.getStudioId()))
+                    .platform(ChatPlatform.YOUTUBE)
+                    .messageType(messageType)
+                    .senderName(displayName)
+                    .senderProfileUrl(profileImageUrl)
+                    .content(content)
+                    .externalMessageId(messageId)
+                    .donationAmount(donationAmount)
+                    .donationCurrency(donationCurrency)
+                    .build();
+        } catch (Exception e) {
+            log.warn("[YouTube] Failed to parse message: {}", e.getMessage());
             return null;
         }
+    }
 
-        YouTubeLiveChatMessage.Snippet snippet = item.getSnippet();
-        YouTubeLiveChatMessage.AuthorDetails author = item.getAuthorDetails();
+    /**
+     * Access Token 갱신
+     */
+    private boolean refreshAccessToken() {
+        if (credentials.getRefreshToken() == null) {
+            log.error("[YouTube] No refresh token available");
+            return false;
+        }
 
-        // 메시지 타입 결정
-        MessageType messageType = MessageType.CHAT;
-        String content = "";
-        Integer donationAmount = null;
-        String donationCurrency = null;
+        try {
+            String requestBody = "grant_type=refresh_token" +
+                    "&refresh_token=" + credentials.getRefreshToken() +
+                    "&client_id=" + clientId +
+                    "&client_secret=" + clientSecret;
 
-        if ("superChatEvent".equals(snippet.getType()) && snippet.getSuperChatDetails() != null) {
-            messageType = MessageType.SUPER_CHAT;
-            content = snippet.getSuperChatDetails().getUserComment();
-            // amountMicros는 마이크로 단위 (1,000,000 = 1원)
-            if (snippet.getSuperChatDetails().getAmountMicros() != null) {
-                donationAmount = (int) (snippet.getSuperChatDetails().getAmountMicros() / 1_000_000);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    OAUTH_TOKEN_ENDPOINT, HttpMethod.POST, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                String newAccessToken = root.get("access_token").asText();
+
+                // credentials 업데이트
+                this.credentials = PlatformCredentials.builder()
+                        .platform(credentials.getPlatform())
+                        .studioId(credentials.getStudioId())
+                        .accessToken(newAccessToken)
+                        .refreshToken(credentials.getRefreshToken())
+                        .liveChatId(credentials.getLiveChatId())
+                        .broadcastId(credentials.getBroadcastId())
+                        .build();
+
+                log.info("[YouTube] Access token refreshed successfully");
+                return true;
             }
-            donationCurrency = snippet.getSuperChatDetails().getCurrency();
-        } else if (snippet.getTextMessageDetails() != null) {
-            content = snippet.getTextMessageDetails().getMessageText();
+        } catch (Exception e) {
+            log.error("[YouTube] Failed to refresh token: {}", e.getMessage());
         }
 
-        // 빈 메시지 무시
-        if (content == null || content.isBlank()) {
-            return null;
-        }
-
-        return ChatMessageRequest.builder()
-                .studioId(credentials.getStudioId())
-                .platform(ChatPlatform.YOUTUBE)
-                .messageType(messageType)
-                .senderName(author.getDisplayName())
-                .senderProfileUrl(author.getProfileImageUrl())
-                .content(content)
-                .externalMessageId(item.getId())
-                .donationAmount(donationAmount)
-                .donationCurrency(donationCurrency)
-                .build();
+        return false;
     }
 
-    // ==================== YouTube API DTOs ====================
-
-    @Data
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class YouTubeLiveChatResponse {
-        private String nextPageToken;
-        private Long pollingIntervalMillis;
-        private List<YouTubeLiveChatMessage> items;
-    }
-
-    @Data
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class YouTubeLiveChatMessage {
-        private String id;
-        private Snippet snippet;
-        private AuthorDetails authorDetails;
-
-        @Data
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        public static class Snippet {
-            private String liveChatId;
-            private String type;
-            private String publishedAt;
-            private TextMessageDetails textMessageDetails;
-            private SuperChatDetails superChatDetails;
-        }
-
-        @Data
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        public static class TextMessageDetails {
-            private String messageText;
-        }
-
-        @Data
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        public static class SuperChatDetails {
-            private Long amountMicros;
-            private String currency;
-            private String userComment;
-        }
-
-        @Data
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        public static class AuthorDetails {
-            private String channelId;
-            private String displayName;
-            private String profileImageUrl;
-            @JsonProperty("isChatOwner")
-            private boolean chatOwner;
-            @JsonProperty("isChatModerator")
-            private boolean chatModerator;
-        }
-    }
-
-    @Data
-    public static class YouTubeSendMessageRequest {
-        private Snippet snippet;
-
-        @Data
-        public static class Snippet {
-            private String liveChatId;
-            private String type;
-            private TextMessageDetails textMessageDetails;
-
-            public Snippet(String liveChatId, String type, TextMessageDetails textMessageDetails) {
-                this.liveChatId = liveChatId;
-                this.type = type;
-                this.textMessageDetails = textMessageDetails;
-            }
-        }
-
-        @Data
-        public static class TextMessageDetails {
-            private String messageText;
-
-            public TextMessageDetails(String messageText) {
-                this.messageText = messageText;
-            }
-        }
-    }
+    // 메시지 전송용 내부 클래스들
+    private record SendMessageBody(Snippet snippet) {}
+    private record Snippet(String liveChatId, String type, TextMessageDetails textMessageDetails) {}
+    private record TextMessageDetails(String messageText) {}
 }

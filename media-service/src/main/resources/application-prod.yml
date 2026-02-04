@@ -43,6 +43,17 @@ recording:
     base-path: ${RECORDING_BASE_PATH}
     base-url: ${RECORDING_BASE_URL}
 
+# External EC2 Upload (청크 업로드)
+external:
+  upload:
+    enabled: ${EXTERNAL_UPLOAD_ENABLED:false}
+    server-url: ${EXTERNAL_UPLOAD_URL}
+    api-key: ${EXTERNAL_UPLOAD_API_KEY}
+    timeout: ${EXTERNAL_UPLOAD_TIMEOUT:300000}
+    chunk-size: ${EXTERNAL_UPLOAD_CHUNK_SIZE:52428800}
+    max-retries: ${EXTERNAL_UPLOAD_MAX_RETRIES:3}
+    retry-delay: ${EXTERNAL_UPLOAD_RETRY_DELAY:1000}
+
 logging:
   level:
     com.onetake.media: INFO

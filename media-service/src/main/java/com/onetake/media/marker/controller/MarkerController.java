@@ -1,6 +1,7 @@
 package com.onetake.media.marker.controller;
 
 import com.onetake.media.global.common.ApiResponse;
+import com.onetake.media.global.resolver.StudioIdResolver;
 import com.onetake.media.marker.dto.CreateMarkerRequest;
 import com.onetake.media.marker.dto.MarkerResponse;
 import com.onetake.media.marker.service.MarkerService;
@@ -19,6 +20,7 @@ import java.util.List;
 public class MarkerController {
 
     private final MarkerService markerService;
+    private final StudioIdResolver studioIdResolver;
 
     /**
      * 마커 생성 (사용자 수동 마킹)
@@ -29,8 +31,9 @@ public class MarkerController {
             @RequestHeader(value = "X-User-Id", required = false) Long userId,
             @Valid @RequestBody CreateMarkerRequest request) {
 
-        log.info("마커 생성 요청: studioId={}, timestamp={}", request.getStudioId(), request.getTimestampSec());
-        MarkerResponse response = markerService.createManualMarker(userId, request);
+        Long studioId = studioIdResolver.resolveStudioId(request.getStudioId());
+        log.info("마커 생성 요청: studioId={}, timestamp={}", studioId, request.getTimestampSec());
+        MarkerResponse response = markerService.createManualMarker(userId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success("마커가 생성되었습니다", response));
     }
 
@@ -40,9 +43,10 @@ public class MarkerController {
      */
     @GetMapping("/studio/{studioId}")
     public ResponseEntity<ApiResponse<List<MarkerResponse>>> getMarkersByStudio(
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
-        List<MarkerResponse> markers = markerService.getMarkersByStudio(studioId);
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        List<MarkerResponse> markers = markerService.getMarkersByStudio(resolvedStudioId);
         return ResponseEntity.ok(ApiResponse.success("마커 목록 조회 성공", markers));
     }
 

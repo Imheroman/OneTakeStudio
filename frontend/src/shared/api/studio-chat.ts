@@ -1,20 +1,21 @@
 /**
- * 스튜디오 채팅 API (경로: /api/media/chat — V1 제외)
+ * 스튜디오 채팅 API (경로: /api/media/chat)
+ * FSD: shared는 entities 미참조. dto/chat 사용.
  */
 import { apiClient } from "./client";
 import {
   ApiResponseChatMessageArraySchema,
   ApiResponseChatMessageSchema,
-  type ChatMessage,
-  type ChatSendRequest,
-} from "@/entities/chat/model";
+  type ChatMessageDto,
+  type ChatSendRequestDto,
+} from "./dto/chat";
 
 const CHAT_BASE = "/api/media/chat";
 
 export async function getChatHistory(
   studioId: number,
   limit = 100,
-): Promise<ChatMessage[]> {
+): Promise<ChatMessageDto[]> {
   const res = await apiClient.get(
     `${CHAT_BASE}/${studioId}?limit=${limit}`,
     ApiResponseChatMessageArraySchema,
@@ -23,8 +24,8 @@ export async function getChatHistory(
 }
 
 export async function sendChatMessage(
-  body: ChatSendRequest,
-): Promise<ChatMessage> {
+  body: ChatSendRequestDto,
+): Promise<ChatMessageDto> {
   const res = await apiClient.post(
     CHAT_BASE,
     ApiResponseChatMessageSchema,

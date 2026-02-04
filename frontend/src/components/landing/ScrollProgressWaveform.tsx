@@ -287,7 +287,7 @@ export function ScrollProgressWaveform() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           className="text-[40px] sm:text-[48px] md:text-[56px] font-bold text-center text-white mb-3 px-4"
         >
           클릭 한 번이면 NG 장면이 사라져요
@@ -297,7 +297,7 @@ export function ScrollProgressWaveform() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.1, duration: 0.5 }}
+          transition={{ delay: 0.1, duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
           className="text-white/50 text-center max-w-lg mx-auto mb-6 px-4 text-sm sm:text-base"
         >
           AI가 음성과 댓글 밀집도를 분석해 침묵을 없애고, 알차고 재밌게. 3개의 쇼츠를 만들어 드려요.
@@ -307,7 +307,7 @@ export function ScrollProgressWaveform() {
         <motion.p
           className="text-purple-300/90 text-center text-sm mb-4 px-4 flex items-center justify-center gap-2"
           animate={{ opacity: showHint ? 1 : 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           style={{ pointerEvents: "none", minHeight: "1.5rem" }}
         >
           {showHint && (

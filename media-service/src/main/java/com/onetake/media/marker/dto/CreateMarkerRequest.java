@@ -1,5 +1,6 @@
 package com.onetake.media.marker.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -8,8 +9,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CreateMarkerRequest {
 
-    @NotNull(message = "스튜디오 ID는 필수입니다")
-    private Long studioId;
+    @NotBlank(message = "스튜디오 ID는 필수입니다")
+    private String studioId;
 
     private String recordingId;
 

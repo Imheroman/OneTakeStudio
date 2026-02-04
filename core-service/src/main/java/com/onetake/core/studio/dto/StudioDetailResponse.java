@@ -16,6 +16,8 @@ import java.util.List;
 public class StudioDetailResponse {
 
     private Long studioId;
+    /** 현재 요청 사용자의 스튜디오 내 역할 (HOST, MANAGER) */
+    private String myRole;
     private String name;
     private String description;
     private String thumbnail;
@@ -28,9 +30,10 @@ public class StudioDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static StudioDetailResponse from(Studio studio, List<StudioMemberResponse> members, List<SceneResponse> scenes) {
+    public static StudioDetailResponse from(Studio studio, List<StudioMemberResponse> members, List<SceneResponse> scenes, String myRole) {
         return StudioDetailResponse.builder()
                 .studioId(studio.getId())
+                .myRole(myRole != null ? myRole : "MANAGER")
                 .name(studio.getName())
                 .description(studio.getDescription())
                 .thumbnail(studio.getThumbnail())
@@ -48,6 +51,7 @@ public class StudioDetailResponse {
     public static StudioDetailResponse from(Studio studio) {
         return StudioDetailResponse.builder()
                 .studioId(studio.getId())
+                .myRole(null)
                 .name(studio.getName())
                 .description(studio.getDescription())
                 .thumbnail(studio.getThumbnail())

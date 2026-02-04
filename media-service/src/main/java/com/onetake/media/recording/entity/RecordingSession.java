@@ -62,6 +62,17 @@ public class RecordingSession extends BaseTimeEntity {
     @Column(name = "error_message")
     private String errorMessage;
 
+    // 외부 EC2 업로드 관련 필드
+    @Enumerated(EnumType.STRING)
+    @Column(name = "external_upload_status")
+    private UploadStatus externalUploadStatus;
+
+    @Column(name = "external_file_url")
+    private String externalFileUrl;
+
+    @Column(name = "external_uploaded_at")
+    private LocalDateTime externalUploadedAt;
+
     public void startRecording(String egressId) {
         this.egressId = egressId;
         this.status = RecordingStatus.RECORDING;
@@ -99,6 +110,24 @@ public class RecordingSession extends BaseTimeEntity {
         if (this.endedAt == null) {
             this.endedAt = LocalDateTime.now();
         }
+    }
+
+    /**
+     * 외부 EC2 업로드 상태 업데이트
+     */
+    public void updateExternalUploadStatus(UploadStatus status, String externalFileUrl) {
+        this.externalUploadStatus = status;
+        if (status == UploadStatus.COMPLETED && externalFileUrl != null) {
+            this.externalFileUrl = externalFileUrl;
+            this.externalUploadedAt = LocalDateTime.now();
+        }
+    }
+
+    /**
+     * 외부 업로드 대기 상태로 초기화
+     */
+    public void initExternalUpload() {
+        this.externalUploadStatus = UploadStatus.PENDING;
     }
 
     @PrePersist

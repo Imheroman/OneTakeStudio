@@ -1,20 +1,21 @@
 /**
  * 스튜디오 녹화 API (Gateway: /api/recordings/**)
+ * FSD: shared는 entities 미참조. dto/recording 사용.
  */
 import { apiClient } from "./client";
 import {
   ApiResponseRecordingArraySchema,
   ApiResponseRecordingNullableSchema,
   ApiResponseRecordingSchema,
-  type RecordingResponse,
-  type RecordingStartRequest,
-} from "@/entities/recording/model";
+  type RecordingResponseDto,
+  type RecordingStartRequestDto,
+} from "./dto/recording";
 
 const RECORDINGS_BASE = "/api/recordings";
 
 export async function startRecording(
-  body: RecordingStartRequest,
-): Promise<RecordingResponse> {
+  body: RecordingStartRequestDto,
+): Promise<RecordingResponseDto> {
   const res = await apiClient.post(
     RECORDINGS_BASE + "/start",
     ApiResponseRecordingSchema,
@@ -25,7 +26,7 @@ export async function startRecording(
 
 export async function stopRecording(
   studioId: number,
-): Promise<RecordingResponse> {
+): Promise<RecordingResponseDto> {
   const res = await apiClient.post(
     `${RECORDINGS_BASE}/${studioId}/stop`,
     ApiResponseRecordingSchema,
@@ -35,7 +36,7 @@ export async function stopRecording(
 
 export async function pauseRecording(
   studioId: number,
-): Promise<RecordingResponse> {
+): Promise<RecordingResponseDto> {
   const res = await apiClient.post(
     `${RECORDINGS_BASE}/${studioId}/pause`,
     ApiResponseRecordingSchema,
@@ -45,7 +46,7 @@ export async function pauseRecording(
 
 export async function resumeRecording(
   studioId: number,
-): Promise<RecordingResponse> {
+): Promise<RecordingResponseDto> {
   const res = await apiClient.post(
     `${RECORDINGS_BASE}/${studioId}/resume`,
     ApiResponseRecordingSchema,
@@ -55,7 +56,7 @@ export async function resumeRecording(
 
 export async function getRecordingsByStudio(
   studioId: number,
-): Promise<RecordingResponse[]> {
+): Promise<RecordingResponseDto[]> {
   const res = await apiClient.get(
     `${RECORDINGS_BASE}/studio/${studioId}`,
     ApiResponseRecordingArraySchema,
@@ -65,7 +66,7 @@ export async function getRecordingsByStudio(
 
 export async function getActiveRecording(
   studioId: number,
-): Promise<RecordingResponse | null> {
+): Promise<RecordingResponseDto | null> {
   const res = await apiClient.get(
     `${RECORDINGS_BASE}/studio/${studioId}/active`,
     ApiResponseRecordingNullableSchema,
@@ -75,7 +76,7 @@ export async function getActiveRecording(
 
 export async function getRecording(
   recordingId: string,
-): Promise<RecordingResponse> {
+): Promise<RecordingResponseDto> {
   const res = await apiClient.get(
     `${RECORDINGS_BASE}/${recordingId}`,
     ApiResponseRecordingSchema,

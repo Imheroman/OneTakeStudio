@@ -2,23 +2,21 @@ server:
   port: 8082
 
 spring:
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
     name: media-service
 
   # MySQL Database
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/media_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:media_user}
-    password: ${DB_PASSWORD:media_password}
+    url: jdbc:mysql://localhost:3306/media_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: media_user
+    password: media_password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # JPA
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:true}
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
@@ -28,18 +26,18 @@ spring:
   # Redis
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: localhost
+      port: 6379
 
-# JWT (media-service에서도 인증 처리 시 필요, base64 encoded)
+# JWT
 jwt:
-  secret: ${JWT_SECRET:bG9jYWxkZXZqd3RzZWNyZXRrZXlmb3JoczI1NmFsZ29yaXRobW11c3RiZWF0bGVhc3QyNTZiaXRz}
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
 
 # Eureka Client
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
@@ -47,17 +45,36 @@ eureka:
 
 # LiveKit
 livekit:
-  host: ${LIVEKIT_HOST:http://localhost:7880}
+  host: http://localhost:7880
   api:
-    key: ${LIVEKIT_API_KEY:devkey}
-    secret: ${LIVEKIT_API_SECRET:devkey-secret-for-livekit-min-32-chars}
+    key: devkey
+    secret: devkey-secret-for-livekit-min-32-chars
   egress:
     output-path: /recordings/
 
 # Core Service
 core:
   service:
-    url: ${CORE_SERVICE_URL:http://localhost:8080}
+    url: http://localhost:8080
+
+# YouTube API
+youtube:
+  oauth:
+    client-id: 131937565238-ullgqej3bktgfkkj441r7p2elvunfecl.apps.googleusercontent.com
+    client-secret: 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
+    redirect-uri: ${YOUTUBE_REDIRECT_URI:https://i14c206.p.ssafy.io/api/oauth/youtube/callback}
+    scope: https://www.googleapis.com/auth/youtube.readonly
+
+# 치지직 OAuth
+chzzk:
+  oauth:
+    client-id: 0c2b66b0-f5ae-400b-9056-0bb9289954d1
+    client-secret: NOJIPyg5MK2KqVhLb-OEPsKGxMyfm-P0OdeHQ3eWDng
+    redirect-uri: ${CHZZK_REDIRECT_URI:https://i14c206.p.ssafy.io/api/oauth/chzzk/callback}
+
+# OAuth 공통 설정
+oauth:
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:https://i14c206.p.ssafy.io/oauth/callback}
 
 # Recording Storage
 recording:
@@ -68,6 +85,6 @@ recording:
 # Logging
 logging:
   level:
-    com.onetake.media: ${LOG_LEVEL:DEBUG}
+    com.onetake.media: DEBUG
     org.springframework.web: INFO
-    org.hibernate.SQL: ${LOG_LEVEL_SQL:DEBUG}
+    org.hibernate.SQL: DEBUG

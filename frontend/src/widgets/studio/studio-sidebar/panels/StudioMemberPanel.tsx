@@ -48,7 +48,7 @@ export function StudioMemberPanel({
       const memberList = await getStudioMembers(studioId);
       setMembers(memberList);
 
-      // 초대 목록은 HOST/MANAGER만 조회 가능 (GUEST는 403)
+      // 초대 목록은 HOST/MANAGER만 조회 가능
       try {
         const inviteList = await getStudioInvites(studioId);
         setInvites(inviteList ?? []);
@@ -84,7 +84,7 @@ export function StudioMemberPanel({
         setCancellingId(null);
       }
     },
-    [studioId],
+    [studioId]
   );
 
   const displayName = (m: StudioMemberResponse) =>
@@ -167,7 +167,9 @@ export function StudioMemberPanel({
                             {displayName(m)}
                           </span>
                           {isOnline(m) && (
-                            <span className="text-[10px] text-green-400">●</span>
+                            <span className="text-[10px] text-green-400">
+                              ●
+                            </span>
                           )}
                         </div>
                         {displaySub(m) ? (
@@ -181,8 +183,7 @@ export function StudioMemberPanel({
                           "text-xs px-2 py-0.5 rounded capitalize shrink-0",
                           m.role === "host" && "bg-amber-900/50 text-amber-200",
                           m.role === "manager" &&
-                            "bg-indigo-900/50 text-indigo-200",
-                          m.role === "guest" && "bg-gray-600 text-gray-300",
+                            "bg-indigo-900/50 text-indigo-200"
                         )}
                       >
                         {m.role}

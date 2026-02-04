@@ -22,7 +22,7 @@ public class PublishStatusResponse {
     @Builder
     public static class DestinationStatus {
         private Long destinationId;
-        private String platform; // "youtube", "twitch", "chzzk"
+        private String platform; // "youtube", "chzzk"
         private String status; // "connected", "disconnected", "error"
         private String rtmpUrl;
     }

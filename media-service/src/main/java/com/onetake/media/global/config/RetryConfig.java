@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * 재시도 설정
- * - LiveKit, S3, 외부 API 호출 시 일시적 장애 대응
+ * - LiveKit, 외부 API 호출 시 일시적 장애 대응
  * - Exponential Backoff: 재시도 간격을 점진적으로 증가 (1초 -> 2초 -> 4초)
  */
 @Configuration

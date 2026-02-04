@@ -19,7 +19,7 @@ export function ChannelManagement() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Connected Channels</h1>
+        <h1 className="text-2xl font-bold text-gray-900">연결된 채널</h1>
         <Button
           onClick={() => setIsDialogOpen(true)}
           className="bg-indigo-600 hover:bg-indigo-700"

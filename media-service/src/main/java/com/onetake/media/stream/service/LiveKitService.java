@@ -24,9 +24,9 @@ public class LiveKitService {
     private final LiveKitConfig liveKitConfig;
     private final RoomServiceClient roomServiceClient;
 
-    public StreamTokenResponse generateToken(Long userId, StreamTokenRequest request) {
+    public StreamTokenResponse generateToken(Long userId, Long studioId, StreamTokenRequest request) {
         try {
-            String roomName = generateRoomName(request.getStudioId());
+            String roomName = generateRoomName(studioId);
             String participantIdentity = generateParticipantIdentity(userId, request.getParticipantName());
 
             AccessToken accessToken = liveKitConfig.createAccessToken();
