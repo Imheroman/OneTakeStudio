@@ -4,9 +4,15 @@ import { create } from "zustand";
 // 타입 정의
 export type ShortStatus = "idle" | "loading" | "completed";
 
-interface ShortItem {
+export interface ShortItem {
   id: number;
   status: ShortStatus;
+  currentStep?: number;
+  totalSteps?: number;
+  currentStepKey?: string;
+  videoUrl?: string;
+  jobId?: string;
+  videoId?: string;
 }
 
 interface ShortsStore {
@@ -15,7 +21,7 @@ interface ShortsStore {
   isModalOpen: boolean;
 
   // 단순 상태 변경 액션들만 남김
-  setShortsStatus: (count: number) => void;
+  setShortsStatus: (shorts: ShortItem[]) => void;
   addNotification: (msg: string) => void;
   openResultModal: () => void;
   closeResultModal: () => void;
@@ -36,16 +42,35 @@ export const useShortsStore = create<ShortsStore>((set) => ({
   addNotification: (msg) =>
     set((state) => ({ notifications: [msg, ...state.notifications] })),
 
-  // 서버에서 받은 '완료된 개수'에 따라 상태 업데이트
-  setShortsStatus: (count) =>
+  // 서버에서 받은 shorts 배열 기반으로 상태 업데이트
+  setShortsStatus: (serverShorts) =>
     set((state) => {
-      const newShorts = state.shorts.map((item, index) => ({
-        ...item,
-        status:
-          index < count
-            ? ("completed" as ShortStatus)
-            : ("loading" as ShortStatus),
-      }));
+      const newShorts = state.shorts.map((item, index) => {
+        const server = serverShorts[index];
+        if (!server) return item;
+
+        if (server.status === "completed") {
+          return {
+            ...item,
+            status: "completed" as ShortStatus,
+            videoUrl: server.videoUrl ?? item.videoUrl,
+            jobId: server.jobId ?? item.jobId,
+            videoId: server.videoId ?? item.videoId,
+          };
+        }
+        if (server.status === "processing" || server.status === "pending") {
+          return {
+            ...item,
+            status: "loading" as ShortStatus,
+            currentStep: server.currentStep,
+            totalSteps: server.totalSteps,
+            currentStepKey: server.currentStepKey,
+            jobId: server.jobId ?? item.jobId,
+            videoId: server.videoId ?? item.videoId,
+          };
+        }
+        return item;
+      });
       return { shorts: newShorts };
     }),
 

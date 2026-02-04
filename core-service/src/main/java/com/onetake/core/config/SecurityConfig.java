@@ -42,6 +42,8 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/destinations/internal/**",
                                 "/api/ai/webhook",  // AI 서비스 Webhook (인증 없이)
+                                "/api/ai/shorts/stream/**",  // 숏츠 비디오 스트리밍 (video 태그 재생)
+                                "/api/ai/shorts/download/**",  // 숏츠 다운로드
                                 "/actuator/health",
                                 "/error",
                                 "/*.html",

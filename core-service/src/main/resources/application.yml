@@ -58,16 +58,16 @@ email:
 # OAuth 설정
 oauth:
   google:
-    client-id: ${OAUTH_GOOGLE_CLIENT_ID:}
-    client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET:}
+    client-id: ${OAUTH_GOOGLE_CLIENT_ID:51683382309-340jprf00qpfjggfv5jphuifk5jk1np0.apps.googleusercontent.com}
+    client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET: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}
     redirect-uri: ${OAUTH_GOOGLE_REDIRECT_URI:http://localhost:3000/oauth/callback}
   kakao:
-    client-id: ${OAUTH_KAKAO_CLIENT_ID:}
-    client-secret: ${OAUTH_KAKAO_CLIENT_SECRET:}
+    client-id: ${OAUTH_KAKAO_CLIENT_ID:42b37ce2a41ca38644fa194c0b3d86bd}
+    client-secret: ${OAUTH_KAKAO_CLIENT_SECRET:C21YcsY9g9y1dlVnVTMCEm0IqosxHzGh}
     redirect-uri: ${OAUTH_KAKAO_REDIRECT_URI:http://localhost:3000/oauth/callback}
   naver:
-    client-id: ${OAUTH_NAVER_CLIENT_ID:}
-    client-secret: ${OAUTH_NAVER_CLIENT_SECRET:}
+    client-id: ${OAUTH_NAVER_CLIENT_ID:ID4xqmLVEISnoNshnvoH}
+    client-secret: ${OAUTH_NAVER_CLIENT_SECRET:QUGmPMFJqK}
     redirect-uri: ${OAUTH_NAVER_REDIRECT_URI:http://localhost:3000/oauth/callback}
 
 # Eureka Client
@@ -93,9 +93,18 @@ media:
   service:
     url: ${MEDIA_SERVICE_URL:http://localhost:8082}
 
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:C:/Users/SSAFY/Desktop/project/backend/onetakestudio-backend/AI/venv/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe}
+
 # Storage
 storage:
-  base-path: ${STORAGE_BASE_PATH:/mnt/storage}
+  base-path: ${STORAGE_BASE_PATH:C:/Users/SSAFY/Desktop/project/test}
+
+management:
+  health:
+    mail:
+      enabled: false
 
 logging:
   level:

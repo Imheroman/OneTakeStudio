@@ -3,6 +3,8 @@ import { useShortsStore } from "@/stores/useShortsStore";
 import { apiClient } from "@/shared/api/client";
 import { z } from "zod";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
 // AI 쇼츠 상태 응답 스키마
 const ShortsStatusResponseSchema = z.object({
   jobId: z.string().optional(),
@@ -16,6 +18,9 @@ const ShortsStatusResponseSchema = z.object({
     thumbnailPath: z.string().nullable().optional(),
     processingTimeSec: z.number().nullable().optional(),
     error: z.string().nullable().optional(),
+    currentStep: z.number().nullable().optional(),
+    totalSteps: z.number().nullable().optional(),
+    currentStepKey: z.string().nullable().optional(),
   })).optional(),
 });
 
@@ -53,7 +58,22 @@ export const useShortsPolling = () => {
 
         // 생성 중이거나 완료되었을 때만 로직 수행
         if (data.status === "processing" || data.status === "completed") {
-          setShortsStatus(data.completedCount);
+          // shorts 배열 기반으로 상태 업데이트 (progress 포함)
+          if (data.shorts && data.shorts.length > 0) {
+            setShortsStatus(data.shorts.map((s, i) => ({
+              id: i + 1,
+              status: s.status as "idle" | "loading" | "completed",
+              currentStep: s.currentStep ?? undefined,
+              totalSteps: s.totalSteps ?? undefined,
+              currentStepKey: s.currentStepKey ?? undefined,
+              jobId: data.jobId,
+              videoId: s.videoId ?? undefined,
+              videoUrl:
+                s.status === "completed" && data.jobId && s.videoId
+                  ? `${API_BASE}/api/ai/shorts/stream/${data.jobId}/${s.videoId}`
+                  : undefined,
+            })));
+          }
 
           // 새로운 완료 건수가 있을 때만 알림 추가
           if (data.completedCount > prevCountRef.current) {

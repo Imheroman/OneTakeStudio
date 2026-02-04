@@ -28,7 +28,25 @@ public class ShortsStatusResponse {
         private String status;
         private String outputPath;
         private String thumbnailPath;
+        private Double durationSec;
+        private String resolution;
+        private Boolean hasSubtitles;
+        private HighlightInfo highlight;
+        private List<String> titles;
         private Double processingTimeSec;
         private String error;
+        private Integer currentStep;
+        private Integer totalSteps;
+        private String currentStepKey;
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class HighlightInfo {
+        private Double startSec;
+        private Double endSec;
+        private String reason;
     }
 }

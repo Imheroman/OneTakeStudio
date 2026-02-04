@@ -43,9 +43,10 @@ async def background_process_job(req: ShortsRequest):
             # progress webhook을 보내는 동기 콜백 (run_in_executor 내 thread에서 호출됨)
             def make_progress_callback(vid_id, wh_url):
                 sync_client = httpx.Client(timeout=10.0)
+                print(f"[DEBUG] Progress webhook URL: {wh_url}")
                 def on_progress(step, total_steps, step_key):
                     try:
-                        sync_client.post(wh_url, json={
+                        resp = sync_client.post(wh_url, json={
                             "job_id": job_id,
                             "video_id": vid_id,
                             "status": "progress",
@@ -53,6 +54,7 @@ async def background_process_job(req: ShortsRequest):
                             "total_steps": total_steps,
                             "step_key": step_key,
                         })
+                        print(f"[PROGRESS] {vid_id} step {step}/{total_steps} ({step_key}) -> HTTP {resp.status_code}")
                     except Exception as err:
                         print(f"[WARN] Progress webhook failed (step {step}): {err}")
                 return on_progress
@@ -90,6 +92,9 @@ async def background_process_job(req: ShortsRequest):
                 }
 
             except Exception as e:
+                import traceback
+                print(f"[ERROR] process_one_video failed for {video.video_id}: {type(e).__name__}: {e}")
+                traceback.print_exc()
                 v_end = datetime.now(timezone.utc)
                 webhook_payload = {
                     "job_id": job_id,
@@ -101,8 +106,9 @@ async def background_process_job(req: ShortsRequest):
 
             # 🚀 영상 하나 끝날 때마다 즉시 웹훅 전송
             try:
-                print(f"[INFO] Sending webhook for {video.video_id}...")
-                await client.post(req.webhook_url, json=webhook_payload)
+                print(f"[INFO] Sending webhook for {video.video_id}... status={webhook_payload.get('status')}")
+                resp = await client.post(req.webhook_url, json=webhook_payload)
+                print(f"[INFO] Webhook response: HTTP {resp.status_code}")
             except Exception as err:
                 print(f"[ERROR] Webhook failed: {err}")
 
