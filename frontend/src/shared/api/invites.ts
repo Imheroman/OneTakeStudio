@@ -7,7 +7,7 @@ import { apiClient } from "./client";
 
 const ReceivedInviteResponseSchema = z.object({
   inviteId: z.string(),
-  studioId: z.number(),
+  studioId: z.union([z.string(), z.number()]),
   studioName: z.string(),
   studioThumbnail: z.string().nullable().optional(),
   inviterNickname: z.string().nullable().optional(),

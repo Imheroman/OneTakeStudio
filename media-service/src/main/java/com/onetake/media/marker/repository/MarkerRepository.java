@@ -14,7 +14,7 @@ public interface MarkerRepository extends JpaRepository<Marker, Long> {
 
     Optional<Marker> findByMarkerId(String markerId);
 
-    List<Marker> findByStudioIdOrderByTimestampSecAsc(Long studioId);
+    List<Marker> findByStudioIdOrderByTimestampSecAsc(String studioId);
 
     List<Marker> findByRecordingIdOrderByTimestampSecAsc(String recordingId);
 
@@ -32,7 +32,7 @@ public interface MarkerRepository extends JpaRepository<Marker, Long> {
     @Query("SELECT m FROM Marker m WHERE m.studioId = :studioId " +
            "AND m.timestampSec BETWEEN :startSec AND :endSec")
     List<Marker> findByStudioIdAndTimestampRange(
-            @Param("studioId") Long studioId,
+            @Param("studioId") String studioId,
             @Param("startSec") Double startSec,
             @Param("endSec") Double endSec);
 }

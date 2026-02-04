@@ -29,7 +29,7 @@ public class OAuthController {
     public ResponseEntity<ApiResponse<AuthorizeResponse>> getAuthorizationUrl(
             @PathVariable String platform,
             @RequestParam Long userId,
-            @RequestParam(required = false) Long studioId) {
+            @RequestParam(required = false) String studioId) {
 
         ChatPlatform chatPlatform = parsePlatform(platform);
         String authUrl = oAuthService.getAuthorizationUrl(chatPlatform, userId, studioId);
@@ -196,7 +196,9 @@ public class OAuthController {
 
     private ResponseEntity<Void> redirectToFrontend(String status, String message) {
         String frontendUri = oAuthService.getFrontendRedirectUri();
-        String redirectUrl = frontendUri + "?status=" + status + "&message=" + message;
+        String safeMessage = (message != null) ? message : "unknown_error";
+        String encodedMessage = java.net.URLEncoder.encode(safeMessage, java.nio.charset.StandardCharsets.UTF_8);
+        String redirectUrl = frontendUri + "?status=" + status + "&message=" + encodedMessage;
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(redirectUrl))
                 .build();

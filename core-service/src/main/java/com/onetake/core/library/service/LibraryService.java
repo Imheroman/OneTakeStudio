@@ -9,6 +9,9 @@ import com.onetake.core.library.exception.RecordingAccessDeniedException;
 import com.onetake.core.library.exception.RecordingNotFoundException;
 import com.onetake.core.library.repository.ClipRepository;
 import com.onetake.core.library.repository.RecordingRepository;
+import com.onetake.core.studio.entity.Studio;
+import com.onetake.core.studio.exception.StudioNotFoundException;
+import com.onetake.core.studio.repository.StudioRepository;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -29,6 +35,7 @@ public class LibraryService {
 
     private final RecordingRepository recordingRepository;
     private final ClipRepository clipRepository;
+    private final StudioRepository studioRepository;
 
     @Value("${library.storage.limit-bytes:32212254720}")
     private Long storageLimitBytes; // 기본 30GB
@@ -38,16 +45,20 @@ public class LibraryService {
         Page<Recording> recordings = recordingRepository
                 .findByUserIdAndStatusNotOrderByCreatedAtDesc(userId, RecordingStatus.DELETED, pageable);
 
-        Page<RecordingResponse> responsePage = recordings.map(RecordingResponse::from);
+        Map<Long, String> uuidMap = resolveStudioUuids(
+                recordings.getContent().stream().map(Recording::getStudioId).collect(Collectors.toList()));
+        Page<RecordingResponse> responsePage = recordings.map(r -> RecordingResponse.from(r, uuidMap.get(r.getStudioId())));
         return RecordingListResponse.from(responsePage);
     }
 
-    public RecordingListResponse getRecordingsByStudio(Long studioId, int page, int size) {
+    public RecordingListResponse getRecordingsByStudio(String studioId, int page, int size) {
+        Studio studio = studioRepository.findByStudioId(studioId)
+                .orElseThrow(() -> new StudioNotFoundException(studioId));
         Pageable pageable = PageRequest.of(page, size);
         Page<Recording> recordings = recordingRepository
-                .findByStudioIdAndStatusNotOrderByCreatedAtDesc(studioId, RecordingStatus.DELETED, pageable);
+                .findByStudioIdAndStatusNotOrderByCreatedAtDesc(studio.getId(), RecordingStatus.DELETED, pageable);
 
-        Page<RecordingResponse> responsePage = recordings.map(RecordingResponse::from);
+        Page<RecordingResponse> responsePage = recordings.map(r -> RecordingResponse.from(r, studioId));
         return RecordingListResponse.from(responsePage);
     }
 
@@ -57,18 +68,23 @@ public class LibraryService {
 
         validateAccess(userId, recording);
 
-        return RecordingResponse.from(recording);
+        String studioUuid = resolveStudioUuid(recording.getStudioId());
+        return RecordingResponse.from(recording, studioUuid);
     }
 
     @Transactional
     public RecordingResponse createRecording(String userId, CreateRecordingRequest request) {
+        String studioUuid = request.getStudioId();
+        Studio studio = studioRepository.findByStudioId(studioUuid)
+                .orElseThrow(() -> new StudioNotFoundException(studioUuid));
+
         String title = request.getTitle();
         if (title == null || title.isBlank()) {
             title = "녹화 - " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         }
 
         Recording recording = Recording.builder()
-                .studioId(request.getStudioId())
+                .studioId(studio.getId())
                 .userId(userId)
                 .title(title)
                 .description(request.getDescription())
@@ -79,9 +95,9 @@ public class LibraryService {
         recordingRepository.save(recording);
 
         log.info("Recording created: recordingId={}, studioId={}, userId={}",
-                recording.getRecordingId(), request.getStudioId(), userId);
+                recording.getRecordingId(), studioUuid, userId);
 
-        return RecordingResponse.from(recording);
+        return RecordingResponse.from(recording, studioUuid);
     }
 
     @Transactional
@@ -96,7 +112,8 @@ public class LibraryService {
 
         log.info("Recording updated: recordingId={}", recordingId);
 
-        return RecordingResponse.from(recording);
+        String studioUuid = resolveStudioUuid(recording.getStudioId());
+        return RecordingResponse.from(recording, studioUuid);
     }
 
     @Transactional
@@ -139,7 +156,8 @@ public class LibraryService {
 
         log.info("Recording media updated: recordingId={}, s3Key={}", recording.getRecordingId(), s3Key);
 
-        return RecordingResponse.from(recording);
+        String studioUuid = resolveStudioUuid(recording.getStudioId());
+        return RecordingResponse.from(recording, studioUuid);
     }
 
     @Transactional
@@ -196,5 +214,19 @@ public class LibraryService {
                 .findByUserIdAndStatusNotOrderByCreatedAtDesc(userId, RecordingStatus.DELETED, pageable);
 
         return StorageFilesResponse.from(recordings);
+    }
+
+    // ==================== Studio UUID Helpers ====================
+
+    private String resolveStudioUuid(Long internalStudioId) {
+        return studioRepository.findById(internalStudioId)
+                .map(Studio::getStudioId)
+                .orElse(null);
+    }
+
+    private Map<Long, String> resolveStudioUuids(List<Long> internalIds) {
+        List<Long> distinct = internalIds.stream().distinct().collect(Collectors.toList());
+        return studioRepository.findAllById(distinct).stream()
+                .collect(Collectors.toMap(Studio::getId, Studio::getStudioId));
     }
 }

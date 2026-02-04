@@ -5,6 +5,7 @@ import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";
+import { useShortsStore } from "@/stores/useShortsStore";
 import { z } from "zod";
 
 interface ShortsConfiguratorProps {
@@ -25,6 +26,7 @@ const GenerateResponseSchema = z.object({
 
 export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
   const router = useRouter();
+  const { openResultModal, reset: resetShorts } = useShortsStore();
 
   const [bgColor, setBgColor] = useState<BgColor>("black");
   const [useSubtitles, setUseSubtitles] = useState(true);
@@ -47,9 +49,8 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
         },
       );
 
-      alert(
-        "쇼츠 생성이 시작되었습니다!\n잠시 후 상단 알림을 통해 확인하실 수 있습니다.",
-      );
+      resetShorts();
+      openResultModal();
       router.back();
     } catch (error) {
       console.error(error);

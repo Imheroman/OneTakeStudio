@@ -24,7 +24,7 @@ public class StudioMemberController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<StudioMemberResponse>>> getMembers(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
         log.debug("멤버 목록 조회 요청: studioId={}", studioId);
         List<StudioMemberResponse> members = studioMemberService.getMembers(userDetails.getUserId(), studioId);
@@ -35,7 +35,7 @@ public class StudioMemberController {
     @PostMapping("/invite")
     public ResponseEntity<ApiResponse<InviteResponse>> inviteMember(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @Valid @RequestBody InviteMemberRequest request) {
 
         log.debug("멤버 초대 요청: studioId={}, email={}", studioId, request.getEmail());
@@ -47,7 +47,7 @@ public class StudioMemberController {
     @PostMapping("/{memberId}/kick")
     public ResponseEntity<ApiResponse<Void>> kickMember(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable Long memberId) {
 
         log.debug("멤버 강퇴 요청: studioId={}, memberId={}", studioId, memberId);
@@ -59,7 +59,7 @@ public class StudioMemberController {
     @PatchMapping("/{memberId}")
     public ResponseEntity<ApiResponse<StudioMemberResponse>> updateMemberRole(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable Long memberId,
             @Valid @RequestBody UpdateMemberRoleRequest request) {
 
@@ -73,7 +73,7 @@ public class StudioMemberController {
     @DeleteMapping("/me")
     public ResponseEntity<ApiResponse<Void>> leaveStudio(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
         log.debug("스튜디오 탈퇴 요청: studioId={}", studioId);
         studioMemberService.leaveStudio(userDetails.getUserId(), studioId);

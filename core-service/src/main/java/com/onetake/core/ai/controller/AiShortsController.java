@@ -8,8 +8,14 @@ import com.onetake.core.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -60,6 +66,67 @@ public class AiShortsController {
 
         ShortsStatusResponse response = aiShortsService.getJobStatus(jobId);
         return ResponseEntity.ok(ApiResponse.success("Job 상태 조회 성공", response));
+    }
+
+    /**
+     * 숏츠 비디오 스트리밍
+     * GET /api/ai/shorts/stream/{jobId}/{videoId}
+     * (인증 없이 프론트엔드에서 video 태그로 재생)
+     */
+    @GetMapping("/shorts/stream/{jobId}/{videoId}")
+    public ResponseEntity<Resource> streamShorts(
+            @PathVariable String jobId,
+            @PathVariable String videoId) {
+
+        Resource videoResource = aiShortsService.getVideoResource(jobId, videoId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("video/mp4"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .body(videoResource);
+    }
+
+    /**
+     * 숏츠 저장 (확정)
+     * PATCH /api/ai/shorts/{jobId}/{videoId}/save
+     */
+    @PatchMapping("/shorts/{jobId}/{videoId}/save")
+    public ResponseEntity<ApiResponse<Void>> saveShort(
+            @PathVariable String jobId,
+            @PathVariable String videoId) {
+
+        aiShortsService.saveShort(jobId, videoId);
+        return ResponseEntity.ok(ApiResponse.success("숏츠가 저장되었습니다", null));
+    }
+
+    /**
+     * 녹화별 저장된 숏츠 목록 조회
+     * GET /api/ai/shorts/saved/{recordingId}
+     */
+    @GetMapping("/shorts/saved/{recordingId}")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSavedShorts(
+            @PathVariable String recordingId) {
+
+        List<Map<String, Object>> savedShorts = aiShortsService.getSavedShorts(recordingId);
+        return ResponseEntity.ok(ApiResponse.success("저장된 숏츠 조회 성공", savedShorts));
+    }
+
+    /**
+     * 숏츠 다운로드
+     * GET /api/ai/shorts/download/{jobId}/{videoId}
+     */
+    @GetMapping("/shorts/download/{jobId}/{videoId}")
+    public ResponseEntity<Resource> downloadShorts(
+            @PathVariable String jobId,
+            @PathVariable String videoId) {
+
+        Resource videoResource = aiShortsService.getVideoResource(jobId, videoId);
+        String filename = "shorts_" + jobId.substring(0, 8) + "_" + videoId + ".mp4";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("video/mp4"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(videoResource);
     }
 
     /**

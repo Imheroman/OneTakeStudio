@@ -39,7 +39,7 @@ public class ShortsJob {
      * 스튜디오 ID
      */
     @Column(nullable = false)
-    private Long studioId;
+    private String studioId;
 
     /**
      * 요청한 사용자 ID

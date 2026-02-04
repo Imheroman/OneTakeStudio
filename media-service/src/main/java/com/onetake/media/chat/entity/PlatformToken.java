@@ -23,7 +23,7 @@ public class PlatformToken {
     private Long userId;
 
     @Column(name = "studio_id")
-    private Long studioId;
+    private String studioId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class MarkerResponse {
 
     private String markerId;
-    private Long studioId;
+    private String studioId;
     private String recordingId;
     private Double timestampSec;
     private String formattedTime;  // "15:30" 형식

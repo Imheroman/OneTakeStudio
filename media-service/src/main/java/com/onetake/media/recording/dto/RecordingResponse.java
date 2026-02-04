@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class RecordingResponse {
 
     private String recordingId;
-    private Long studioId;
+    private String studioId;
     private Long userId;
     private RecordingStatus status;
     private String fileName;

@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 public class MarkerInfo {
 
     private String markerId;
-    private Long studioId;
+    private String studioId;
     private String recordingId;
     private Double timestampSec;
     private String source;

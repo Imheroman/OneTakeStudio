@@ -26,7 +26,7 @@ public class LiveStreamEventPublisher {
     /**
      * 라이브 시작 이벤트 발행
      */
-    public void publishLiveStarted(Long studioId, Long userId, String roomName) {
+    public void publishLiveStarted(String studioId, Long userId, String roomName) {
         Map<String, String> event = new HashMap<>();
         event.put("eventType", "LIVE_STARTED");
         event.put("studioId", String.valueOf(studioId));
@@ -51,7 +51,7 @@ public class LiveStreamEventPublisher {
     /**
      * 라이브 종료 이벤트 발행
      */
-    public void publishLiveEnded(Long studioId, Long userId, String roomName) {
+    public void publishLiveEnded(String studioId, Long userId, String roomName) {
         Map<String, String> event = new HashMap<>();
         event.put("eventType", "LIVE_ENDED");
         event.put("studioId", String.valueOf(studioId));

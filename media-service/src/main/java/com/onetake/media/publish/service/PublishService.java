@@ -50,7 +50,7 @@ public class PublishService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public PublishResponse startPublish(Long userId, Long studioId, PublishStartRequest request) {
+    public PublishResponse startPublish(Long userId, String studioId, PublishStartRequest request) {
         // 이미 송출 중인 세션이 있으면 정리 후 새로 시작 (이중 클릭·끊긴 세션 복구)
         Optional<PublishSession> existingOpt = publishSessionRepository.findByStudioIdAndStatus(
                 studioId, PublishStatus.PUBLISHING);
@@ -150,7 +150,7 @@ public class PublishService {
     }
 
     @Transactional
-    public PublishResponse stopPublish(Long studioId) {
+    public PublishResponse stopPublish(String studioId) {
         PublishSession publishSession = publishSessionRepository
                 .findByStudioIdAndStatus(studioId, PublishStatus.PUBLISHING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PUBLISH_NOT_IN_PROGRESS));
@@ -174,7 +174,7 @@ public class PublishService {
         return PublishResponse.from(publishSession);
     }
 
-    public PublishStatusResponse getPublishStatus(Long studioId) {
+    public PublishStatusResponse getPublishStatus(String studioId) {
         PublishSession publishSession = publishSessionRepository
                 .findByStudioIdAndStatus(studioId, PublishStatus.PUBLISHING)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PUBLISH_NOT_IN_PROGRESS));
@@ -291,7 +291,7 @@ public class PublishService {
         }
 
         try {
-            Long studioId = Long.parseLong(roomName.substring(7));
+            String studioId = roomName.substring(7);
 
             Optional<PublishSession> optSession = publishSessionRepository
                     .findByStudioIdAndStatus(studioId, PublishStatus.PUBLISHING);
@@ -327,7 +327,7 @@ public class PublishService {
             eventPublisher.publishEndedExternally(studioId, publishSession.getPublishSessionId(),
                     "모든 참가자가 퇴장하여 스트림이 종료되었습니다");
 
-        } catch (NumberFormatException e) {
+        } catch (Exception e) {
             log.warn("Invalid room name format: {}", roomName);
         }
     }

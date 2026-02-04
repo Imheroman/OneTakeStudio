@@ -17,7 +17,7 @@ import java.util.List;
 public class ViewerMetricsResponse {
 
     private String metricsId;
-    private Long studioId;
+    private String studioId;
     private ChatPlatform platform;
     private Long currentViewers;
     private Long peakViewers;
@@ -45,7 +45,7 @@ public class ViewerMetricsResponse {
     @AllArgsConstructor
     @Builder
     public static class Aggregated {
-        private Long studioId;
+        private String studioId;
         private Long totalViewers;
         private Long totalPeakViewers;
         private List<PlatformMetrics> platforms;

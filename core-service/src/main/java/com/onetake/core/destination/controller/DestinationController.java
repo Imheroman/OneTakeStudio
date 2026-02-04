@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/destinations")
@@ -63,6 +64,19 @@ public class DestinationController {
             @PathVariable String destinationId) {
         destinationService.deleteDestination(userDetails.getUserId(), destinationId);
         return ResponseEntity.ok(ApiResponse.success("채널 연동 해제 성공"));
+    }
+
+    /**
+     * 채팅 연동 OAuth에 필요한 내부 userId 반환
+     *
+     * 프론트엔드에서 이 값을 사용해 Media Service의 /api/oauth/{platform}/authorize 호출
+     */
+    @GetMapping("/oauth/internal-user-id")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getInternalUserId(
+            @CurrentUser CustomUserDetails userDetails) {
+        Long internalUserId = destinationService.getInternalUserId(userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.success("조회 성공",
+                Map.of("internalUserId", internalUserId)));
     }
 
     @PostMapping("/internal/batch")

@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 export const StreamJoinRequestSchema = z.object({
-  studioId: z.number(),
+  studioId: z.union([z.string(), z.number()]),
   participantName: z.string().min(1, "참가자 이름은 필수입니다"),
   metadata: z.string().optional(),
 });
@@ -25,7 +25,7 @@ export const ApiResponseStreamTokenSchema = z.object({
 
 export const StreamSessionResponseSchema = z.object({
   sessionId: z.string(),
-  studioId: z.number(),
+  studioId: z.union([z.string(), z.number()]),
   userId: z.number(),
   roomName: z.string(),
   participantIdentity: z.string(),

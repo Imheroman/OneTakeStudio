@@ -23,7 +23,7 @@ public class StreamSession extends BaseTimeEntity {
     private String sessionId;
 
     @Column(name = "studio_id", nullable = false)
-    private Long studioId;
+    private String studioId;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;

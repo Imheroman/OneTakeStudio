@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class ReceivedInviteResponse {
 
     private String inviteId;
-    private Long studioId;
+    private String studioId;
     private String studioName;
     private String studioThumbnail;
     private String inviterNickname;
@@ -29,7 +29,7 @@ public class ReceivedInviteResponse {
     public static ReceivedInviteResponse from(MemberInvite invite, Studio studio, User inviter) {
         return ReceivedInviteResponse.builder()
                 .inviteId(invite.getInviteId())
-                .studioId(studio.getId())
+                .studioId(studio.getStudioId())
                 .studioName(studio.getName())
                 .studioThumbnail(studio.getThumbnail())
                 .inviterNickname(inviter != null ? inviter.getNickname() : null)

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 public class RecordingResponse {
 
     private String recordingId;
-    private Long studioId;
+    private String studioId;
     private String userId;
     private String title;
     private String description;
@@ -28,10 +28,10 @@ public class RecordingResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    public static RecordingResponse from(Recording recording) {
+    public static RecordingResponse from(Recording recording, String studioUuid) {
         return RecordingResponse.builder()
                 .recordingId(recording.getRecordingId())
-                .studioId(recording.getStudioId())
+                .studioId(studioUuid)
                 .userId(recording.getUserId())
                 .title(recording.getTitle())
                 .description(recording.getDescription())

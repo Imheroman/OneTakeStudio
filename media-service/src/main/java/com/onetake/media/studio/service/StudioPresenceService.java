@@ -26,7 +26,7 @@ public class StudioPresenceService {
      * 스튜디오별 접속자 목록
      * Key: studioId, Value: Map<userId, OnlineMember>
      */
-    private final Map<Long, Map<String, OnlineMember>> studioMembers = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, OnlineMember>> studioMembers = new ConcurrentHashMap<>();
 
     public record OnlineMember(
             String odUserId,
@@ -40,7 +40,7 @@ public class StudioPresenceService {
      * 2. 기존 접속자들에게 MEMBER_JOINED 브로드캐스트
      * 3. 새 접속자에게 현재 접속자 목록(CURRENT_MEMBERS) 전송
      */
-    public void memberJoined(Long studioId, String userId, String nickname) {
+    public void memberJoined(String studioId, String userId, String nickname) {
         Map<String, OnlineMember> members = studioMembers.computeIfAbsent(studioId, k -> new ConcurrentHashMap<>());
 
         // 이미 접속 중이면 무시
@@ -108,7 +108,7 @@ public class StudioPresenceService {
     /**
      * 멤버 퇴장 처리
      */
-    public void memberLeft(Long studioId, String userId, String nickname) {
+    public void memberLeft(String studioId, String userId, String nickname) {
         Map<String, OnlineMember> members = studioMembers.get(studioId);
         if (members == null) return;
 
@@ -140,7 +140,7 @@ public class StudioPresenceService {
     /**
      * 현재 접속자 목록 조회
      */
-    public List<OnlineMember> getOnlineMembers(Long studioId) {
+    public List<OnlineMember> getOnlineMembers(String studioId) {
         Map<String, OnlineMember> members = studioMembers.get(studioId);
         if (members == null) return Collections.emptyList();
         return new ArrayList<>(members.values());
@@ -149,7 +149,7 @@ public class StudioPresenceService {
     /**
      * 특정 멤버가 접속 중인지 확인
      */
-    public boolean isOnline(Long studioId, String userId) {
+    public boolean isOnline(String studioId, String userId) {
         Map<String, OnlineMember> members = studioMembers.get(studioId);
         return members != null && members.containsKey(userId);
     }

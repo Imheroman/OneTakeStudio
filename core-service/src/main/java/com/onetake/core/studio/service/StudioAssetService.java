@@ -24,47 +24,47 @@ public class StudioAssetService {
     private final StudioAssetRepository assetRepository;
     private final StudioRepository studioRepository;
 
-    public List<AssetResponse> getAssets(Long studioId) {
-        validateStudioExists(studioId);
-        return assetRepository.findByStudioIdOrderBySortOrderAsc(studioId).stream()
-                .map(AssetResponse::from)
+    public List<AssetResponse> getAssets(String studioId) {
+        Long internalStudioId = getInternalStudioId(studioId);
+        return assetRepository.findByStudioIdOrderBySortOrderAsc(internalStudioId).stream()
+                .map(asset -> AssetResponse.from(asset, studioId))
                 .toList();
     }
 
-    public List<AssetResponse> getAssetsByType(Long studioId, String type) {
-        validateStudioExists(studioId);
+    public List<AssetResponse> getAssetsByType(String studioId, String type) {
+        Long internalStudioId = getInternalStudioId(studioId);
         AssetType assetType = parseAssetType(type);
-        return assetRepository.findByStudioIdAndTypeOrderBySortOrderAsc(studioId, assetType).stream()
-                .map(AssetResponse::from)
+        return assetRepository.findByStudioIdAndTypeOrderBySortOrderAsc(internalStudioId, assetType).stream()
+                .map(asset -> AssetResponse.from(asset, studioId))
                 .toList();
     }
 
     @Transactional
-    public AssetResponse createAsset(Long studioId, CreateAssetRequest request) {
-        validateStudioExists(studioId);
+    public AssetResponse createAsset(String studioId, CreateAssetRequest request) {
+        Long internalStudioId = getInternalStudioId(studioId);
 
         AssetType assetType = parseAssetType(request.getType());
 
         StudioAsset asset = StudioAsset.builder()
-                .studioId(studioId)
+                .studioId(internalStudioId)
                 .type(assetType)
                 .name(request.getName())
                 .fileUrl(request.getFileUrl())
-                .sortOrder((int) assetRepository.countByStudioId(studioId))
+                .sortOrder((int) assetRepository.countByStudioId(internalStudioId))
                 .build();
 
         assetRepository.save(asset);
 
         log.info("Asset created: studioId={}, assetId={}, type={}", studioId, asset.getAssetId(), assetType);
 
-        return AssetResponse.from(asset);
+        return AssetResponse.from(asset, studioId);
     }
 
     @Transactional
-    public void deleteAsset(Long studioId, Long assetId) {
-        validateStudioExists(studioId);
+    public void deleteAsset(String studioId, Long assetId) {
+        Long internalStudioId = getInternalStudioId(studioId);
 
-        StudioAsset asset = assetRepository.findByIdAndStudioId(assetId, studioId)
+        StudioAsset asset = assetRepository.findByIdAndStudioId(assetId, internalStudioId)
                 .orElseThrow(() -> new AssetNotFoundException(assetId));
 
         assetRepository.delete(asset);
@@ -72,10 +72,10 @@ public class StudioAssetService {
         log.info("Asset deleted: studioId={}, assetId={}", studioId, assetId);
     }
 
-    private void validateStudioExists(Long studioId) {
-        if (!studioRepository.existsById(studioId)) {
-            throw new StudioNotFoundException(studioId);
-        }
+    private Long getInternalStudioId(String studioId) {
+        return studioRepository.findByStudioId(studioId)
+                .orElseThrow(() -> new StudioNotFoundException(studioId))
+                .getId();
     }
 
     private AssetType parseAssetType(String type) {

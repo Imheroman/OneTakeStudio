@@ -26,7 +26,7 @@ public class DestinationService {
     private final ConnectedDestinationRepository destinationRepository;
     private final UserRepository userRepository;
 
-    private Long getInternalUserId(String externalUserId) {
+    public Long getInternalUserId(String externalUserId) {
         User user = userRepository.findByUserId(externalUserId)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
         return user.getId();
@@ -77,6 +77,9 @@ public class DestinationService {
                         trimOrNull(request.getRtmpUrl(), dest.getRtmpUrl()),
                         trimOrNull(request.getStreamKey(), dest.getStreamKey()));
             }
+            if (request.getAccessToken() != null) {
+                dest.updateTokens(request.getAccessToken(), request.getRefreshToken(), null);
+            }
             destinationRepository.save(dest);
             return DestinationResponse.from(dest);
         }
@@ -88,6 +91,8 @@ public class DestinationService {
                 .channelName(request.getChannelName())
                 .rtmpUrl(trimOrNull(request.getRtmpUrl(), null))
                 .streamKey(trimOrNull(request.getStreamKey(), null))
+                .accessToken(request.getAccessToken())
+                .refreshToken(request.getRefreshToken())
                 .isActive(true)
                 .build();
 

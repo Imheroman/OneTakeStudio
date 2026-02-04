@@ -41,12 +41,12 @@ public class CommentCounterService {
      * - startTime: 방송 시작 시간
      * - counts: 분당 카운트 리스트
      */
-    private final Map<Long, CounterInfo> counters = new ConcurrentHashMap<>();
+    private final Map<String, CounterInfo> counters = new ConcurrentHashMap<>();
 
     /**
      * 방송 시작 시 카운터 초기화
      */
-    public void startCounting(Long studioId) {
+    public void startCounting(String studioId) {
         counters.put(studioId, new CounterInfo());
         log.info("[CommentCounter] Started counting for studioId={}", studioId);
     }
@@ -55,7 +55,7 @@ public class CommentCounterService {
      * 댓글 수신 시 카운트 증가
      * 현재 시간 기준으로 몇 분째인지 계산하여 해당 인덱스 증가
      */
-    public void incrementCount(Long studioId) {
+    public void incrementCount(String studioId) {
         CounterInfo info = counters.get(studioId);
         if (info == null) {
             // 카운터가 없으면 자동 시작 (안전장치)
@@ -74,7 +74,7 @@ public class CommentCounterService {
     /**
      * 현재 집계 중인 카운트 조회 (디버깅/모니터링용)
      */
-    public List<Integer> getCurrentCounts(Long studioId) {
+    public List<Integer> getCurrentCounts(String studioId) {
         CounterInfo info = counters.get(studioId);
         if (info == null) {
             return List.of();
@@ -86,7 +86,7 @@ public class CommentCounterService {
      * 방송 종료 시 카운트 저장 및 정리
      */
     @Transactional
-    public CommentStats saveAndStopCounting(Long studioId, Long recordingId) {
+    public CommentStats saveAndStopCounting(String studioId, Long recordingId) {
         CounterInfo info = counters.remove(studioId);
         if (info == null) {
             log.warn("[CommentCounter] No counter found for studioId={}", studioId);
@@ -124,7 +124,7 @@ public class CommentCounterService {
     /**
      * 카운터 강제 중지 (저장 없이)
      */
-    public void stopCounting(Long studioId) {
+    public void stopCounting(String studioId) {
         CounterInfo removed = counters.remove(studioId);
         if (removed != null) {
             log.info("[CommentCounter] Stopped counting for studioId={} (without saving)", studioId);
@@ -134,7 +134,7 @@ public class CommentCounterService {
     /**
      * 카운터 활성 여부 확인
      */
-    public boolean isCountingActive(Long studioId) {
+    public boolean isCountingActive(String studioId) {
         return counters.containsKey(studioId);
     }
 

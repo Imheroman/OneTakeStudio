@@ -12,7 +12,7 @@ import java.util.List;
 public class PublishStatusResponse {
 
     private String publishSessionId;
-    private Long studioId;
+    private String studioId;
     private PublishStatus status;
     private List<DestinationStatus> destinations;
     private LocalDateTime startedAt;
@@ -27,7 +27,7 @@ public class PublishStatusResponse {
         private String rtmpUrl;
     }
 
-    public static PublishStatusResponse of(String publishSessionId, Long studioId, PublishStatus status,
+    public static PublishStatusResponse of(String publishSessionId, String studioId, PublishStatus status,
                                             List<DestinationStatus> destinations,
                                             LocalDateTime startedAt) {
         Long durationSeconds = null;

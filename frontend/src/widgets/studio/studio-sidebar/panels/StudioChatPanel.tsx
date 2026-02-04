@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { List } from "react-window";
-import { MessageSquare, Send } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { MessageSquare, Monitor, Send } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { getChatHistory, sendChatMessage } from "@/shared/api/studio-chat";
 import type { ChatMessage } from "@/entities/chat/model";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useChatMessageStore } from "@/stores/useChatMessageStore";
 
-const CHAT_ROW_HEIGHT = 48;
-const VIRTUAL_THRESHOLD = 25;
+const EMPTY_MESSAGES: ChatMessage[] = [];
 
 const PLATFORM_LABEL: Record<string, string> = {
   YOUTUBE: "유튜브",
@@ -21,86 +20,108 @@ const PLATFORM_LABEL: Record<string, string> = {
   INTERNAL: "프라이빗",
 };
 
-function ChatMessageRow({
-  index,
-  style,
-  messages: list,
-}: {
-  index: number;
-  style: React.CSSProperties;
-  messages: ChatMessage[];
-}) {
-  const m = list[index];
-  return (
-    <div
-      style={style}
-      className={cn(
-        "text-sm rounded px-2 py-1 flex-shrink-0",
-        m.platform === "HOST" && "bg-indigo-900/30",
-        m.platform === "INTERNAL" && "bg-purple-900/30"
-      )}
-    >
-      <span className="text-gray-400 text-xs mr-2">
-        [{PLATFORM_LABEL[m.platform] ?? m.platform}]
-      </span>
-      <span className="font-medium text-gray-200">{m.senderName}:</span>{" "}
-      <span className="text-gray-300 break-words">{m.content}</span>
-    </div>
-  );
+function formatTime(createdAt: string | undefined): string {
+  if (!createdAt) return "";
+  const d = new Date(createdAt);
+  if (isNaN(d.getTime())) return "";
+  const h = d.getHours().toString().padStart(2, "0");
+  const m = d.getMinutes().toString().padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 interface StudioChatPanelProps {
-  studioId: number;
+  studioId: number | string;
   onClose?: () => void;
   filterPlatform?: "INTERNAL" | null; // null = 전체(공개), INTERNAL = 프라이빗만
+  isChatOverlayEnabled?: boolean;
+  onChatOverlayToggle?: () => void;
 }
 
 export function StudioChatPanel({
   studioId,
   onClose,
   filterPlatform = null,
+  isChatOverlayEnabled,
+  onChatOverlayToggle,
 }: StudioChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
-  const [listHeight, setListHeight] = useState(300);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((state) => state.user);
 
-  useEffect(() => {
-    const el = listRef.current;
+  const studioIdStr = String(studioId);
+  const setHistory = useChatMessageStore((s) => s.setHistory);
+  const rawMessages = useChatMessageStore(
+    (s) => s.messagesByStudio[studioIdStr] ?? EMPTY_MESSAGES,
+  );
+  const messages = useMemo(
+    () =>
+      filterPlatform === "INTERNAL"
+        ? rawMessages.filter((m) => m.platform === "INTERNAL")
+        : rawMessages.filter((m) => m.platform !== "INTERNAL"),
+    [rawMessages, filterPlatform],
+  );
+
+  // 자동 스크롤: 새 메시지가 추가되면 하단으로 이동
+  const shouldAutoScroll = useRef(true);
+  const prevMessageCount = useRef(messages.length);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const { height } = entries[0]?.contentRect ?? { height: 300 };
-      setListHeight(height);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const fetchHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      const list = await getChatHistory(studioId);
-      setMessages(
-        filterPlatform === "INTERNAL"
-          ? list.filter((m) => m.platform === "INTERNAL") // 프라이빗: INTERNAL만
-          : list.filter((m) => m.platform !== "INTERNAL"), // 전체: INTERNAL 제외 (HOST, YOUTUBE 등 포함)
-      );
-    } catch (e) {
-      console.error("채팅 히스토리 조회 실패:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [studioId, filterPlatform]);
+    // 유저가 위로 스크롤했으면 자동 스크롤 비활성화
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    shouldAutoScroll.current = atBottom;
+  };
 
   useEffect(() => {
-    fetchHistory();
-    // 5초마다 자동 새로고침
-    const interval = setInterval(fetchHistory, 5000);
-    return () => clearInterval(interval);
-  }, [fetchHistory]);
+    if (messages.length > prevMessageCount.current && shouldAutoScroll.current) {
+      const el = scrollRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+    prevMessageCount.current = messages.length;
+  }, [messages.length]);
+
+  // 초기 로드 후 스크롤 하단 이동
+  useEffect(() => {
+    if (!loading) {
+      const el = scrollRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+  }, [loading]);
+
+  // 초기 히스토리 로드 (1회) → 스토어에 세팅
+  // 이미 스토어에 메시지가 있으면 (탭 전환 후 복귀) API 재호출 생략
+  useEffect(() => {
+    const existing = useChatMessageStore.getState().messagesByStudio[studioIdStr];
+    if (existing && existing.length > 0) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const loadHistory = async () => {
+      try {
+        setLoading(true);
+        const list = await getChatHistory(studioId);
+        if (!cancelled) {
+          setHistory(studioIdStr, list);
+        }
+      } catch (e) {
+        console.error("채팅 히스토리 조회 실패:", e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [studioId, studioIdStr, setHistory]);
 
   const handleSend = async () => {
     const content = input.trim();
@@ -115,7 +136,7 @@ export function StudioChatPanel({
         platform: filterPlatform === "INTERNAL" ? "INTERNAL" : "HOST",
       });
       setInput("");
-      await fetchHistory();
+      // WebSocket으로 메시지가 바로 돌아오므로 fetchHistory 불필요
     } catch (e) {
       console.error("채팅 전송 실패:", e);
     } finally {
@@ -130,18 +151,41 @@ export function StudioChatPanel({
           <MessageSquare className="h-4 w-4" />
           {filterPlatform === "INTERNAL" ? "프라이빗채팅" : "채팅"}
         </span>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-            aria-label="닫기"
-          >
-            ✕
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {filterPlatform !== "INTERNAL" && onChatOverlayToggle && (
+            <button
+              type="button"
+              onClick={onChatOverlayToggle}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors",
+                isChatOverlayEnabled
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-700 text-gray-400 hover:text-white hover:bg-gray-600"
+              )}
+              aria-label="채팅 오버레이 토글"
+              title="방송 화면에 채팅 오버레이 표시"
+            >
+              <Monitor className="h-3.5 w-3.5" />
+              오버레이
+            </button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-white"
+              aria-label="닫기"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
-      <div ref={listRef} className="flex-1 min-h-0 p-3">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 min-h-0 p-3 overflow-y-auto space-y-1"
+      >
         {loading ? (
           <div className="text-gray-400 text-sm">로딩 중...</div>
         ) : messages.length === 0 ? (
@@ -150,34 +194,24 @@ export function StudioChatPanel({
               ? "프라이빗 채팅 메시지가 없습니다."
               : "채팅 메시지가 없습니다."}
           </div>
-        ) : messages.length > VIRTUAL_THRESHOLD ? (
-          <List<{ messages: ChatMessage[] }>
-            rowCount={messages.length}
-            rowHeight={CHAT_ROW_HEIGHT}
-            rowComponent={ChatMessageRow}
-            rowProps={{ messages }}
-            style={{ height: listHeight, width: "100%" }}
-            overscanCount={5}
-          />
         ) : (
-          <div className="space-y-2">
-            {messages.map((m) => (
-              <div
-                key={m.messageId}
-                className={cn(
-                  "text-sm rounded px-2 py-1",
-                  m.platform === "HOST" && "bg-indigo-900/30",
-                  m.platform === "INTERNAL" && "bg-purple-900/30"
-                )}
-              >
-                <span className="text-gray-400 text-xs mr-2">
-                  [{PLATFORM_LABEL[m.platform] ?? m.platform}]
-                </span>
-                <span className="font-medium text-gray-200">{m.senderName}:</span>{" "}
-                <span className="text-gray-300">{m.content}</span>
-              </div>
-            ))}
-          </div>
+          messages.map((m) => (
+            <div
+              key={m.messageId}
+              className={cn(
+                "text-sm rounded px-2 py-1 break-words",
+                m.platform === "HOST" && "bg-indigo-900/30",
+                m.platform === "INTERNAL" && "bg-purple-900/30"
+              )}
+            >
+              <span className="text-gray-400 text-xs mr-1">
+                [{PLATFORM_LABEL[m.platform] ?? m.platform}]
+              </span>
+              <span className="text-gray-500 text-xs mr-1">{formatTime(m.createdAt)}</span>
+              <span className="font-medium text-gray-200">{m.senderName}:</span>{" "}
+              <span className="text-gray-300">{m.content}</span>
+            </div>
+          ))
         )}
       </div>
       {/* 채팅 입력 (전체/프라이빗 모두 가능) */}

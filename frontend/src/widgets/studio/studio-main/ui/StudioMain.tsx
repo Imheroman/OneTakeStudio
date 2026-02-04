@@ -29,6 +29,8 @@ import {
 } from "@/hooks/studio";
 import { apiClient } from "@/shared/api/client";
 import { ApiResponseDestinationListSchema } from "@/entities/channel/model";
+import { useChatMessageStore } from "@/stores/useChatMessageStore";
+import type { ChatOverlayMessage } from "@/widgets/studio/preview-area/ui/PreviewArea";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
 import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBannerPanel";
 import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
@@ -61,6 +63,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   );
   const [showUnsavedConfirmModal, setShowUnsavedConfirmModal] = useState(false);
   const [showLockedByOtherModal, setShowLockedByOtherModal] = useState(false);
+  const [isChatOverlayEnabled, setIsChatOverlayEnabled] = useState(false);
 
   // 배너 타이머: timerSeconds가 있으면 카운트다운, 0이 되면 자동 중단
   useEffect(() => {
@@ -108,6 +111,31 @@ export function StudioMain({ studioId }: StudioMainProps) {
     };
     fetchDestinations();
   }, []);
+
+  // 스튜디오 퇴장 시 채팅 스토어 정리 (재입장 시 히스토리 새로 로드)
+  const clearChat = useChatMessageStore((s) => s.clear);
+  useEffect(() => {
+    return () => clearChat(studioId);
+  }, [studioId, clearChat]);
+
+  // 채팅 오버레이용: 공개 CHAT 메시지 최근 6개
+  const EMPTY_CHAT: never[] = [];
+  const allChatMessages = useChatMessageStore(
+    (s) => s.messagesByStudio[studioId] ?? EMPTY_CHAT,
+  );
+  const chatOverlayMessages: ChatOverlayMessage[] = useMemo(
+    () =>
+      allChatMessages
+        .filter((m) => m.platform !== "INTERNAL" && m.messageType === "CHAT")
+        .slice(-6)
+        .map((m) => ({
+          messageId: m.messageId,
+          platform: m.platform,
+          senderName: m.senderName,
+          content: m.content,
+        })),
+    [allChatMessages],
+  );
 
   const {
     studio,
@@ -398,6 +426,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 activeBanner={activeBanner}
                 activeAsset={activeAsset}
                 styleState={styleState}
+                isChatOverlayEnabled={isChatOverlayEnabled}
+                chatMessages={chatOverlayMessages}
               />
             </div>
 
@@ -604,6 +634,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
           onStartLocalRecording={handleStartLocalRecording}
           onStopLocalRecording={handleStopLocalRecording}
           onlineMembers={onlineMembers}
+          isChatOverlayEnabled={isChatOverlayEnabled}
+          onChatOverlayToggle={() => setIsChatOverlayEnabled((v) => !v)}
         />
       </div>
     </LayoutGroup>

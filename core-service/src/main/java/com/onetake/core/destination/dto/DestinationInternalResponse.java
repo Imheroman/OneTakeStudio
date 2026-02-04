@@ -15,6 +15,7 @@ import lombok.Getter;
 public class DestinationInternalResponse {
 
     private Long id;
+    private Long userId;
     private String platform;
     private String channelId;
     private String channelName;
@@ -25,6 +26,7 @@ public class DestinationInternalResponse {
     public static DestinationInternalResponse from(ConnectedDestination entity) {
         return DestinationInternalResponse.builder()
                 .id(entity.getId())
+                .userId(entity.getUserId())
                 .platform(entity.getPlatform())
                 .channelId(entity.getChannelId())
                 .channelName(entity.getChannelName())

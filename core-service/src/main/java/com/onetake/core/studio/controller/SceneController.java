@@ -25,7 +25,7 @@ public class SceneController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<SceneResponse>>> getScenes(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
         log.debug("씬 목록 조회 요청: studioId={}", studioId);
         List<SceneResponse> scenes = sceneService.getScenes(userDetails.getUserId(), studioId);
@@ -36,7 +36,7 @@ public class SceneController {
     @PostMapping
     public ResponseEntity<ApiResponse<SceneResponse>> createScene(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @Valid @RequestBody CreateSceneRequest request) {
 
         log.debug("씬 생성 요청: studioId={}, name={}", studioId, request.getName());
@@ -49,7 +49,7 @@ public class SceneController {
     @PutMapping("/{sceneId}")
     public ResponseEntity<ApiResponse<SceneResponse>> updateScene(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable Long sceneId,
             @Valid @RequestBody UpdateSceneRequest request) {
 
@@ -62,7 +62,7 @@ public class SceneController {
     @DeleteMapping("/{sceneId}")
     public ResponseEntity<ApiResponse<Void>> deleteScene(
             @CurrentUser CustomUserDetails userDetails,
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable Long sceneId) {
 
         log.debug("씬 삭제 요청: studioId={}, sceneId={}", studioId, sceneId);

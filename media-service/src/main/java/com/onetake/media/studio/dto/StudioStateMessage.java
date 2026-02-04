@@ -25,9 +25,9 @@ public class StudioStateMessage {
     private StudioStateType type;
 
     /**
-     * 스튜디오 ID
+     * 스튜디오 ID (외부 UUID)
      */
-    private Long studioId;
+    private String studioId;
 
     /**
      * 변경을 수행한 사용자 ID

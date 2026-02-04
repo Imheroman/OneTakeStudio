@@ -26,7 +26,7 @@ export type EditLockResponse = z.infer<typeof EditLockResponseSchema>;
 /**
  * 편집 락 획득
  */
-export async function acquireEditLock(studioId: number): Promise<EditLockResponse> {
+export async function acquireEditLock(studioId: string | number): Promise<EditLockResponse> {
   const response = await apiClient.post(
     `/api/studios/${studioId}/edit-lock`,
     ApiResponseEditLockSchema,
@@ -38,7 +38,7 @@ export async function acquireEditLock(studioId: number): Promise<EditLockRespons
 /**
  * 편집 락 갱신 (heartbeat)
  */
-export async function extendEditLock(studioId: number): Promise<EditLockResponse> {
+export async function extendEditLock(studioId: string | number): Promise<EditLockResponse> {
   const response = await apiClient.post(
     `/api/studios/${studioId}/edit-lock`,
     ApiResponseEditLockSchema,
@@ -50,7 +50,7 @@ export async function extendEditLock(studioId: number): Promise<EditLockResponse
 /**
  * 편집 락 해제
  */
-export async function releaseEditLock(studioId: number): Promise<void> {
+export async function releaseEditLock(studioId: string | number): Promise<void> {
   await apiClient.delete(
     `/api/studios/${studioId}/edit-lock`,
     z.object({ success: z.boolean(), message: z.string().optional() })
@@ -60,7 +60,7 @@ export async function releaseEditLock(studioId: number): Promise<void> {
 /**
  * 편집 락 상태 조회
  */
-export async function getEditLockStatus(studioId: number): Promise<EditLockResponse> {
+export async function getEditLockStatus(studioId: string | number): Promise<EditLockResponse> {
   const response = await apiClient.get(
     `/api/studios/${studioId}/edit-lock`,
     ApiResponseEditLockSchema
@@ -71,7 +71,7 @@ export async function getEditLockStatus(studioId: number): Promise<EditLockRespo
 /**
  * 편집 락 강제 해제 (호스트 전용)
  */
-export async function forceReleaseEditLock(studioId: number): Promise<void> {
+export async function forceReleaseEditLock(studioId: string | number): Promise<void> {
   await apiClient.delete(
     `/api/studios/${studioId}/edit-lock/force`,
     z.object({ success: z.boolean(), message: z.string().optional() })

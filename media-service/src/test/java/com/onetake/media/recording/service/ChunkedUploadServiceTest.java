@@ -96,7 +96,7 @@ class ChunkedUploadServiceTest {
         Long recordingId = 1L;
         RecordingSession session = RecordingSession.builder()
                 .id(recordingId)
-                .studioId(100L)
+                .studioId("100")
                 .userId(1L)
                 .status(RecordingStatus.COMPLETED)
                 .build();
@@ -121,7 +121,7 @@ class ChunkedUploadServiceTest {
         String externalUrl = "http://external-ec2/files/test.mp4";
         RecordingSession session = RecordingSession.builder()
                 .id(recordingId)
-                .studioId(100L)
+                .studioId("100")
                 .userId(1L)
                 .status(RecordingStatus.COMPLETED)
                 .build();
@@ -163,7 +163,7 @@ class ChunkedUploadServiceTest {
 
         RecordingSession session = RecordingSession.builder()
                 .id(recordingId)
-                .studioId(100L)
+                .studioId("100")
                 .userId(1L)
                 .status(RecordingStatus.COMPLETED)
                 .build();

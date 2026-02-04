@@ -13,14 +13,14 @@ public class RecentStudioResponse {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    private Long id;
+    private String id;
     private String title;
     private String date;
     private String role;  // HOST, MANAGER
 
     public static RecentStudioResponse from(Studio studio, StudioMemberRole role) {
         return RecentStudioResponse.builder()
-                .id(studio.getId())
+                .id(studio.getStudioId())
                 .title(studio.getName())
                 .date(studio.getCreatedAt().format(DATE_FORMAT))
                 .role(role.name())

@@ -33,7 +33,7 @@ public class CommentStats {
      * 스튜디오 ID
      */
     @Column(nullable = false)
-    private Long studioId;
+    private String studioId;
 
     /**
      * 분당 댓글 수 (JSON 배열)

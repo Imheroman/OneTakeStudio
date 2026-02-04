@@ -31,7 +31,7 @@ public class EditLockController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<EditLockResponse>> acquireLock(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @CurrentUser CustomUserDetails userDetails,
             @RequestBody(required = false) EditLockRequest request) {
 
@@ -76,7 +76,7 @@ public class EditLockController {
      */
     @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> releaseLock(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @CurrentUser CustomUserDetails userDetails) {
 
         log.debug("편집 락 해제 요청: studioId={}, userId={}", studioId, userDetails.getUserId());
@@ -96,7 +96,7 @@ public class EditLockController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<EditLockResponse>> getLockStatus(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @CurrentUser CustomUserDetails userDetails) {
 
         log.debug("편집 락 상태 조회: studioId={}, userId={}", studioId, userDetails.getUserId());
@@ -111,7 +111,7 @@ public class EditLockController {
      */
     @DeleteMapping("/force")
     public ResponseEntity<ApiResponse<Void>> forceReleaseLock(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @CurrentUser CustomUserDetails userDetails) {
 
         log.info("편집 락 강제 해제 요청: studioId={}, userId={}", studioId, userDetails.getUserId());

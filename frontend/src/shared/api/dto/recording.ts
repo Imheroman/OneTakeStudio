@@ -16,7 +16,7 @@ export const RecordingStatusSchema = z.enum([
 
 export const RecordingResponseSchema = z.object({
   recordingId: z.string(),
-  studioId: z.number(),
+  studioId: z.union([z.string(), z.number()]),
   userId: z.number().optional(),
   status: RecordingStatusSchema,
   fileName: z.string().nullable().optional(),
@@ -30,7 +30,7 @@ export const RecordingResponseSchema = z.object({
 });
 
 export const RecordingStartRequestSchema = z.object({
-  studioId: z.number(),
+  studioId: z.union([z.string(), z.number()]),
   outputFormat: z.string().optional(),
   quality: z.string().optional(),
   audioOnly: z.boolean().optional(),

@@ -27,7 +27,7 @@ public class ViewerMetrics extends BaseTimeEntity {
     private String metricsId;
 
     @Column(name = "studio_id", nullable = false)
-    private Long studioId;
+    private String studioId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false, length = 20)
@@ -60,7 +60,7 @@ public class ViewerMetrics extends BaseTimeEntity {
         this.recordedAt = LocalDateTime.now();
     }
 
-    public static ViewerMetrics create(Long studioId, ChatPlatform platform, Long currentViewers) {
+    public static ViewerMetrics create(String studioId, ChatPlatform platform, Long currentViewers) {
         return ViewerMetrics.builder()
                 .studioId(studioId)
                 .platform(platform)

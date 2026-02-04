@@ -15,15 +15,15 @@ public interface StreamSessionRepository extends JpaRepository<StreamSession, Lo
 
     Optional<StreamSession> findByRoomName(String roomName);
 
-    Optional<StreamSession> findByStudioIdAndStatus(Long studioId, SessionStatus status);
+    Optional<StreamSession> findByStudioIdAndStatus(String studioId, SessionStatus status);
 
-    Optional<StreamSession> findFirstByStudioIdAndStatusInOrderByCreatedAtDesc(Long studioId, List<SessionStatus> statuses);
+    Optional<StreamSession> findFirstByStudioIdAndStatusInOrderByCreatedAtDesc(String studioId, List<SessionStatus> statuses);
 
-    Optional<StreamSession> findByStudioIdAndUserIdAndStatusIn(Long studioId, Long userId, List<SessionStatus> statuses);
+    Optional<StreamSession> findByStudioIdAndUserIdAndStatusIn(String studioId, Long userId, List<SessionStatus> statuses);
 
-    List<StreamSession> findByStudioId(Long studioId);
+    List<StreamSession> findByStudioId(String studioId);
 
     List<StreamSession> findByUserIdAndStatus(Long userId, SessionStatus status);
 
-    boolean existsByStudioIdAndStatus(Long studioId, SessionStatus status);
+    boolean existsByStudioIdAndStatus(String studioId, SessionStatus status);
 }

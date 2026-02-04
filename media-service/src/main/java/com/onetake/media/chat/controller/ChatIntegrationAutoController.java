@@ -1,11 +1,12 @@
 package com.onetake.media.chat.controller;
 
 import com.onetake.media.chat.entity.ChatPlatform;
+import com.onetake.media.chat.entity.PlatformToken;
 import com.onetake.media.chat.integration.ChatIntegrationService;
 import com.onetake.media.chat.integration.PlatformCredentials;
 import com.onetake.media.chat.integration.YouTubeBroadcastService;
+import com.onetake.media.chat.service.OAuthService;
 import com.onetake.media.global.common.ApiResponse;
-import com.onetake.media.global.resolver.StudioIdResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +30,7 @@ public class ChatIntegrationAutoController {
 
     private final ChatIntegrationService chatIntegrationService;
     private final YouTubeBroadcastService youTubeBroadcastService;
-    private final StudioIdResolver studioIdResolver;
+    private final OAuthService oAuthService;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${core-service.url:http://localhost:8080}")
@@ -46,8 +47,6 @@ public class ChatIntegrationAutoController {
             @PathVariable Long destinationId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-
         try {
             // Core Service에서 destination 정보 조회
             DestinationInfo destination = fetchDestinationInfo(destinationId, authHeader);
@@ -63,22 +62,23 @@ public class ChatIntegrationAutoController {
                         .body(ApiResponse.error("지원하지 않는 플랫폼입니다: " + destination.platform));
             }
 
-            boolean success = startChatIntegration(resolvedStudioId, platform, destination);
+            String failReason = startChatIntegration(studioId, platform, destination);
+            boolean success = failReason == null;
 
             if (success) {
                 log.info("Chat integration started: studioId={}, platform={}, destinationId={}",
-                        resolvedStudioId, platform, destinationId);
+                        studioId, platform, destinationId);
                 return ResponseEntity.ok(ApiResponse.success(
                         new ChatIntegrationResult(platform.name(), true, "채팅 연동 성공")
                 ));
             } else {
                 return ResponseEntity.ok(ApiResponse.success(
-                        new ChatIntegrationResult(platform.name(), false, "채팅 연동 실패 (라이브 방송이 없거나 토큰이 만료됨)")
+                        new ChatIntegrationResult(platform.name(), false, failReason)
                 ));
             }
 
         } catch (Exception e) {
-            log.error("Chat integration failed: studioId={}, destinationId={}", resolvedStudioId, destinationId, e);
+            log.error("Chat integration failed: studioId={}, destinationId={}", studioId, destinationId, e);
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("채팅 연동 시작 실패: " + e.getMessage()));
         }
@@ -93,8 +93,6 @@ public class ChatIntegrationAutoController {
             @RequestBody DestinationsRequest request,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-
         List<ChatIntegrationResult> results = request.destinationIds().stream()
                 .map(destId -> {
                     try {
@@ -108,11 +106,12 @@ public class ChatIntegrationAutoController {
                             return new ChatIntegrationResult(dest.platform, false, "지원하지 않는 플랫폼");
                         }
 
-                        boolean success = startChatIntegration(resolvedStudioId, platform, dest);
+                        String failReason = startChatIntegration(studioId, platform, dest);
+                        boolean success = failReason == null;
                         return new ChatIntegrationResult(
                                 platform.name(),
                                 success,
-                                success ? "연동 성공" : "연동 실패"
+                                success ? "연동 성공" : failReason
                         );
                     } catch (Exception e) {
                         log.error("Chat integration failed for destination {}: {}", destId, e.getMessage());
@@ -121,7 +120,7 @@ public class ChatIntegrationAutoController {
                 })
                 .toList();
 
-        log.info("Chat integrations started for studioId={}: {}", resolvedStudioId, results);
+        log.info("Chat integrations started for studioId={}: {}", studioId, results);
         return ResponseEntity.ok(ApiResponse.success(results));
     }
 
@@ -144,16 +143,17 @@ public class ChatIntegrationAutoController {
                 Object data = body.get("data");
                 if (data instanceof Map) {
                     Map<String, Object> dest = (Map<String, Object>) data;
+                    Long userId = getLongValue(dest, "userId");
                     String platform = getStringValue(dest, "platform");
                     String channelId = getStringValue(dest, "channelId");
                     String channelName = getStringValue(dest, "channelName");
                     String accessToken = getStringValue(dest, "accessToken");
                     String refreshToken = getStringValue(dest, "refreshToken");
 
-                    log.debug("Fetched destination: platform={}, channelId={}, hasAccessToken={}",
-                            platform, channelId, accessToken != null);
+                    log.debug("Fetched destination: platform={}, channelId={}, userId={}, hasAccessToken={}",
+                            platform, channelId, userId, accessToken != null);
 
-                    return new DestinationInfo(platform, channelId, channelName, accessToken, refreshToken);
+                    return new DestinationInfo(userId, platform, channelId, channelName, accessToken, refreshToken);
                 }
             }
         } catch (Exception e) {
@@ -168,6 +168,13 @@ public class ChatIntegrationAutoController {
         return value.toString();
     }
 
+    private Long getLongValue(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return null;
+        if (value instanceof Number) return ((Number) value).longValue();
+        try { return Long.parseLong(value.toString()); } catch (NumberFormatException e) { return null; }
+    }
+
     private ChatPlatform toChatPlatform(String platform) {
         if (platform == null) return null;
         return switch (platform.toUpperCase()) {
@@ -177,52 +184,82 @@ public class ChatIntegrationAutoController {
         };
     }
 
-    private boolean startChatIntegration(Long studioId, ChatPlatform platform, DestinationInfo dest) {
+    /**
+     * 채팅 연동 시작. 성공 시 null 반환, 실패 시 사유 문자열 반환.
+     */
+    private String startChatIntegration(String studioId, ChatPlatform platform, DestinationInfo dest) {
         switch (platform) {
             case YOUTUBE -> {
-                if (dest.accessToken() == null || dest.accessToken().isBlank()) {
-                    log.warn("YouTube access token is null or empty for studioId={}", studioId);
-                    return false;
-                }
-                // 자동으로 liveChatId 조회
-                try {
-                    String liveChatId = youTubeBroadcastService.getLiveChatId(dest.accessToken());
-                    if (liveChatId == null) {
-                        log.warn("No active YouTube broadcast found for studioId={}", studioId);
-                        return false;
+                String accessToken = dest.accessToken();
+                String refreshToken = dest.refreshToken();
+
+                // Core Service destination에 토큰이 없으면 Media Service PlatformToken에서 fallback 조회
+                if (accessToken == null || accessToken.isBlank()) {
+                    log.info("YouTube accessToken not in destination, trying PlatformToken fallback for userId={}", dest.userId());
+                    if (dest.userId() != null) {
+                        try {
+                            PlatformToken platformToken = oAuthService.getValidToken(dest.userId(), ChatPlatform.YOUTUBE);
+                            accessToken = platformToken.getAccessToken();
+                            refreshToken = platformToken.getRefreshToken();
+                            log.info("YouTube token found via PlatformToken fallback for userId={}", dest.userId());
+                        } catch (Exception e) {
+                            log.warn("PlatformToken fallback failed for userId={}: {}", dest.userId(), e.getMessage());
+                        }
                     }
+                }
+
+                if (accessToken == null || accessToken.isBlank()) {
+                    log.warn("YouTube access token is null or empty for studioId={}", studioId);
+                    return "YouTube accessToken이 없습니다. 채널을 다시 연동해주세요.";
+                }
+                // 자동으로 liveChatId 조회 (최대 5회 재시도, 5초 간격 — YouTube 방송 활성화 대기)
+                String liveChatId = null;
+                for (int attempt = 1; attempt <= 5; attempt++) {
+                    liveChatId = youTubeBroadcastService.getLiveChatId(accessToken);
+                    if (liveChatId != null) break;
+                    if (attempt < 5) {
+                        log.info("YouTube liveChatId not found, retry {}/5 for studioId={}", attempt, studioId);
+                        try { Thread.sleep(5000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+                    }
+                }
+                if (liveChatId == null) {
+                    log.warn("No active YouTube broadcast found after retries for studioId={}", studioId);
+                    return "YouTube에 활성/예정 방송이 없습니다. 송출이 시작된 후 잠시 기다려주세요.";
+                }
+                try {
                     PlatformCredentials credentials = PlatformCredentials.forYouTube(
-                            studioId, dest.accessToken(), dest.refreshToken(), liveChatId);
+                            studioId, accessToken, refreshToken, liveChatId);
                     chatIntegrationService.startIntegration(studioId, credentials);
-                    return true;
+                    return null; // 성공
                 } catch (Exception e) {
                     log.error("Failed to start YouTube chat integration for studioId={}: {}", studioId, e.getMessage());
-                    return false;
+                    return "YouTube 채팅 연동 예외: " + e.getMessage();
                 }
             }
             case CHZZK -> {
                 if (dest.channelId() == null || dest.channelId().isBlank()) {
                     log.warn("Chzzk channel ID is null or empty for studioId={}", studioId);
-                    return false;
+                    return "Chzzk channelId가 없습니다.";
                 }
                 try {
                     PlatformCredentials credentials = PlatformCredentials.forChzzk(studioId, dest.channelId());
                     chatIntegrationService.startIntegration(studioId, credentials);
-                    return true;
+                    return null; // 성공
                 } catch (Exception e) {
                     log.error("Failed to start Chzzk chat integration for studioId={}: {}", studioId, e.getMessage());
-                    return false;
+                    return "Chzzk 채팅 연동 예외: " + e.getMessage();
                 }
             }
             default -> {
                 log.warn("Unsupported platform: {} for studioId={}", platform, studioId);
-                return false;
+                return "지원하지 않는 플랫폼: " + platform;
             }
         }
     }
 
     // DTOs
     private record DestinationInfo(
+            Long userId,
             String platform,
             String channelId,
             String channelName,

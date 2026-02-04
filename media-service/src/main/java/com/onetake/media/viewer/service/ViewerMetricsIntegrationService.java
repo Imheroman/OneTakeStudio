@@ -40,12 +40,12 @@ public class ViewerMetricsIntegrationService {
     private final ChzzkViewerClient chzzkViewerClient;
 
     // 스튜디오별 활성 시청자 수집 상태: studioId -> (platform -> client)
-    private final Map<Long, Map<ChatPlatform, ExternalViewerClient>> activeCollections = new ConcurrentHashMap<>();
+    private final Map<String, Map<ChatPlatform, ExternalViewerClient>> activeCollections = new ConcurrentHashMap<>();
 
     /**
      * 플랫폼 시청자 수집 시작
      */
-    public void startMetricsCollection(Long studioId, PlatformCredentials credentials) {
+    public void startMetricsCollection(String studioId, PlatformCredentials credentials) {
         ExternalViewerClient client = getClientForPlatform(credentials.getPlatform());
         if (client == null) {
             log.warn("Unsupported platform for viewer metrics: {}", credentials.getPlatform());
@@ -70,7 +70,7 @@ public class ViewerMetricsIntegrationService {
     /**
      * 플랫폼 시청자 수집 종료
      */
-    public void stopMetricsCollection(Long studioId, ChatPlatform platform) {
+    public void stopMetricsCollection(String studioId, ChatPlatform platform) {
         Map<ChatPlatform, ExternalViewerClient> studioCollections = activeCollections.get(studioId);
         if (studioCollections == null) {
             return;
@@ -91,7 +91,7 @@ public class ViewerMetricsIntegrationService {
     /**
      * 스튜디오의 모든 플랫폼 시청자 수집 종료
      */
-    public void stopAllMetricsCollections(Long studioId) {
+    public void stopAllMetricsCollections(String studioId) {
         Map<ChatPlatform, ExternalViewerClient> studioCollections = activeCollections.remove(studioId);
         if (studioCollections != null) {
             studioCollections.values().forEach(client -> {
@@ -106,7 +106,7 @@ public class ViewerMetricsIntegrationService {
     /**
      * 수집 상태 확인
      */
-    public boolean isCollectionActive(Long studioId, ChatPlatform platform) {
+    public boolean isCollectionActive(String studioId, ChatPlatform platform) {
         Map<ChatPlatform, ExternalViewerClient> studioCollections = activeCollections.get(studioId);
         if (studioCollections == null) {
             return false;
@@ -118,7 +118,7 @@ public class ViewerMetricsIntegrationService {
     /**
      * 활성 수집 목록 조회
      */
-    public List<ChatPlatform> getActiveCollections(Long studioId) {
+    public List<ChatPlatform> getActiveCollections(String studioId) {
         Map<ChatPlatform, ExternalViewerClient> studioCollections = activeCollections.get(studioId);
         if (studioCollections == null) {
             return List.of();
@@ -135,8 +135,8 @@ public class ViewerMetricsIntegrationService {
     @Scheduled(fixedDelay = 10000)
     public void collectAndBroadcast() {
         // 명시적으로 등록된 수집 처리
-        for (Map.Entry<Long, Map<ChatPlatform, ExternalViewerClient>> studioEntry : activeCollections.entrySet()) {
-            Long studioId = studioEntry.getKey();
+        for (Map.Entry<String, Map<ChatPlatform, ExternalViewerClient>> studioEntry : activeCollections.entrySet()) {
+            String studioId = studioEntry.getKey();
             collectMetricsForStudio(studioId, studioEntry.getValue());
         }
 
@@ -155,7 +155,7 @@ public class ViewerMetricsIntegrationService {
                 .toList();
 
         for (PublishSession session : activeSessions) {
-            Long studioId = session.getStudioId();
+            String studioId = session.getStudioId();
 
             // 이미 활성 수집이 있으면 스킵
             if (activeCollections.containsKey(studioId)) {
@@ -170,7 +170,7 @@ public class ViewerMetricsIntegrationService {
     /**
      * 특정 스튜디오의 모든 활성 클라이언트에서 시청자 수 수집
      */
-    private void collectMetricsForStudio(Long studioId, Map<ChatPlatform, ExternalViewerClient> clients) {
+    private void collectMetricsForStudio(String studioId, Map<ChatPlatform, ExternalViewerClient> clients) {
         for (ExternalViewerClient client : clients.values()) {
             if (!client.isConnected()) {
                 continue;

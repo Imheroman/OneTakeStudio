@@ -16,30 +16,30 @@ public interface ViewerMetricsRepository extends JpaRepository<ViewerMetrics, Lo
 
     Optional<ViewerMetrics> findByMetricsId(String metricsId);
 
-    List<ViewerMetrics> findByStudioIdOrderByRecordedAtDesc(Long studioId);
+    List<ViewerMetrics> findByStudioIdOrderByRecordedAtDesc(String studioId);
 
-    Optional<ViewerMetrics> findTopByStudioIdAndPlatformOrderByRecordedAtDesc(Long studioId, ChatPlatform platform);
+    Optional<ViewerMetrics> findTopByStudioIdAndPlatformOrderByRecordedAtDesc(String studioId, ChatPlatform platform);
 
     List<ViewerMetrics> findByStudioIdAndRecordedAtBetweenOrderByRecordedAtAsc(
-            Long studioId, LocalDateTime start, LocalDateTime end);
+            String studioId, LocalDateTime start, LocalDateTime end);
 
     List<ViewerMetrics> findByStudioIdAndPlatformAndRecordedAtBetweenOrderByRecordedAtAsc(
-            Long studioId, ChatPlatform platform, LocalDateTime start, LocalDateTime end);
+            String studioId, ChatPlatform platform, LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT v FROM ViewerMetrics v WHERE v.studioId = :studioId " +
             "AND v.recordedAt = (SELECT MAX(v2.recordedAt) FROM ViewerMetrics v2 " +
             "WHERE v2.studioId = :studioId AND v2.platform = v.platform)")
-    List<ViewerMetrics> findLatestByStudioIdGroupByPlatform(@Param("studioId") Long studioId);
+    List<ViewerMetrics> findLatestByStudioIdGroupByPlatform(@Param("studioId") String studioId);
 
     @Query("SELECT MAX(v.peakViewers) FROM ViewerMetrics v WHERE v.studioId = :studioId AND v.platform = :platform")
     Optional<Long> findMaxPeakViewersByStudioIdAndPlatform(
-            @Param("studioId") Long studioId, @Param("platform") ChatPlatform platform);
+            @Param("studioId") String studioId, @Param("platform") ChatPlatform platform);
 
     @Query("SELECT COALESCE(SUM(v.currentViewers), 0) FROM ViewerMetrics v " +
             "WHERE v.studioId = :studioId " +
             "AND v.recordedAt = (SELECT MAX(v2.recordedAt) FROM ViewerMetrics v2 " +
             "WHERE v2.studioId = :studioId AND v2.platform = v.platform)")
-    Long sumCurrentViewersByStudioId(@Param("studioId") Long studioId);
+    Long sumCurrentViewersByStudioId(@Param("studioId") String studioId);
 
-    void deleteByStudioIdAndRecordedAtBefore(Long studioId, LocalDateTime before);
+    void deleteByStudioIdAndRecordedAtBefore(String studioId, LocalDateTime before);
 }

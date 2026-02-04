@@ -19,4 +19,9 @@ public class CreateDestinationRequest {
     private String channelName;
     private String rtmpUrl;
     private String streamKey;
+
+    /** OAuth access token (YouTube 등 외부 채팅 연동용) */
+    private String accessToken;
+    /** OAuth refresh token */
+    private String refreshToken;
 }

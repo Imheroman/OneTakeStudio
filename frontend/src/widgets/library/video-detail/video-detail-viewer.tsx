@@ -11,6 +11,7 @@ import {
 } from "@/features/library/video-library";
 import { DownloadVideoModal } from "@/widgets/library/download-video-modal";
 import { ShortsPlaybackModal } from "@/widgets/library/shorts-playback-modal";
+import { SavedShortsSection } from "@/features/shorts/SavedShortsSection";
 import { getRecordingDetail } from "@/shared/api/library";
 import { apiClient } from "@/shared/api/client";
 import {
@@ -120,6 +121,8 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
             onEndChange={setTrimEnd}
           />
         </section>
+
+        <SavedShortsSection recordingId={video.id} />
 
         <section className="w-full bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
           <VideoInfoSection

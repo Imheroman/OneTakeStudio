@@ -13,9 +13,9 @@ public interface ScreenShareSessionRepository extends JpaRepository<ScreenShareS
 
     Optional<ScreenShareSession> findByShareId(String shareId);
 
-    Optional<ScreenShareSession> findByStudioIdAndStatus(Long studioId, ScreenShareStatus status);
+    Optional<ScreenShareSession> findByStudioIdAndStatus(String studioId, ScreenShareStatus status);
 
-    List<ScreenShareSession> findByStudioIdOrderByCreatedAtDesc(Long studioId);
+    List<ScreenShareSession> findByStudioIdOrderByCreatedAtDesc(String studioId);
 
-    boolean existsByStudioIdAndStatus(Long studioId, ScreenShareStatus status);
+    boolean existsByStudioIdAndStatus(String studioId, ScreenShareStatus status);
 }

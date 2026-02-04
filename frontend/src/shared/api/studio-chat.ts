@@ -13,7 +13,7 @@ import {
 const CHAT_BASE = "/api/media/chat";
 
 export async function getChatHistory(
-  studioId: number,
+  studioId: string | number,
   limit = 100,
 ): Promise<ChatMessageDto[]> {
   const res = await apiClient.get(

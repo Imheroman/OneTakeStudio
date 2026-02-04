@@ -22,7 +22,7 @@ public class StudioAssetController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<AssetResponse>>> getAssets(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestParam(required = false) String type) {
 
         log.debug("에셋 목록 조회: studioId={}, type={}", studioId, type);
@@ -39,7 +39,7 @@ public class StudioAssetController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<AssetResponse>> createAsset(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @Valid @RequestBody CreateAssetRequest request) {
 
         log.debug("에셋 생성: studioId={}, type={}, name={}", studioId, request.getType(), request.getName());
@@ -51,7 +51,7 @@ public class StudioAssetController {
 
     @DeleteMapping("/{assetId}")
     public ResponseEntity<ApiResponse<Void>> deleteAsset(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable Long assetId) {
 
         log.debug("에셋 삭제: studioId={}, assetId={}", studioId, assetId);

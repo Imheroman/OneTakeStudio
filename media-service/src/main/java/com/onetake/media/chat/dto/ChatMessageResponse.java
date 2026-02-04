@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class ChatMessageResponse {
 
     private String messageId;
-    private Long studioId;
+    private String studioId;
     private ChatPlatform platform;
     private MessageType messageType;
     private Long userId;

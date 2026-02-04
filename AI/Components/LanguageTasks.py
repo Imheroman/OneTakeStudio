@@ -113,7 +113,7 @@ def GetHighlight(transcription_data, model_name: str = "gpt-4o-mini"):
         transcription_data: List [[text, start, end], ...] OR String
     """
     from langchain_openai import ChatOpenAI
-    from langchain.prompts import ChatPromptTemplate
+    from langchain_core.prompts import ChatPromptTemplate
 
     if not transcription_data:
         print("ERROR: Empty transcription data")

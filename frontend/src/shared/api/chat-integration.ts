@@ -42,7 +42,7 @@ export interface ChzzkIntegrationRequest {
  * YouTube 채팅 연동 시작 (자동으로 liveChatId 조회)
  */
 export async function startYouTubeChatIntegration(
-  studioId: number,
+  studioId: string | number,
   request: { accessToken: string; refreshToken?: string }
 ): Promise<{ liveChatId: string; message: string } | null> {
   try {
@@ -62,7 +62,7 @@ export async function startYouTubeChatIntegration(
  * YouTube 채팅 연동 시작 (liveChatId 직접 지정)
  */
 export async function startYouTubeChatIntegrationManual(
-  studioId: number,
+  studioId: string | number,
   request: YouTubeIntegrationRequest
 ): Promise<boolean> {
   try {
@@ -82,7 +82,7 @@ export async function startYouTubeChatIntegrationManual(
  * Twitch 채팅 연동 시작
  */
 export async function startTwitchChatIntegration(
-  studioId: number,
+  studioId: string | number,
   request: TwitchIntegrationRequest
 ): Promise<boolean> {
   try {
@@ -102,7 +102,7 @@ export async function startTwitchChatIntegration(
  * Chzzk 채팅 연동 시작
  */
 export async function startChzzkChatIntegration(
-  studioId: number,
+  studioId: string | number,
   request: ChzzkIntegrationRequest
 ): Promise<boolean> {
   try {
@@ -122,7 +122,7 @@ export async function startChzzkChatIntegration(
  * 특정 플랫폼 채팅 연동 종료
  */
 export async function stopChatIntegration(
-  studioId: number,
+  studioId: string | number,
   platform: "YOUTUBE" | "TWITCH" | "CHZZK"
 ): Promise<boolean> {
   try {
@@ -140,7 +140,7 @@ export async function stopChatIntegration(
 /**
  * 모든 채팅 연동 종료
  */
-export async function stopAllChatIntegrations(studioId: number): Promise<boolean> {
+export async function stopAllChatIntegrations(studioId: string | number): Promise<boolean> {
   try {
     await apiClient.post(
       `${CHAT_INTEGRATION_BASE}/${studioId}/stop-all`,
@@ -179,14 +179,15 @@ export interface ChatIntegrationResult {
  * 백엔드에서 destination 정보를 조회하여 자동으로 연동
  */
 export async function startChatIntegrationByDestinations(
-  studioId: number,
+  studioId: string | number,
   destinationIds: number[]
 ): Promise<ChatIntegrationResult[]> {
   try {
     const res = await apiClient.post(
       `/api/media/chat/integration/auto/${studioId}/destinations`,
       ChatIntegrationResultsSchema,
-      { destinationIds }
+      { destinationIds },
+      { timeout: 60000 }
     );
     return res.data ?? [];
   } catch (error) {

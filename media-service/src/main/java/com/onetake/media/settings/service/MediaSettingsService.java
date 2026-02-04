@@ -69,7 +69,7 @@ public class MediaSettingsService {
     // ===================== Session Media State =====================
 
     @Transactional
-    public SessionMediaStateResponse initializeSessionState(Long userId, Long studioId, Long streamSessionId) {
+    public SessionMediaStateResponse initializeSessionState(Long userId, String studioId, Long streamSessionId) {
         // 유니크 제약 (studio_id, user_id, is_active): (1,1,false) 행은 하나만 허용되므로
         // 기존 활성 행을 is_active=false로 바꾸면 이미 있는 false 행과 충돌함. 따라서 기존 활성 행은 삭제.
         sessionMediaStateRepository.findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
@@ -103,7 +103,7 @@ public class MediaSettingsService {
         return SessionMediaStateResponse.from(saved);
     }
 
-    public SessionMediaStateResponse getSessionState(Long studioId, Long userId) {
+    public SessionMediaStateResponse getSessionState(String studioId, Long userId) {
         SessionMediaState state = sessionMediaStateRepository
                 .findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEDIA_STATE_NOT_FOUND));
@@ -132,7 +132,7 @@ public class MediaSettingsService {
     }
 
     @Transactional
-    public SessionMediaStateResponse toggleVideo(Long studioId, Long userId) {
+    public SessionMediaStateResponse toggleVideo(String studioId, Long userId) {
         SessionMediaState state = sessionMediaStateRepository
                 .findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEDIA_STATE_NOT_FOUND));
@@ -144,7 +144,7 @@ public class MediaSettingsService {
     }
 
     @Transactional
-    public SessionMediaStateResponse toggleAudio(Long studioId, Long userId) {
+    public SessionMediaStateResponse toggleAudio(String studioId, Long userId) {
         SessionMediaState state = sessionMediaStateRepository
                 .findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEDIA_STATE_NOT_FOUND));
@@ -156,7 +156,7 @@ public class MediaSettingsService {
     }
 
     @Transactional
-    public SessionMediaStateResponse toggleMute(Long studioId, Long userId) {
+    public SessionMediaStateResponse toggleMute(String studioId, Long userId) {
         SessionMediaState state = sessionMediaStateRepository
                 .findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEDIA_STATE_NOT_FOUND));
@@ -167,14 +167,14 @@ public class MediaSettingsService {
         return SessionMediaStateResponse.from(saved);
     }
 
-    public List<SessionMediaStateResponse> getParticipantsState(Long studioId) {
+    public List<SessionMediaStateResponse> getParticipantsState(String studioId) {
         return sessionMediaStateRepository.findByStudioIdAndIsActiveTrue(studioId).stream()
                 .map(SessionMediaStateResponse::from)
                 .toList();
     }
 
     @Transactional
-    public void terminateSessionState(Long studioId, Long userId) {
+    public void terminateSessionState(String studioId, Long userId) {
         sessionMediaStateRepository.findByStudioIdAndUserIdAndIsActiveTrue(studioId, userId)
                 .ifPresent(state -> {
                     sessionMediaStateRepository.delete(state);

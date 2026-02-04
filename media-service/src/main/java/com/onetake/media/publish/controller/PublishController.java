@@ -1,7 +1,6 @@
 package com.onetake.media.publish.controller;
 
 import com.onetake.media.global.common.ApiResponse;
-import com.onetake.media.global.resolver.StudioIdResolver;
 import com.onetake.media.publish.dto .PublishResponse;
 import com.onetake.media.publish.dto.PublishStartRequest;
 import com.onetake.media.publish.dto.PublishStatusResponse;
@@ -17,13 +16,12 @@ import org.springframework.web.bind.annotation.*;
 public class PublishController {
 
     private final PublishService publishService;
-    private final StudioIdResolver studioIdResolver;
 
     @PostMapping
     public ResponseEntity<ApiResponse<PublishResponse>> startPublish(
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody PublishStartRequest request) {
-        Long studioId = studioIdResolver.resolveStudioId(request.getStudioId());
+        String studioId = request.getStudioId();
         PublishResponse response = publishService.startPublish(userId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -31,16 +29,14 @@ public class PublishController {
     @PostMapping("/stop")
     public ResponseEntity<ApiResponse<PublishResponse>> stopPublish(
             @RequestParam String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        PublishResponse response = publishService.stopPublish(resolvedStudioId);
+        PublishResponse response = publishService.stopPublish(studioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<PublishStatusResponse>> getPublishStatus(
             @RequestParam String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        PublishStatusResponse response = publishService.getPublishStatus(resolvedStudioId);
+        PublishStatusResponse response = publishService.getPublishStatus(studioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

@@ -14,10 +14,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +37,7 @@ public class AiShortsService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final WebClient.Builder webClientBuilder;
+    private final ObjectMapper objectMapper;
 
     @Value("${ai.service.url:http://localhost:8000}")
     private String aiServiceUrl;
@@ -46,12 +51,40 @@ public class AiShortsService {
     @Value("${storage.base-path:/mnt/storage}")
     private String storageBasePath;
 
-    // 구간 설정
-    private static final double SEGMENT_DURATION = 60.0;  // 각 구간 60초
-    private static final double SEGMENT_PADDING = 30.0;   // 마커 앞뒤 패딩
+    @Value("${ffmpeg.path:ffmpeg}")
+    private String ffmpegPath;
+
+    // 마커 기반 분할 설정
+    private static final double SEGMENT_HALF_DURATION = 300.0;  // 마커 기준 앞뒤 5분씩 = 10분 구간
+    private static final int MAX_SEGMENTS = 3;                   // 최대 3개 구간
+    private static final double MIN_SPLIT_DURATION = 600.0;      // 10분 미만이면 분할하지 않음
 
     /**
-     * 쇼츠 생성 요청 (마커 기반)
+     * Recording에서 AI 서버가 접근 가능한 파일 경로 추출
+     * 공유 스토리지(NFS) 기준 절대 경로 반환
+     */
+    private String resolveFilePath(Recording recording) {
+        // s3Key가 절대 경로면 그대로 사용, 아니면 storageBasePath 기준으로 조합
+        String s3Key = recording.getS3Key();
+        if (s3Key != null && s3Key.startsWith("/")) {
+            return s3Key;
+        }
+        return storageBasePath + "/" + (s3Key != null ? s3Key : recording.getFileName());
+    }
+
+    /**
+     * Recording에서 영상 길이(초) 추출
+     */
+    private double resolveRecordingDuration(Recording recording) {
+        return recording.getDurationSeconds() != null
+                ? recording.getDurationSeconds().doubleValue()
+                : 3600.0;  // 기본 1시간
+    }
+
+    /**
+     * 쇼츠 생성 요청
+     * - 마커가 있으면: 마커 기반으로 최대 3개 구간 분할
+     * - 마커가 없으면: AI가 자동으로 하이라이트 선정
      */
     @Transactional
     public ShortsGenerateResponse requestGeneration(String userId, ShortsGenerateRequest request) {
@@ -70,17 +103,13 @@ public class AiShortsService {
         log.info("마커 조회 결과: recordingId={}, 마커 수={}", request.getRecordingId(), markers.size());
 
         // 마커 기반 영상 구간 계산 (최대 3개)
-        List<VideoSegment> segments = calculateSegments(markers, recording, 3);
+        List<VideoSegment> segments = calculateSegments(markers, recording);
 
-        if (segments.isEmpty()) {
-            // 마커가 없으면 영상 전체를 AI에게 맡김 (하이라이트 자동 선정)
-            log.info("마커 없음 - AI 자동 하이라이트 선정 모드");
-            segments = List.of(VideoSegment.builder()
-                    .videoId("short_1")
-                    .videoPath(recording.getS3Url())
-                    .startSec(0.0)
-                    .endSec(null)  // null이면 전체 영상
-                    .build());
+        boolean useMarkerMode = !segments.isEmpty();
+        if (!useMarkerMode) {
+            // 마커가 없으면 영상을 균등 분할하여 최대 3개 구간으로 나눔
+            log.info("마커 없음 - 균등 분할 모드");
+            segments = calculateEvenSegments(recording);
         }
 
         // Job 생성
@@ -94,7 +123,7 @@ public class AiShortsService {
 
         ShortsJob savedJob = shortsJobRepository.save(job);
 
-        // 결과 슬롯 생성
+        // 결과 슬롯 생성 (구간별 1개씩)
         for (VideoSegment segment : segments) {
             ShortsResult result = ShortsResult.builder()
                     .job(savedJob)
@@ -105,12 +134,16 @@ public class AiShortsService {
         }
 
         // AI 서비스에 비동기 요청
-        sendToAiService(savedJob, recording, segments);
+        sendToAiService(savedJob, recording, segments, useMarkerMode);
+
+        String message = useMarkerMode
+                ? String.format("마커 기반 %d개 구간 처리 시작", segments.size())
+                : "AI 자동 하이라이트 선정 모드로 처리 시작";
 
         return ShortsGenerateResponse.builder()
                 .jobId(savedJob.getJobId())
                 .status("accepted")
-                .message(String.format("쇼츠 생성이 시작되었습니다. %d개의 구간을 처리합니다.", segments.size()))
+                .message(message)
                 .build();
     }
 
@@ -144,7 +177,6 @@ public class AiShortsService {
 
     private MarkerInfo mapToMarkerInfo(Map<String, Object> map) {
         MarkerInfo info = new MarkerInfo();
-        // Reflection 없이 수동 매핑 (간단한 방법)
         try {
             var field = MarkerInfo.class.getDeclaredField("markerId");
             field.setAccessible(true);
@@ -170,72 +202,189 @@ public class AiShortsService {
     }
 
     /**
-     * 마커 기반 영상 구간 계산
+     * 마커 기반 영상 구간 계산 (최대 3개)
+     * 각 마커 기준 앞뒤 5분씩 = 약 10분 구간
+     * AI가 각 구간을 "전체 영상"으로 인식하고 90-120초 하이라이트 선택
      */
-    private List<VideoSegment> calculateSegments(List<MarkerInfo> markers, Recording recording, int maxCount) {
+    private List<VideoSegment> calculateSegments(List<MarkerInfo> markers, Recording recording) {
         List<VideoSegment> segments = new ArrayList<>();
 
-        // 영상 길이 (초) - 없으면 기본값
-        Integer durationSec = recording.getDurationSeconds();
-        Double recordingDuration = durationSec != null ? durationSec.doubleValue() : 3600.0;
+        if (markers.isEmpty()) {
+            return segments;
+        }
+
+        // 영상 길이 (초)
+        double recordingDuration = resolveRecordingDuration(recording);
 
         int count = 0;
         Set<Double> usedRanges = new HashSet<>();  // 중복 방지
 
         for (MarkerInfo marker : markers) {
-            if (count >= maxCount) break;
+            if (count >= MAX_SEGMENTS) break;
             if (marker.getTimestampSec() == null) continue;
 
             double markerTime = marker.getTimestampSec();
 
-            // 시작/끝 계산 (마커 기준 ±패딩)
-            double startSec = Math.max(0, markerTime - SEGMENT_PADDING);
-            double endSec = Math.min(recordingDuration, markerTime + SEGMENT_PADDING + SEGMENT_DURATION);
+            // 시작/끝 계산 (마커 기준 앞뒤 5분씩 = 10분 구간)
+            double startSec = Math.max(0, markerTime - SEGMENT_HALF_DURATION);
+            double endSec = Math.min(recordingDuration, markerTime + SEGMENT_HALF_DURATION);
 
-            // 구간 겹침 체크 (간단히 시작점으로 체크)
-            double roundedStart = Math.floor(startSec / 30) * 30;  // 30초 단위로 반올림
+            // 최소 구간 길이 확보 (AI가 처리하려면 최소 2분 필요)
+            if (endSec - startSec < 120) {
+                double needed = 120 - (endSec - startSec);
+                startSec = Math.max(0, startSec - needed / 2);
+                endSec = Math.min(recordingDuration, endSec + needed / 2);
+            }
+
+            // 구간 겹침 체크 (3분 단위 그리드)
+            double roundedStart = Math.floor(startSec / 180) * 180;
             if (usedRanges.contains(roundedStart)) continue;
             usedRanges.add(roundedStart);
 
             count++;
             segments.add(VideoSegment.builder()
                     .videoId("short_" + count)
-                    .videoPath(recording.getS3Url())
+                    .videoPath(resolveFilePath(recording))
                     .startSec(startSec)
                     .endSec(endSec)
                     .markerId(marker.getMarkerId())
                     .label(marker.getLabel())
                     .build());
 
-            log.info("구간 추가: short_{}, start={}, end={}, label={}",
-                    count, startSec, endSec, marker.getLabel());
+            log.info("구간 추가: short_{}, start={}s, end={}s ({}분), label={}",
+                    count, startSec, endSec, Math.round((endSec - startSec) / 60), marker.getLabel());
         }
 
         return segments;
     }
 
     /**
-     * AI 서비스에 요청 전송
+     * 마커가 없을 때 영상을 균등 분할 (항상 3개 구간)
+     *
+     * 스트리머 방송 특성상 영상 길이가 30분~12시간까지 다양하므로:
+     * - 30분 미만: 전체 영상을 AI에 보내서 하이라이트 자동 선정 (1개)
+     * - 30분 이상: 영상을 3등분 → 각 구간 중간 지점 기준 앞뒤 5분(10분) → FFmpeg 컷 → AI 전송
+     *
+     * AI 파이프라인이 각 세그먼트 내에서 자체적으로
+     * 오디오 추출 → 전사 → LLM 하이라이트 선정 → 90~120초 쇼츠 생성
      */
-    private void sendToAiService(ShortsJob job, Recording recording, List<VideoSegment> segments) {
+    private List<VideoSegment> calculateEvenSegments(Recording recording) {
+        List<VideoSegment> segments = new ArrayList<>();
+        double duration = resolveRecordingDuration(recording);
+        String filePath = resolveFilePath(recording);
+
+        // 10분 미만: 분할하지 않고 전체 영상을 AI에 전송
+        if (duration < MIN_SPLIT_DURATION) {
+            segments.add(VideoSegment.builder()
+                    .videoId("short_1")
+                    .videoPath(filePath)
+                    .build());
+            log.info("짧은 영상({}분) - 전체 영상을 AI에 전송하여 하이라이트 자동 선정", Math.round(duration / 60));
+            return segments;
+        }
+
+        // 10분 이상: 3등분하여 각 구간 전체를 AI에 전송
+        double segmentDuration = duration / MAX_SEGMENTS;
+
+        for (int i = 0; i < MAX_SEGMENTS; i++) {
+            double startSec = segmentDuration * i;
+            double endSec = (i == MAX_SEGMENTS - 1) ? duration : segmentDuration * (i + 1);
+
+            segments.add(VideoSegment.builder()
+                    .videoId("short_" + (i + 1))
+                    .videoPath(filePath)
+                    .startSec(startSec)
+                    .endSec(endSec)
+                    .build());
+
+            log.info("균등 분할: short_{}, 구간 {}/3, range={}s~{}s ({}분)",
+                    i + 1, i + 1,
+                    Math.round(startSec), Math.round(endSec), Math.round((endSec - startSec) / 60));
+        }
+
+        return segments;
+    }
+
+    /**
+     * FFmpeg로 영상 구간 잘라서 별도 파일로 저장
+     * AI가 각 파일을 "전체 영상"으로 인식하도록 함
+     */
+    private String cutVideoSegment(String inputPath, double startSec, double endSec, String outputPath) {
+        try {
+            // FFmpeg 명령어: -ss (시작) -to (끝) -c copy (재인코딩 없이 빠르게)
+            ProcessBuilder pb = new ProcessBuilder(
+                    ffmpegPath, "-y",
+                    "-ss", String.valueOf(startSec),
+                    "-i", inputPath,
+                    "-to", String.valueOf(endSec - startSec),  // 상대 시간
+                    "-c", "copy",
+                    "-avoid_negative_ts", "1",
+                    outputPath
+            );
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+
+            if (exitCode == 0) {
+                log.info("영상 분할 완료: {} ({}s ~ {}s)", outputPath, startSec, endSec);
+                return outputPath;
+            } else {
+                log.error("FFmpeg 실패 (exit code: {})", exitCode);
+                return null;
+            }
+        } catch (Exception e) {
+            log.error("영상 분할 중 오류: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * AI 서비스에 요청 전송
+     * - useMarkerMode=true: 영상을 실제로 잘라서 각각 전송 (마커 기반)
+     * - useMarkerMode=false: 전체 영상 경로만 전송 (AI 자동 하이라이트)
+     */
+    private void sendToAiService(ShortsJob job, Recording recording, List<VideoSegment> segments, boolean useMarkerMode) {
         try {
             WebClient client = webClientBuilder.baseUrl(aiServiceUrl).build();
 
-            // 영상 구간 정보 구성
-            List<Map<String, Object>> videos = segments.stream()
-                    .map(seg -> {
-                        Map<String, Object> video = new HashMap<>();
-                        video.put("video_id", seg.getVideoId());
+            // 임시 분할 파일 저장 경로
+            String segmentDir = storageBasePath + "/temp/segments/" + job.getJobId();
+            new java.io.File(segmentDir).mkdirs();
+
+            // 영상 정보 구성
+            List<Map<String, Object>> videos = new ArrayList<>();
+
+            for (VideoSegment seg : segments) {
+                Map<String, Object> video = new HashMap<>();
+                video.put("video_id", seg.getVideoId());
+
+                if (seg.getStartSec() != null && seg.getEndSec() != null) {
+                    // 구간 분할: 영상을 실제로 잘라서 별도 파일로 저장
+                    String segmentPath = segmentDir + "/" + seg.getVideoId() + ".mp4";
+                    String cutPath = cutVideoSegment(
+                            seg.getVideoPath(),
+                            seg.getStartSec(),
+                            seg.getEndSec(),
+                            segmentPath
+                    );
+
+                    if (cutPath != null) {
+                        video.put("video_path", cutPath);  // 잘린 파일 경로
+                        log.info("분할 영상 생성: {} ({}s ~ {}s) -> {}",
+                                seg.getVideoId(), seg.getStartSec(), seg.getEndSec(), cutPath);
+                    } else {
+                        // 분할 실패 시 원본 경로 사용 (폴백)
                         video.put("video_path", seg.getVideoPath());
-                        if (seg.getStartSec() != null) {
-                            video.put("start_sec", seg.getStartSec());
-                        }
-                        if (seg.getEndSec() != null) {
-                            video.put("end_sec", seg.getEndSec());
-                        }
-                        return video;
-                    })
-                    .collect(Collectors.toList());
+                        log.warn("분할 실패, 원본 사용: {}", seg.getVideoId());
+                    }
+                } else {
+                    // AI 자동 모드: 전체 영상 경로
+                    video.put("video_path", seg.getVideoPath());
+                }
+
+                videos.add(video);
+            }
 
             // AI 서비스 요청 페이로드 구성
             Map<String, Object> payload = new HashMap<>();
@@ -246,7 +395,8 @@ public class AiShortsService {
             payload.put("output_dir", storageBasePath + "/shorts/" + job.getJobId());
             payload.put("webhook_url", webhookUrl);
 
-            log.info("AI 서비스 요청: jobId={}, 구간 수={}", job.getJobId(), videos.size());
+            log.info("AI 서비스 요청: jobId={}, mode={}, 영상 수={}",
+                    job.getJobId(), useMarkerMode ? "마커 기반 분할" : "AI 자동", videos.size());
 
             client.post()
                     .uri("/shorts/process")
@@ -272,6 +422,79 @@ public class AiShortsService {
             job.markError("요청 처리 중 오류: " + e.getMessage());
             shortsJobRepository.save(job);
         }
+    }
+
+    /**
+     * 숏츠 저장 (확정)
+     */
+    @Transactional
+    public void saveShort(String jobId, String videoId) {
+        ShortsJob job = shortsJobRepository.findByJobId(jobId)
+                .orElseThrow(() -> new IllegalArgumentException("Job을 찾을 수 없습니다: " + jobId));
+
+        ShortsResult result = shortsResultRepository.findByJobAndVideoId(job, videoId)
+                .orElseThrow(() -> new IllegalArgumentException("결과를 찾을 수 없습니다: " + videoId));
+
+        if (result.getStatus() != ShortsResultStatus.COMPLETED) {
+            throw new IllegalStateException("완료된 숏츠만 저장할 수 있습니다.");
+        }
+
+        result.markSaved();
+        shortsResultRepository.save(result);
+        log.info("숏츠 저장 완료: jobId={}, videoId={}", jobId, videoId);
+    }
+
+    /**
+     * 녹화별 저장된 숏츠 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getSavedShorts(String recordingId) {
+        List<ShortsResult> results = shortsResultRepository.findSavedByRecordingId(recordingId);
+
+        return results.stream().map(r -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("jobId", r.getJob().getJobId());
+            item.put("videoId", r.getVideoId());
+            item.put("durationSec", r.getDurationSec());
+
+            // titles JSON 파싱
+            if (r.getTitles() != null) {
+                try {
+                    List<String> titles = objectMapper.readValue(r.getTitles(),
+                            objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                    item.put("titles", titles);
+                } catch (Exception e) {
+                    log.debug("titles JSON 파싱 실패: {}", e.getMessage());
+                }
+            }
+
+            item.put("streamUrl", "/api/ai/shorts/stream/" + r.getJob().getJobId() + "/" + r.getVideoId());
+            item.put("downloadUrl", "/api/ai/shorts/download/" + r.getJob().getJobId() + "/" + r.getVideoId());
+            return item;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 숏츠 비디오 파일을 Resource로 반환
+     */
+    @Transactional(readOnly = true)
+    public Resource getVideoResource(String jobId, String videoId) {
+        ShortsJob job = shortsJobRepository.findByJobId(jobId)
+                .orElseThrow(() -> new IllegalArgumentException("Job을 찾을 수 없습니다: " + jobId));
+
+        ShortsResult result = shortsResultRepository.findByJobAndVideoId(job, videoId)
+                .orElseThrow(() -> new IllegalArgumentException("결과를 찾을 수 없습니다: " + videoId));
+
+        if (result.getOutputPath() == null) {
+            throw new IllegalStateException("아직 생성이 완료되지 않았습니다: " + videoId);
+        }
+
+        java.io.File file = new java.io.File(result.getOutputPath());
+        if (!file.exists()) {
+            throw new IllegalStateException("비디오 파일을 찾을 수 없습니다: " + result.getOutputPath());
+        }
+
+        return new FileSystemResource(file);
     }
 
     /**
@@ -311,14 +534,45 @@ public class AiShortsService {
         List<ShortsResult> results = shortsResultRepository.findByJobOrderByCreatedAtAsc(job);
 
         List<ShortsStatusResponse.ShortItem> items = results.stream()
-                .map(r -> ShortsStatusResponse.ShortItem.builder()
-                        .videoId(r.getVideoId())
-                        .status(r.getStatus().name().toLowerCase())
-                        .outputPath(r.getOutputPath())
-                        .thumbnailPath(r.getThumbnailPath())
-                        .processingTimeSec(r.getProcessingTimeSec())
-                        .error(r.getErrorMessage())
-                        .build())
+                .map(r -> {
+                    // highlight 정보
+                    ShortsStatusResponse.HighlightInfo highlight = null;
+                    if (r.getHighlightStartSec() != null || r.getHighlightEndSec() != null) {
+                        highlight = ShortsStatusResponse.HighlightInfo.builder()
+                                .startSec(r.getHighlightStartSec())
+                                .endSec(r.getHighlightEndSec())
+                                .reason(r.getHighlightReason())
+                                .build();
+                    }
+
+                    // titles JSON 파싱
+                    List<String> titles = null;
+                    if (r.getTitles() != null) {
+                        try {
+                            titles = objectMapper.readValue(r.getTitles(),
+                                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                        } catch (Exception e) {
+                            log.debug("titles JSON 파싱 실패: {}", e.getMessage());
+                        }
+                    }
+
+                    return ShortsStatusResponse.ShortItem.builder()
+                            .videoId(r.getVideoId())
+                            .status(r.getStatus().name().toLowerCase())
+                            .outputPath(r.getOutputPath())
+                            .thumbnailPath(r.getThumbnailPath())
+                            .durationSec(r.getDurationSec())
+                            .resolution(r.getResolution())
+                            .hasSubtitles(r.getHasSubtitles())
+                            .highlight(highlight)
+                            .titles(titles)
+                            .processingTimeSec(r.getProcessingTimeSec())
+                            .error(r.getErrorMessage())
+                            .currentStep(r.getCurrentStep())
+                            .totalSteps(r.getTotalSteps())
+                            .currentStepKey(r.getCurrentStepKey())
+                            .build();
+                })
                 .collect(Collectors.toList());
 
         return ShortsStatusResponse.builder()
@@ -332,17 +586,12 @@ public class AiShortsService {
 
     /**
      * AI 서비스 Webhook 처리
+     * API 명세서 기준: status=success/error, data 구조 파싱
      */
     @Transactional
     public void handleWebhook(AiWebhookPayload payload) {
         log.info("AI Webhook 수신: jobId={}, videoId={}, status={}",
                 payload.getJobId(), payload.getVideoId(), payload.getStatus());
-
-        if ("summary".equals(payload.getType())) {
-            log.info("Summary webhook 수신: jobId={}, totalTime={}",
-                    payload.getJobId(), payload.getTotalProcessingTimeSec());
-            return;
-        }
 
         ShortsJob job = shortsJobRepository.findByJobId(payload.getJobId())
                 .orElse(null);
@@ -360,17 +609,68 @@ public class AiShortsService {
             return;
         }
 
-        if ("completed".equals(payload.getStatus())) {
-            String outputPath = null;
-            if (payload.getResult() != null) {
-                outputPath = (String) payload.getResult().get("output_video");
+        // summary 타입은 로그만 남기고 종료
+        if ("summary".equals(payload.getType())) {
+            log.info("Summary webhook 수신: jobId={}, totalTime={}",
+                    payload.getJobId(), payload.getTotalProcessingTimeSec());
+            return;
+        }
+
+        // progress 상태 처리
+        if (payload.isProgress()) {
+            result.updateProgress(payload.getStep(), payload.getTotalSteps(), payload.getStepKey());
+            shortsResultRepository.save(result);
+
+            // Job이 아직 PENDING이면 PROCESSING으로 전환
+            if (job.getStatus() == ShortsJobStatus.PENDING) {
+                job.setStatus(ShortsJobStatus.PROCESSING);
+                shortsJobRepository.save(job);
             }
 
-            result.markCompleted(outputPath, payload.getProcessingTimeSec());
+            log.info("쇼츠 진행 상황: jobId={}, videoId={}, step={}/{} ({})",
+                    payload.getJobId(), payload.getVideoId(),
+                    payload.getStep(), payload.getTotalSteps(), payload.getStepKey());
+            return;
+        }
+
+        // success 또는 completed 모두 성공 처리
+        if (payload.isSuccess()) {
+            AiWebhookPayload.AiResultData data = payload.getResultData();
+
+            if (data != null && data.getShortInfo() != null) {
+                AiWebhookPayload.ShortInfo shortInfo = data.getShortInfo();
+                AiWebhookPayload.HighlightInfo highlight = data.getHighlight();
+
+                // titles를 JSON 문자열로 변환
+                String titlesJson = null;
+                if (data.getTitles() != null && !data.getTitles().isEmpty()) {
+                    try {
+                        titlesJson = objectMapper.writeValueAsString(data.getTitles());
+                    } catch (Exception e) {
+                        log.warn("titles JSON 변환 실패", e);
+                    }
+                }
+
+                result.markCompletedWithDetails(
+                        shortInfo.getFilePath(),
+                        shortInfo.getDurationSec(),
+                        shortInfo.getResolution(),
+                        shortInfo.getHasSubtitles(),
+                        highlight != null ? highlight.getStartSec() : null,
+                        highlight != null ? highlight.getEndSec() : null,
+                        highlight != null ? highlight.getReason() : null,
+                        titlesJson,
+                        payload.getProcessingTimeSec()
+                );
+            } else {
+                // data가 없으면 기본 완료 처리
+                result.markCompleted(null, payload.getProcessingTimeSec());
+            }
+
             job.incrementCompleted();
 
-            log.info("쇼츠 생성 완료: jobId={}, videoId={}, outputPath={}, 진행률={}/{}",
-                    payload.getJobId(), payload.getVideoId(), outputPath,
+            log.info("쇼츠 생성 완료: jobId={}, videoId={}, 진행률={}/{}",
+                    payload.getJobId(), payload.getVideoId(),
                     job.getCompletedCount(), job.getTotalCount());
 
             // 알림 생성
@@ -387,9 +687,9 @@ public class AiShortsService {
             }
 
         } else if ("error".equals(payload.getStatus())) {
-            result.markError(payload.getError());
+            result.markError(payload.getErrorMessage());
             log.error("쇼츠 생성 실패: jobId={}, videoId={}, error={}",
-                    payload.getJobId(), payload.getVideoId(), payload.getError());
+                    payload.getJobId(), payload.getVideoId(), payload.getErrorMessage());
         }
 
         shortsResultRepository.save(result);

@@ -26,7 +26,7 @@ public class StudioStateController {
      */
     @PostMapping("/{studioId}/broadcast")
     public ResponseEntity<ApiResponse<Void>> broadcastState(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestBody StudioStateMessage message) {
 
         log.debug("상태 브로드캐스트 요청: studioId={}, type={}", studioId, message.getType());
@@ -50,7 +50,7 @@ public class StudioStateController {
      */
     @PostMapping("/{studioId}/lock/broadcast")
     public ResponseEntity<ApiResponse<Void>> broadcastLock(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestBody LockBroadcastRequest request) {
 
         log.debug("락 브로드캐스트 요청: studioId={}, acquired={}", studioId, request.isAcquired());
@@ -70,7 +70,7 @@ public class StudioStateController {
      */
     @PostMapping("/{studioId}/presence/broadcast")
     public ResponseEntity<ApiResponse<Void>> broadcastPresence(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestBody PresenceBroadcastRequest request) {
 
         log.debug("프레즌스 브로드캐스트 요청: studioId={}, joined={}", studioId, request.isJoined());

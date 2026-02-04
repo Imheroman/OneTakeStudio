@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 public class StudioResponse {
 
-    private Long studioId;
+    private String studioId;
     private String name;
     private String thumbnail;
     private String status;
@@ -22,7 +22,7 @@ public class StudioResponse {
 
     public static StudioResponse from(Studio studio) {
         return StudioResponse.builder()
-                .studioId(studio.getId())
+                .studioId(studio.getStudioId())
                 .name(studio.getName())
                 .thumbnail(studio.getThumbnail())
                 .status(studio.getStatus().name().toLowerCase())

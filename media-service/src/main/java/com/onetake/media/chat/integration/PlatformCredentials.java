@@ -17,7 +17,7 @@ public class PlatformCredentials {
 
     private ChatPlatform platform;
 
-    private Long studioId;
+    private String studioId;
 
     // OAuth Access Token (YouTube)
     private String accessToken;
@@ -40,7 +40,7 @@ public class PlatformCredentials {
     /**
      * YouTube 인증 정보 생성
      */
-    public static PlatformCredentials forYouTube(Long studioId, String accessToken,
+    public static PlatformCredentials forYouTube(String studioId, String accessToken,
                                                   String refreshToken, String liveChatId) {
         return PlatformCredentials.builder()
                 .platform(ChatPlatform.YOUTUBE)
@@ -54,7 +54,7 @@ public class PlatformCredentials {
     /**
      * 치지직 인증 정보 생성
      */
-    public static PlatformCredentials forChzzk(Long studioId, String chzzkChannelId) {
+    public static PlatformCredentials forChzzk(String studioId, String chzzkChannelId) {
         return PlatformCredentials.builder()
                 .platform(ChatPlatform.CHZZK)
                 .studioId(studioId)

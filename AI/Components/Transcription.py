@@ -34,7 +34,7 @@ def transcribeAudio(audio_path, language="ko"):
 
         segments = list(segments)
         extracted_texts = [[seg.text, float(seg.start), float(seg.end)] for seg in segments]
-        print(f"✓ Transcription complete: {len(extracted_texts)} segments extracted")
+        print(f"[OK] Transcription complete: {len(extracted_texts)} segments extracted")
         return extracted_texts
 
     except Exception as e:

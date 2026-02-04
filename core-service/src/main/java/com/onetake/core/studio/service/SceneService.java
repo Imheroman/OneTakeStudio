@@ -42,11 +42,11 @@ public class SceneService {
         return user.getId();
     }
 
-    public List<SceneResponse> getScenes(String userId, Long studioId) {
+    public List<SceneResponse> getScenes(String userId, String studioId) {
         log.debug("씬 목록 조회: studioId={}", studioId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateMemberAccess(studio.getId(), internalUserId);
@@ -57,11 +57,11 @@ public class SceneService {
     }
 
     @Transactional
-    public SceneResponse createScene(String userId, Long studioId, CreateSceneRequest request) {
+    public SceneResponse createScene(String userId, String studioId, CreateSceneRequest request) {
         log.debug("씬 생성 요청: studioId={}, name={}", studioId, request.getName());
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateHostOrManagerAccess(studio.getId(), internalUserId);
@@ -91,11 +91,11 @@ public class SceneService {
     }
 
     @Transactional
-    public SceneResponse updateScene(String userId, Long studioId, Long sceneId, UpdateSceneRequest request) {
+    public SceneResponse updateScene(String userId, String studioId, Long sceneId, UpdateSceneRequest request) {
         log.debug("씬 수정 요청: studioId={}, sceneId={}", studioId, sceneId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateHostOrManagerAccess(studio.getId(), internalUserId);
@@ -124,11 +124,11 @@ public class SceneService {
     }
 
     @Transactional
-    public void deleteScene(String userId, Long studioId, Long sceneId) {
+    public void deleteScene(String userId, String studioId, Long sceneId) {
         log.debug("씬 삭제 요청: studioId={}, sceneId={}", studioId, sceneId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateHostOrManagerAccess(studio.getId(), internalUserId);

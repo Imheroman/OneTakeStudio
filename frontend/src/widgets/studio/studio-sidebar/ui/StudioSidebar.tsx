@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion } from "motion/react";
 import {
   MessageSquare,
@@ -27,11 +27,14 @@ import { StudioRecordingPanel } from "../panels/StudioRecordingPanel";
 import { StudioDestinationsPanel } from "../panels/StudioDestinationsPanel";
 import { StudioInviteModal } from "@/widgets/studio/studio-invite-modal";
 import { usePrivateChatStore } from "@/stores/usePrivateChatStore";
-import { getChatHistory } from "@/shared/api/studio-chat";
+import { useChatMessageStore } from "@/stores/useChatMessageStore";
+import type { ChatMessage } from "@/entities/chat/model";
 import type { BannerItem } from "../panels/StudioBannerPanel";
 import type { AssetItem } from "../panels/StudioAssetPanel";
 import type { StudioStyleState } from "../panels/StudioStylePanel";
 import type { OnlineMember } from "@/hooks/studio";
+
+const EMPTY_MESSAGES: ChatMessage[] = [];
 
 const TABS = [
   { id: "destinations", icon: Share2, label: "연동 채널" },
@@ -76,6 +79,10 @@ interface StudioSidebarProps {
   onStopLocalRecording?: () => void;
   /** 현재 접속 중인 멤버 목록 */
   onlineMembers?: OnlineMember[];
+  /** 채팅 오버레이 활성화 여부 */
+  isChatOverlayEnabled?: boolean;
+  /** 채팅 오버레이 토글 콜백 */
+  onChatOverlayToggle?: () => void;
 }
 
 export function StudioSidebar({
@@ -95,6 +102,8 @@ export function StudioSidebar({
   onStartLocalRecording,
   onStopLocalRecording,
   onlineMembers = [],
+  isChatOverlayEnabled,
+  onChatOverlayToggle,
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -102,94 +111,44 @@ export function StudioSidebar({
   const prefersMotion = usePrefersMotion();
   const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
 
-  const studioIdNum = Number(studioId) || 0;
-  const unreadCount = usePrivateChatStore(
-    (state) => state.unreadCounts[studioIdNum] ?? 0
-  );
-  const lastSeenId = usePrivateChatStore(
-    (state) => state.lastSeenMessageIds[studioIdNum]
-  );
+  const studioIdStr = studioId;
   const markAsRead = usePrivateChatStore((state) => state.markAsRead);
-  const setUnreadCount = usePrivateChatStore((state) => state.setUnreadCount);
-  const setLastSeenMessageId = usePrivateChatStore(
-    (state) => state.setLastSeenMessageId
+
+  // useChatMessageStore에서 INTERNAL 메시지 수를 세어 unread 카운트 관리
+  const rawMessages = useChatMessageStore(
+    (s) => s.messagesByStudio[studioIdStr] ?? EMPTY_MESSAGES,
   );
+  const internalMessageCount = useMemo(
+    () => rawMessages.filter((m) => m.platform === "INTERNAL").length,
+    [rawMessages],
+  );
+  const [lastSeenCount, setLastSeenCount] = useState(0);
 
-  // 프라이빗 메시지 폴링 (프라이빗 패널이 열려있지 않을 때만)
+  // 최초 히스토리 로드 시 기존 메시지를 전부 "읽음"으로 처리
+  // (0 → N 전환 감지: 마운트 직후 빈 스토어에서 히스토리가 채워질 때)
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (activeTab === "private" || studioIdNum === 0) return;
+    if (!initializedRef.current && internalMessageCount > 0) {
+      initializedRef.current = true;
+      setLastSeenCount(internalMessageCount);
+    }
+  }, [internalMessageCount]);
 
-    const checkNewPrivateMessages = async () => {
-      try {
-        const messages = await getChatHistory(studioIdNum);
-        const privateMessages = messages.filter(
-          (m) => m.platform === "INTERNAL"
-        );
+  const unreadCount = activeTab === "private" ? 0 : Math.max(0, internalMessageCount - lastSeenCount);
 
-        if (privateMessages.length === 0) return;
-
-        // 가장 최근 메시지 ID
-        const latestMessageId = privateMessages[0]?.messageId;
-
-        // 처음 로드 시 lastSeenId 설정
-        if (!lastSeenId && latestMessageId) {
-          setLastSeenMessageId(studioIdNum, latestMessageId);
-          return;
-        }
-
-        // 새 메시지가 있으면 카운트 업데이트
-        if (latestMessageId && latestMessageId !== lastSeenId) {
-          const lastSeenIndex = privateMessages.findIndex(
-            (m) => m.messageId === lastSeenId
-          );
-          const newCount =
-            lastSeenIndex === -1 ? privateMessages.length : lastSeenIndex;
-          if (newCount > 0) {
-            setUnreadCount(studioIdNum, newCount);
-          }
-        }
-      } catch (e) {
-        // 조용히 실패
-      }
-    };
-
-    checkNewPrivateMessages();
-    const interval = setInterval(checkNewPrivateMessages, 5000); // 5초마다 체크
-
-    return () => clearInterval(interval);
-  }, [
-    studioIdNum,
-    activeTab,
-    lastSeenId,
-    setUnreadCount,
-    setLastSeenMessageId,
-  ]);
-
-  // 프라이빗 패널 열면 lastSeenId 업데이트
+  // 프라이빗 패널 열면 읽음 처리
   useEffect(() => {
-    if (activeTab !== "private" || studioIdNum === 0) return;
-
-    const updateLastSeen = async () => {
-      try {
-        const messages = await getChatHistory(studioIdNum);
-        const privateMessages = messages.filter(
-          (m) => m.platform === "INTERNAL"
-        );
-        if (privateMessages.length > 0) {
-          setLastSeenMessageId(studioIdNum, privateMessages[0].messageId);
-        }
-      } catch (e) {
-        // 조용히 실패
-      }
-    };
-
-    updateLastSeen();
-  }, [activeTab, studioIdNum, setLastSeenMessageId]);
+    if (activeTab === "private" && studioIdStr) {
+      markAsRead(studioIdStr);
+      setLastSeenCount(internalMessageCount);
+    }
+  }, [activeTab, studioIdStr, markAsRead, internalMessageCount]);
 
   const handleTabClick = (id: StudioSidebarTabId) => {
     // 프라이빗 탭 열면 읽음 처리
     if (id === "private") {
-      markAsRead(studioIdNum);
+      markAsRead(studioIdStr);
+      setLastSeenCount(internalMessageCount);
     }
     setActiveTab((prev) => (prev === id ? null : id));
   };
@@ -244,14 +203,16 @@ export function StudioSidebar({
             )}
             {activeTab === "chat" && (
               <StudioChatPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 filterPlatform={null}
+                isChatOverlayEnabled={isChatOverlayEnabled}
+                onChatOverlayToggle={onChatOverlayToggle}
               />
             )}
             {activeTab === "banner" && (
               <StudioBannerPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 onSelectBanner={onSelectBanner}
                 selectedBannerId={activeBanner?.id ?? null}
@@ -260,7 +221,7 @@ export function StudioSidebar({
             )}
             {activeTab === "assets" && (
               <StudioAssetPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 onSelectAsset={onSelectAsset}
                 selectedAssetId={activeAsset?.id ?? null}
@@ -268,14 +229,14 @@ export function StudioSidebar({
             )}
             {activeTab === "style" && (
               <StudioStylePanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 onStyleChange={onStyleChange}
                 initialStyle={styleState}
               />
             )}
             {activeTab === "notes" && (
-              <StudioNotePanel studioId={studioIdNum} onClose={closePanel} />
+              <StudioNotePanel studioId={studioIdStr} onClose={closePanel} />
             )}
             {activeTab === "members" && (
               <StudioMemberPanel
@@ -288,14 +249,14 @@ export function StudioSidebar({
             )}
             {activeTab === "private" && (
               <StudioChatPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 filterPlatform="INTERNAL"
               />
             )}
             {activeTab === "recording" && (
               <StudioRecordingPanel
-                studioId={studioIdNum}
+                studioId={studioIdStr}
                 onClose={closePanel}
                 isRecordingLocal={isRecordingLocal}
                 onStartLocalRecording={onStartLocalRecording}

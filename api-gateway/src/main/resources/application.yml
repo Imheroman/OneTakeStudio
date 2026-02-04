@@ -17,7 +17,7 @@ spring:
             - id: core-service
               uri: lb://core-service
               predicates:
-                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**
+                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**, /api/ai/**
               filters:
                 - StripPrefix=0
 
@@ -58,6 +58,14 @@ spring:
               uri: lb://media-service
               predicates:
                 - Path=/api/media/chat/**
+              filters:
+                - StripPrefix=0
+
+            # Media Service - OAuth Routes (YouTube/Chzzk 채팅 연동)
+            - id: media-service-oauth
+              uri: lb://media-service
+              predicates:
+                - Path=/api/oauth/**
               filters:
                 - StripPrefix=0
 

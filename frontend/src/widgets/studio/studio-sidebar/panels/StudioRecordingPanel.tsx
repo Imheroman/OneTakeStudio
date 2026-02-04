@@ -11,7 +11,7 @@ function formatDuration(seconds: number): string {
 }
 
 interface StudioRecordingPanelProps {
-  studioId: number;
+  studioId: string | number;
   onClose?: () => void;
   /** 녹화 중 여부 (useStudioMain과 연동) */
   isRecordingLocal?: boolean;

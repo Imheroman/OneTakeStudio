@@ -25,7 +25,7 @@ public class ChatMessage extends BaseTimeEntity {
     private String messageId;
 
     @Column(name = "studio_id", nullable = false)
-    private Long studioId;
+    private String studioId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "platform", nullable = false, length = 20)

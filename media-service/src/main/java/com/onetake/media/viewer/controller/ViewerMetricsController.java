@@ -2,7 +2,6 @@ package com.onetake.media.viewer.controller;
 
 import com.onetake.media.chat.entity.ChatPlatform;
 import com.onetake.media.global.common.ApiResponse;
-import com.onetake.media.global.resolver.StudioIdResolver;
 import com.onetake.media.viewer.dto.ViewerMetricsResponse;
 import com.onetake.media.viewer.dto.ViewerStatsResponse;
 import com.onetake.media.viewer.service.ViewerMetricsService;
@@ -22,7 +21,6 @@ import java.util.List;
 public class ViewerMetricsController {
 
     private final ViewerMetricsService viewerMetricsService;
-    private final StudioIdResolver studioIdResolver;
 
     /**
      * 현재 시청 지표 조회 (모든 플랫폼)
@@ -32,9 +30,8 @@ public class ViewerMetricsController {
     @GetMapping("/{studioId}/current")
     public ResponseEntity<ApiResponse<List<ViewerMetricsResponse>>> getCurrentMetrics(
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        log.info("Get current viewer metrics: studioId={}", resolvedStudioId);
-        List<ViewerMetricsResponse> metrics = viewerMetricsService.getCurrentMetrics(resolvedStudioId);
+        log.info("Get current viewer metrics: studioId={}", studioId);
+        List<ViewerMetricsResponse> metrics = viewerMetricsService.getCurrentMetrics(studioId);
         return ResponseEntity.ok(ApiResponse.success(metrics));
     }
 
@@ -46,9 +43,8 @@ public class ViewerMetricsController {
     @GetMapping("/{studioId}/aggregated")
     public ResponseEntity<ApiResponse<ViewerMetricsResponse.Aggregated>> getAggregatedMetrics(
             @PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        log.info("Get aggregated viewer metrics: studioId={}", resolvedStudioId);
-        ViewerMetricsResponse.Aggregated aggregated = viewerMetricsService.getCurrentAggregatedMetrics(resolvedStudioId);
+        log.info("Get aggregated viewer metrics: studioId={}", studioId);
+        ViewerMetricsResponse.Aggregated aggregated = viewerMetricsService.getCurrentAggregatedMetrics(studioId);
         return ResponseEntity.ok(ApiResponse.success(aggregated));
     }
 
@@ -61,9 +57,8 @@ public class ViewerMetricsController {
     public ResponseEntity<ApiResponse<ViewerMetricsResponse>> getPlatformMetrics(
             @PathVariable String studioId,
             @PathVariable ChatPlatform platform) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        log.info("Get platform viewer metrics: studioId={}, platform={}", resolvedStudioId, platform);
-        ViewerMetricsResponse metrics = viewerMetricsService.getPlatformMetrics(resolvedStudioId, platform);
+        log.info("Get platform viewer metrics: studioId={}, platform={}", studioId, platform);
+        ViewerMetricsResponse metrics = viewerMetricsService.getPlatformMetrics(studioId, platform);
         return ResponseEntity.ok(ApiResponse.success(metrics));
     }
 
@@ -74,9 +69,8 @@ public class ViewerMetricsController {
      */
     @GetMapping("/{studioId}/total")
     public ResponseEntity<ApiResponse<Long>> getTotalViewers(@PathVariable String studioId) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        log.info("Get total viewers: studioId={}", resolvedStudioId);
-        Long totalViewers = viewerMetricsService.getTotalViewers(resolvedStudioId);
+        log.info("Get total viewers: studioId={}", studioId);
+        Long totalViewers = viewerMetricsService.getTotalViewers(studioId);
         return ResponseEntity.ok(ApiResponse.success(totalViewers));
     }
 
@@ -90,9 +84,8 @@ public class ViewerMetricsController {
             @PathVariable String studioId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
-        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
-        log.info("Get viewer stats: studioId={}, startTime={}, endTime={}", resolvedStudioId, startTime, endTime);
-        ViewerStatsResponse stats = viewerMetricsService.getStats(resolvedStudioId, startTime, endTime);
+        log.info("Get viewer stats: studioId={}, startTime={}, endTime={}", studioId, startTime, endTime);
+        ViewerStatsResponse stats = viewerMetricsService.getStats(studioId, startTime, endTime);
         return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }

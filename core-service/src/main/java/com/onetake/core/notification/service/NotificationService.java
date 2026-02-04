@@ -63,6 +63,27 @@ public class NotificationService {
     }
 
     /**
+     * 개별 알림 삭제
+     */
+    @Transactional
+    public void deleteNotification(String userId, String notificationId) {
+        User user = findUserByUserId(userId);
+        int deleted = notificationRepository.deleteByNotificationIdAndUser(notificationId, user);
+        if (deleted == 0) {
+            throw new IllegalArgumentException("알림을 찾을 수 없거나 권한이 없습니다.");
+        }
+    }
+
+    /**
+     * 사용자의 모든 알림 삭제
+     */
+    @Transactional
+    public void deleteAllNotifications(String userId) {
+        User user = findUserByUserId(userId);
+        notificationRepository.deleteAllByUser(user);
+    }
+
+    /**
      * referenceId로 알림 삭제 (요청 수락/거절 시)
      */
     @Transactional

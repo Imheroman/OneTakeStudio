@@ -17,7 +17,7 @@ public interface CommentStatsRepository extends JpaRepository<CommentStats, Long
     /**
      * 스튜디오 ID로 최근 댓글 통계 조회
      */
-    Optional<CommentStats> findFirstByStudioIdOrderByCreatedAtDesc(Long studioId);
+    Optional<CommentStats> findFirstByStudioIdOrderByCreatedAtDesc(String studioId);
 
     /**
      * 녹화 ID로 존재 여부 확인

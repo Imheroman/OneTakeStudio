@@ -162,7 +162,7 @@ public class ShortsService {
     /**
      * 스튜디오별 작업 목록 조회
      */
-    public List<ShortsResponse> getJobsByStudio(Long studioId) {
+    public List<ShortsResponse> getJobsByStudio(String studioId) {
         return shortsJobRepository.findByStudioIdOrderByCreatedAtDesc(studioId)
                 .stream()
                 .map(ShortsResponse::from)

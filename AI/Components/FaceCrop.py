@@ -3,6 +3,9 @@ import numpy as np
 from moviepy.editor import VideoFileClip, AudioFileClip
 import subprocess
 import os
+import imageio_ffmpeg
+
+FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 global Fps
 Fps = 30.0
@@ -56,8 +59,10 @@ def crop_to_vertical(input_video_path, output_video_path,
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    vertical_h = H
+    vertical_h = H if H % 2 == 0 else H - 1
     vertical_w = int(vertical_h * 9 / 16)
+    if vertical_w % 2 != 0:
+        vertical_w -= 1
     print(f"Output dimensions: {vertical_w}x{vertical_h}")
 
     if W < vertical_w:
@@ -128,34 +133,59 @@ def crop_to_vertical(input_video_path, output_video_path,
         x_start = max(0, min(x_start - margin, W - vertical_w))
         print(f"[FaceCrop] static x_start={x_start}")
 
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out = cv2.VideoWriter(output_video_path, fourcc, float(fps), (vertical_w, vertical_h))
+    cap.release()
 
     global Fps
     Fps = fps
 
-    frame_count = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    # FFmpeg로 크롭 처리 (GPU NVENC 우선, 실패시 CPU)
+    if decision == "FACE_CROP":
+        crop_filter = f"crop={vertical_w}:{vertical_h}:{x_start}:0"
+    else:
+        # FULLFRAME: _fit_to_canvas 대체 - 원본을 세로 비율에 맞춰 패딩 (짝수 보장)
+        crop_filter = f"scale={vertical_w}:{vertical_h}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad={vertical_w}:{vertical_h}:(ow-iw)/2:(oh-ih)/2:black"
 
-        if decision == "FACE_CROP":
-            out_frame = frame[:, x_start:x_start + vertical_w]
-            if out_frame.shape[1] != vertical_w:
-                out_frame = _fit_to_canvas(frame, vertical_w, vertical_h)
+    cmd_gpu = [
+        FFMPEG, "-y",
+        "-i", input_video_path,
+        "-vf", crop_filter,
+        "-c:v", "h264_nvenc",
+        "-preset", "p4",
+        "-an",
+        output_video_path
+    ]
+    cmd_cpu = [
+        FFMPEG, "-y",
+        "-i", input_video_path,
+        "-vf", crop_filter,
+        "-c:v", "libx264",
+        "-preset", "fast",
+        "-an",
+        output_video_path
+    ]
+
+    print(f"[FaceCrop] FFmpeg processing ({decision})...")
+    try:
+        result = subprocess.run(cmd_gpu, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=120)
+        if result.returncode == 0:
+            print(f"[FaceCrop] done (GPU) -> {output_video_path}")
+            return True
         else:
-            out_frame = _fit_to_canvas(frame, vertical_w, vertical_h)
+            print(f"[FaceCrop] GPU failed, trying CPU...")
+    except Exception as e:
+        print(f"[FaceCrop] GPU error: {e}, trying CPU...")
 
-        out.write(out_frame)
-        frame_count += 1
-
-    cap.release()
-    out.release()
-    print(f"[FaceCrop] done -> {output_video_path}")
-    return True
+    try:
+        result = subprocess.run(cmd_cpu, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
+        if result.returncode == 0:
+            print(f"[FaceCrop] done (CPU) -> {output_video_path}")
+            return True
+        else:
+            print(f"[FaceCrop] CPU also failed: {result.stderr.decode()[-500:]}")
+            return False
+    except Exception as e:
+        print(f"[FaceCrop] Critical error: {e}")
+        return False
 
 def combine_videos(audio_input, video_input, output_filename):
     """
@@ -220,7 +250,7 @@ def combine_videos(audio_input, video_input, output_filename):
             abs_output = os.path.abspath(output_filename)
 
             cmd = [
-                "ffmpeg", "-y",
+                FFMPEG, "-y",
                 "-i", abs_video,
                 "-i", abs_audio,
                 "-c:v", "copy",  # 비디오 복사 (화질저하 없음)

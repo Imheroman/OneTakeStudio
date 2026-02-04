@@ -14,7 +14,7 @@ import {
 import { joinStream, leaveStream } from "@/shared/api/studio-stream";
 
 export interface UseLiveKitOptions {
-  studioId: number;
+  studioId: string | number;
   participantName: string;
   onConnected?: () => void;
   onDisconnected?: () => void;

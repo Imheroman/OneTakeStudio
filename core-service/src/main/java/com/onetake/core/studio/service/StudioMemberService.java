@@ -40,11 +40,11 @@ public class StudioMemberService {
         return user.getId();
     }
 
-    public List<StudioMemberResponse> getMembers(String userId, Long studioId) {
+    public List<StudioMemberResponse> getMembers(String userId, String studioId) {
         log.debug("멤버 목록 조회: studioId={}", studioId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateMemberAccess(studio.getId(), internalUserId);
@@ -61,13 +61,13 @@ public class StudioMemberService {
     }
 
     @Transactional
-    public InviteResponse inviteMember(String userId, Long studioId, InviteMemberRequest request) {
+    public InviteResponse inviteMember(String userId, String studioId, InviteMemberRequest request) {
         log.debug("멤버 초대 요청: studioId={}, email={}", studioId, request.getEmail());
         User inviter = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
         Long internalUserId = inviter.getId();
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateHostOrManagerAccess(studio.getId(), internalUserId);
@@ -117,11 +117,11 @@ public class StudioMemberService {
     }
 
     @Transactional
-    public void kickMember(String userId, Long studioId, Long memberId) {
+    public void kickMember(String userId, String studioId, Long memberId) {
         log.debug("멤버 강퇴 요청: studioId={}, memberId={}", studioId, memberId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateHostOrManagerAccess(studio.getId(), internalUserId);
@@ -149,11 +149,11 @@ public class StudioMemberService {
     }
 
     @Transactional
-    public StudioMemberResponse updateMemberRole(String userId, Long studioId, Long memberId, UpdateMemberRoleRequest request) {
+    public StudioMemberResponse updateMemberRole(String userId, String studioId, Long memberId, UpdateMemberRoleRequest request) {
         log.debug("멤버 역할 변경 요청: studioId={}, memberId={}, role={}", studioId, memberId, request.getRole());
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         StudioMember requester = studioMemberRepository.findByStudioIdAndUserId(studio.getId(), internalUserId)
@@ -294,11 +294,11 @@ public class StudioMemberService {
         log.info("초대 거절 완료: inviteId={}", inviteId);
     }
 
-    public List<InviteResponse> getStudioInvites(String userId, Long studioId) {
+    public List<InviteResponse> getStudioInvites(String userId, String studioId) {
         log.debug("스튜디오 초대 목록 조회: studioId={}", studioId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateHostOrManagerAccess(studio.getId(), internalUserId);
@@ -309,11 +309,11 @@ public class StudioMemberService {
     }
 
     @Transactional
-    public void cancelInvite(String userId, Long studioId, String inviteId) {
+    public void cancelInvite(String userId, String studioId, String inviteId) {
         log.debug("초대 취소: studioId={}, inviteId={}", studioId, inviteId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         validateHostOrManagerAccess(studio.getId(), internalUserId);
@@ -334,11 +334,11 @@ public class StudioMemberService {
     }
 
     @Transactional
-    public void leaveStudio(String userId, Long studioId) {
+    public void leaveStudio(String userId, String studioId) {
         log.debug("스튜디오 탈퇴: userId={}, studioId={}", userId, studioId);
         Long internalUserId = getInternalUserId(userId);
 
-        Studio studio = studioRepository.findById(studioId)
+        Studio studio = studioRepository.findByStudioId(studioId)
                 .orElseThrow(() -> new StudioNotFoundException(studioId));
 
         StudioMember member = studioMemberRepository.findByStudioIdAndUserId(studio.getId(), internalUserId)

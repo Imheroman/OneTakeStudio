@@ -38,27 +38,27 @@ def _safe_remove(path: str, verbose: bool = False):
     try:
         if not os.path.exists(path):
             if verbose:
-                print(f"  ℹ File not found: {os.path.basename(path)}")
+                print(f"  [INFO] File not found: {os.path.basename(path)}")
             return False
         
         # 첫 시도
         try:
             os.remove(path)
             if verbose:
-                print(f"  ✓ Deleted: {os.path.basename(path)}")
+                print(f"  [OK] Deleted: {os.path.basename(path)}")
             return True
         except PermissionError:
             # 파일이 아직 열려있을 수 있으니 대기 후 재시도
             if verbose:
-                print(f"  ⏳ File locked, retrying in 1s: {os.path.basename(path)}")
+                print(f"  [WAIT] File locked, retrying in 1s: {os.path.basename(path)}")
             time.sleep(1)
             os.remove(path)
             if verbose:
-                print(f"  ✓ Deleted (retry): {os.path.basename(path)}")
+                print(f"  [OK] Deleted (retry): {os.path.basename(path)}")
             return True
     except Exception as e:
         if verbose:
-            print(f"  ⚠ Failed to delete {os.path.basename(path)}: {type(e).__name__}: {e}")
+            print(f"  [WARN] Failed to delete {os.path.basename(path)}: {type(e).__name__}: {e}")
         return False
 
 
@@ -95,7 +95,7 @@ def generate_titles_stub(text: str, lang: str = "ko") -> List[str]:
     
     try:
         from langchain_openai import ChatOpenAI
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
         import os
         from dotenv import load_dotenv
         
@@ -235,11 +235,16 @@ def process_one_video(
     output_root: str = "./outputs",
     work_root: str = "./work",
     video_title: Optional[str] = None,
+    on_progress=None,
 ) -> Dict[str, Any]:
     """
     10분 이내 영상 1개 -> 쇼츠 1개 + 제목 3개
     반환 dict는 api.py에서 합의한 결과 JSON에 매핑됨
+
+    on_progress: Optional callback(step, total_steps, step_key) for progress reporting
     """
+    TOTAL_STEPS = 7
+
     out_dir = os.path.join(output_root, job_id, video_id)
     work_dir = os.path.join(work_root, job_id, video_id)
     _ensure_dir(out_dir)
@@ -252,11 +257,15 @@ def process_one_video(
     temp_subtitled = os.path.join(work_dir, f"temp_subtitled_{job_id}_{video_id}.mp4")
 
     # 1) Extract wav
+    if on_progress:
+        on_progress(1, TOTAL_STEPS, "AUDIO_EXTRACTION")
     Audio = extractAudio(input_video_path, wav_path)
     if not Audio:
         raise RuntimeError("Failed to extract audio (wav)")
 
     # 2) STT (wav only)
+    if on_progress:
+        on_progress(2, TOTAL_STEPS, "TRANSCRIPTION")
     transcriptions = transcribeAudio(Audio, language=source_lang)
     if not transcriptions:
         # fallback: use first 90-120 seconds
@@ -265,6 +274,10 @@ def process_one_video(
         video_clip.close()
         start, stop = 0, min(120, total_duration)
     else:
+        # 3) Highlight selection
+        if on_progress:
+            on_progress(3, TOTAL_STEPS, "HIGHLIGHT_SELECTION")
+
         # Make text for GetHighlight
         TransText = ""
         for text, s, e in transcriptions:
@@ -280,7 +293,7 @@ def process_one_video(
                 duration = stop - start
                 last_result = (start, stop)  # 이번 결과 저장
                 if duration >= 90:
-                    print(f"✓ Highlight selected on attempt {attempt + 1}: {start}s-{stop}s ({duration}s)")
+                    print(f"[OK] Highlight selected on attempt {attempt + 1}: {start}s-{stop}s ({duration}s)")
                     break
                 else:
                     if attempt < max_retries - 1:
@@ -294,7 +307,7 @@ def process_one_video(
         # 3회 재시도 후 처리
         if start is None or stop is None:
             # 모든 시도가 None 반환 → 폴백 (0-120초)
-            print("\n⚠ All highlight extraction attempts returned no result")
+            print("\n[WARN] All highlight extraction attempts returned no result")
             video_clip = VideoFileClip(input_video_path)
             total_duration = video_clip.duration
             video_clip.close()
@@ -304,12 +317,12 @@ def process_one_video(
                 print(f"Using fallback segment: 0-{stop}s (from {total_duration}s total video)")
             else:
                 start, stop = 0, total_duration
-                print(f"⚠ Video too short ({total_duration}s). Using entire video as highlight.")
+                print(f"[WARN] Video too short ({total_duration}s). Using entire video as highlight.")
         elif (stop - start) < 90 and last_result:
             # 마지막 결과가 90초 미만 → 그대로 사용
             start, stop = last_result
             duration = stop - start
-            print(f"\n⚠ Using short highlight as fallback: {start}s-{stop}s ({duration}s)")
+            print(f"\n[WARN] Using short highlight as fallback: {start}s-{stop}s ({duration}s)")
             print("  (3 retries completed, accepting < 90s segment)")
                 # Try to extend the segment while keeping content quality
             video_clip = VideoFileClip(input_video_path)
@@ -334,11 +347,15 @@ def process_one_video(
     crop_video(input_video_path, temp_clip, start, stop)
 
     # 4) Crop to vertical
+    if on_progress:
+        on_progress(4, TOTAL_STEPS, "VIDEO_CROP")
     ok = crop_to_vertical(temp_clip, temp_cropped)
     if ok is False or (not os.path.exists(temp_cropped)):
         raise RuntimeError("crop_to_vertical failed (no output)")
 
     # 5) Subtitles (optional)
+    if on_progress:
+        on_progress(5, TOTAL_STEPS, "SUBTITLE_PROCESSING")
     if need_subtitles:
         # 쇼츠 구간(start~stop)에 해당하는 자막만 필터링
         shorts_transcriptions = []
@@ -387,7 +404,9 @@ def process_one_video(
     clean_title = clean_filename(video_title or os.path.splitext(os.path.basename(input_video_path))[0])
     final_path = os.path.join(out_dir, f"{clean_title}_{job_id}_{video_id}_short.mp4")
 
-    # 7) Combine audio
+    # 6) Combine audio
+    if on_progress:
+        on_progress(6, TOTAL_STEPS, "AUDIO_COMBINE")
     #  IMPORTANT:
     # - combine_videos()는 "오디오 있는 비디오"에서 audio를 꺼내 붙이므로,
     #   temp_clip이 audio=False로 만들어졌다면 temp_clip에는 오디오가 없음.
@@ -399,6 +418,9 @@ def process_one_video(
         duration = float(v.duration)
         resolution = f"{v.w}x{v.h}"
 
+    # 7) Title generation
+    if on_progress:
+        on_progress(7, TOTAL_STEPS, "TITLE_GENERATION")
     highlight_text = _extract_highlight_text(transcriptions, start, stop)
     titles = generate_titles_stub(highlight_text, lang=subtitle_lang)
 

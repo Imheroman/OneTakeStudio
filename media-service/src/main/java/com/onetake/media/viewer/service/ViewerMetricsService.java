@@ -29,7 +29,7 @@ public class ViewerMetricsService {
      * 시청자 지표 저장 및 브로드캐스트
      */
     @Transactional
-    public ViewerMetrics saveAndBroadcast(Long studioId, ChatPlatform platform, Long currentViewers) {
+    public ViewerMetrics saveAndBroadcast(String studioId, ChatPlatform platform, Long currentViewers) {
         // 기존 peak 조회
         Long existingPeak = viewerMetricsRepository
                 .findMaxPeakViewersByStudioIdAndPlatform(studioId, platform)
@@ -58,7 +58,7 @@ public class ViewerMetricsService {
     /**
      * 스튜디오의 현재 통합 지표 브로드캐스트
      */
-    public void broadcastMetrics(Long studioId) {
+    public void broadcastMetrics(String studioId) {
         ViewerMetricsResponse.Aggregated aggregated = getCurrentAggregatedMetrics(studioId);
         messagingTemplate.convertAndSend(
                 "/topic/metrics/" + studioId,
@@ -71,7 +71,7 @@ public class ViewerMetricsService {
      * 현재 시청 지표 조회 (모든 플랫폼)
      */
     @Transactional(readOnly = true)
-    public List<ViewerMetricsResponse> getCurrentMetrics(Long studioId) {
+    public List<ViewerMetricsResponse> getCurrentMetrics(String studioId) {
         List<ViewerMetrics> latestMetrics = viewerMetricsRepository
                 .findLatestByStudioIdGroupByPlatform(studioId);
         return ViewerMetricsResponse.fromList(latestMetrics);
@@ -81,7 +81,7 @@ public class ViewerMetricsService {
      * 현재 통합 지표 조회
      */
     @Transactional(readOnly = true)
-    public ViewerMetricsResponse.Aggregated getCurrentAggregatedMetrics(Long studioId) {
+    public ViewerMetricsResponse.Aggregated getCurrentAggregatedMetrics(String studioId) {
         List<ViewerMetrics> latestMetrics = viewerMetricsRepository
                 .findLatestByStudioIdGroupByPlatform(studioId);
 
@@ -119,7 +119,7 @@ public class ViewerMetricsService {
      * 플랫폼별 현재 지표 조회
      */
     @Transactional(readOnly = true)
-    public ViewerMetricsResponse getPlatformMetrics(Long studioId, ChatPlatform platform) {
+    public ViewerMetricsResponse getPlatformMetrics(String studioId, ChatPlatform platform) {
         ViewerMetrics metrics = viewerMetricsRepository
                 .findTopByStudioIdAndPlatformOrderByRecordedAtDesc(studioId, platform)
                 .orElseThrow(() -> new BusinessException(ErrorCode.VIEWER_METRICS_NOT_FOUND));
@@ -130,7 +130,7 @@ public class ViewerMetricsService {
      * 통합 시청자 수 조회
      */
     @Transactional(readOnly = true)
-    public Long getTotalViewers(Long studioId) {
+    public Long getTotalViewers(String studioId) {
         return viewerMetricsRepository.sumCurrentViewersByStudioId(studioId);
     }
 
@@ -138,7 +138,7 @@ public class ViewerMetricsService {
      * 시간대별 통계 조회
      */
     @Transactional(readOnly = true)
-    public ViewerStatsResponse getStats(Long studioId, LocalDateTime startTime, LocalDateTime endTime) {
+    public ViewerStatsResponse getStats(String studioId, LocalDateTime startTime, LocalDateTime endTime) {
         List<ViewerMetrics> metricsInRange = viewerMetricsRepository
                 .findByStudioIdAndRecordedAtBetweenOrderByRecordedAtAsc(studioId, startTime, endTime);
 
@@ -242,7 +242,7 @@ public class ViewerMetricsService {
      * 오래된 지표 데이터 삭제 (정리용)
      */
     @Transactional
-    public void cleanupOldMetrics(Long studioId, LocalDateTime before) {
+    public void cleanupOldMetrics(String studioId, LocalDateTime before) {
         viewerMetricsRepository.deleteByStudioIdAndRecordedAtBefore(studioId, before);
         log.info("Cleaned up viewer metrics before {} for studioId={}", before, studioId);
     }
