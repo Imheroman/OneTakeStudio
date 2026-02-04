@@ -1,5 +1,6 @@
 package com.onetake.core.library.service;
 
+import com.onetake.core.ai.repository.ShortsResultRepository;
 import com.onetake.core.library.dto.*;
 import com.onetake.core.library.entity.Clip;
 import com.onetake.core.library.entity.ClipStatus;
@@ -12,6 +13,8 @@ import com.onetake.core.library.repository.RecordingRepository;
 import com.onetake.core.studio.entity.Studio;
 import com.onetake.core.studio.exception.StudioNotFoundException;
 import com.onetake.core.studio.repository.StudioRepository;
+import com.onetake.core.user.entity.User;
+import com.onetake.core.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,9 +39,11 @@ public class LibraryService {
     private final RecordingRepository recordingRepository;
     private final ClipRepository clipRepository;
     private final StudioRepository studioRepository;
+    private final ShortsResultRepository shortsResultRepository;
+    private final UserRepository userRepository;
 
-    @Value("${library.storage.limit-bytes:32212254720}")
-    private Long storageLimitBytes; // 기본 30GB
+    @Value("${library.storage.limit-bytes:10737418240}")
+    private Long storageLimitBytes; // 기본 10GB
 
     public RecordingListResponse getRecordings(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -194,13 +199,20 @@ public class LibraryService {
         Long recordingSize = recordingRepository.getTotalFileSizeByUserId(userId);
         Long clipSize = clipRepository.getTotalFileSizeByUserId(userId);
 
+        Long shortsSize = 0L;
+        User user = userRepository.findByUserId(userId).orElse(null);
+        if (user != null) {
+            shortsSize = shortsResultRepository.getTotalSavedFileSizeByUserId(user.getId());
+        }
+
         Long videoBytes = (recordingSize != null ? recordingSize : 0L) +
                           (clipSize != null ? clipSize : 0L);
+        Long shortsBytes = (shortsSize != null ? shortsSize : 0L);
         Long assetBytes = 0L; // 에셋 스토리지는 추후 구현
 
-        Long totalUsed = videoBytes + assetBytes;
+        Long totalUsed = videoBytes + shortsBytes + assetBytes;
 
-        return StorageResponse.of(totalUsed, storageLimitBytes, videoBytes, assetBytes);
+        return StorageResponse.of(totalUsed, storageLimitBytes, videoBytes, assetBytes, shortsBytes);
     }
 
     /**

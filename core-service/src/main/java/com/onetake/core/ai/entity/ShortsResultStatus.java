@@ -4,5 +4,6 @@ public enum ShortsResultStatus {
     PENDING,
     PROCESSING,
     COMPLETED,
-    ERROR
+    ERROR,
+    EXPIRED
 }

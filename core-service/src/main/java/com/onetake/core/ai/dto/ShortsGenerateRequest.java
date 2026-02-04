@@ -16,4 +16,8 @@ public class ShortsGenerateRequest {
     private String subtitleLang = "ko";
 
     private String bgColor = "black";
+
+    private Double trimStartSec;
+
+    private Double trimEndSec;
 }

@@ -77,6 +77,9 @@ public class ShortsResult {
     @Column(name = "current_step_key", length = 50)
     private String currentStepKey;
 
+    @Column(name = "file_size")
+    private Long fileSize;
+
     @Column(name = "error_message", length = 500)
     private String errorMessage;
 

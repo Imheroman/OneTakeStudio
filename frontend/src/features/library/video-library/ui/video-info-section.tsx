@@ -8,17 +8,23 @@ interface VideoInfoSectionProps {
   video: VideoDetail;
   onDownload: () => void;
   onSaveTrim: () => void;
+  onGenerateShorts?: () => void;
 }
 
 export const VideoInfoSection = ({
   video,
   onDownload,
   onSaveTrim,
+  onGenerateShorts,
 }: VideoInfoSectionProps) => {
   const router = useRouter();
 
   const handleGenerateShorts = () => {
-    router.push(`/library/${video.id}/shorts`);
+    if (onGenerateShorts) {
+      onGenerateShorts();
+    } else {
+      router.push(`/library/${video.id}/shorts`);
+    }
   };
 
   return (

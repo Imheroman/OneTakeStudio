@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   VideoPlayer,
   VideoSidebar,
@@ -25,6 +26,7 @@ interface VideoDetailViewerProps {
 }
 
 export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
+  const router = useRouter();
   const [video, setVideo] = useState<VideoDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +69,18 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
       console.error("클립 생성 실패:", err);
     }
   }, [video, videoId, trimStart, trimEnd]);
+
+  const handleGenerateShorts = useCallback(() => {
+    if (!video) return;
+    const totalSec = parseDurationToSeconds(video.duration);
+    const params = new URLSearchParams();
+    if (trimStart > 0 || trimEnd < totalSec) {
+      params.set("start", String(trimStart));
+      params.set("end", String(trimEnd));
+    }
+    const query = params.toString();
+    router.push(`/library/${video.id}/shorts${query ? `?${query}` : ""}`);
+  }, [video, trimStart, trimEnd, router]);
 
   const handleClipClick = useCallback((clip: Clip) => {
     setPlaybackClip(clip);
@@ -129,6 +143,7 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
             video={video}
             onDownload={() => setDownloadModalOpen(true)}
             onSaveTrim={handleSaveTrim}
+            onGenerateShorts={handleGenerateShorts}
           />
         </section>
       </div>

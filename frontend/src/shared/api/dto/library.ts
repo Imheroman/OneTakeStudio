@@ -121,6 +121,9 @@ export const StorageResponseSchema = z.object({
   usedPercentage: z.number().optional(),
   usedFormatted: z.string().optional(),
   limitFormatted: z.string().optional(),
+  videoUsage: z.number().optional(),
+  assetUsage: z.number().optional(),
+  shortsUsage: z.number().optional(),
 });
 
 export const ApiResponseStorageSchema = z.object({
@@ -136,4 +139,5 @@ export type StorageDataFromApiDto = {
   available?: number;
   videoUsage?: number;
   assetUsage?: number;
+  shortsUsage?: number;
 };

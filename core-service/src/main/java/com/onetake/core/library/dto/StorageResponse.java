@@ -17,6 +17,7 @@ public class StorageResponse {
     private Double available;   // 남은 용량 (GB)
     private Double videoUsage;  // 비디오 사용량 (GB)
     private Double assetUsage;  // 에셋 사용량 (GB)
+    private Double shortsUsage; // 숏츠 사용량 (GB)
 
     // 상세 정보 (bytes 단위)
     private Long usedBytes;
@@ -28,10 +29,14 @@ public class StorageResponse {
     private static final double BYTES_TO_GB = 1024.0 * 1024.0 * 1024.0;
 
     public static StorageResponse of(Long usedBytes, Long limitBytes) {
-        return of(usedBytes, limitBytes, usedBytes, 0L);
+        return of(usedBytes, limitBytes, usedBytes, 0L, 0L);
     }
 
     public static StorageResponse of(Long usedBytes, Long limitBytes, Long videoBytes, Long assetBytes) {
+        return of(usedBytes, limitBytes, videoBytes, assetBytes, 0L);
+    }
+
+    public static StorageResponse of(Long usedBytes, Long limitBytes, Long videoBytes, Long assetBytes, Long shortsBytes) {
         double percentage = limitBytes > 0 ? (double) usedBytes / limitBytes * 100 : 0;
 
         double totalGb = Math.round(limitBytes / BYTES_TO_GB * 100.0) / 100.0;
@@ -39,6 +44,7 @@ public class StorageResponse {
         double availableGb = Math.round((limitBytes - usedBytes) / BYTES_TO_GB * 100.0) / 100.0;
         double videoGb = Math.round(videoBytes / BYTES_TO_GB * 100.0) / 100.0;
         double assetGb = Math.round(assetBytes / BYTES_TO_GB * 100.0) / 100.0;
+        double shortsGb = Math.round(shortsBytes / BYTES_TO_GB * 100.0) / 100.0;
 
         return StorageResponse.builder()
                 // GB 단위 (프론트엔드용)
@@ -47,6 +53,7 @@ public class StorageResponse {
                 .available(availableGb > 0 ? availableGb : 0.0)
                 .videoUsage(videoGb)
                 .assetUsage(assetGb)
+                .shortsUsage(shortsGb)
                 // Bytes 단위 (상세)
                 .usedBytes(usedBytes)
                 .limitBytes(limitBytes)

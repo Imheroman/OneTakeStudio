@@ -1,12 +1,18 @@
 "use client";
 
 import { ShortsConfigurator } from "@/widgets/shorts/shorts-configurator";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 export default function ShortsCreatePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const videoId = params.id as string;
+
+  const startParam = searchParams.get("start");
+  const endParam = searchParams.get("end");
+  const trimStartSec = startParam != null ? Number(startParam) : undefined;
+  const trimEndSec = endParam != null ? Number(endParam) : undefined;
 
   return (
     <div className="p-6 h-[calc(100vh-64px)] bg-[#F8FAFC]">
@@ -17,7 +23,11 @@ export default function ShortsCreatePage() {
         <span className="mr-2">←</span> Back
       </button>
 
-      <ShortsConfigurator videoId={videoId} />
+      <ShortsConfigurator
+        videoId={videoId}
+        trimStartSec={trimStartSec}
+        trimEndSec={trimEndSec}
+      />
     </div>
   );
 }

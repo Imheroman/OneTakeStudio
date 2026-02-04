@@ -10,6 +10,8 @@ import { z } from "zod";
 
 interface ShortsConfiguratorProps {
   videoId: string;  // recordingId
+  trimStartSec?: number;
+  trimEndSec?: number;
 }
 
 type BgColor = "black" | "white";
@@ -24,7 +26,22 @@ const GenerateResponseSchema = z.object({
   }),
 });
 
-export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
+function formatTime(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function formatDuration(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  const parts: string[] = [];
+  if (m > 0) parts.push(`${m}분`);
+  if (s > 0 || parts.length === 0) parts.push(`${s}초`);
+  return parts.join(" ");
+}
+
+export function ShortsConfigurator({ videoId, trimStartSec, trimEndSec }: ShortsConfiguratorProps) {
   const router = useRouter();
   const { openResultModal, reset: resetShorts } = useShortsStore();
 
@@ -38,15 +55,20 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
 
     setIsSubmitting(true);
     try {
+      const body: Record<string, unknown> = {
+        recordingId: videoId,
+        needSubtitles: useSubtitles,
+        subtitleLang: language,
+        bgColor,
+      };
+      if (trimStartSec != null && trimEndSec != null) {
+        body.trimStartSec = trimStartSec;
+        body.trimEndSec = trimEndSec;
+      }
       const response = await apiClient.post(
         "/api/ai/shorts/generate",
         GenerateResponseSchema,
-        {
-          recordingId: videoId,
-          needSubtitles: useSubtitles,
-          subtitleLang: language,
-          bgColor,
-        },
+        body,
       );
 
       resetShorts();
@@ -107,6 +129,16 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
 
       {/* [오른쪽] 설정 패널 */}
       <section className="w-full lg:w-[400px] flex flex-col gap-6">
+        {/* 0. 트림 구간 정보 */}
+        {trimStartSec != null && trimEndSec != null && (
+          <div className="bg-purple-50 p-4 rounded-2xl border border-purple-200">
+            <p className="text-sm font-medium text-purple-800">
+              선택된 구간: {formatTime(trimStartSec)} ~ {formatTime(trimEndSec)}{" "}
+              ({formatDuration(trimEndSec - trimStartSec)})
+            </p>
+          </div>
+        )}
+
         {/* 1. 배경색 설정 */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <h3 className="font-semibold text-gray-900 mb-4">배경색</h3>

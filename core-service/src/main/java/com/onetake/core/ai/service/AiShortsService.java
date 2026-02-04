@@ -23,6 +23,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.File;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -98,18 +100,41 @@ public class AiShortsService {
         Recording recording = recordingRepository.findByRecordingId(request.getRecordingId())
                 .orElseThrow(() -> new IllegalArgumentException("녹화 파일을 찾을 수 없습니다."));
 
-        // Media Service에서 마커 조회
-        List<MarkerInfo> markers = fetchMarkers(request.getRecordingId());
-        log.info("마커 조회 결과: recordingId={}, 마커 수={}", request.getRecordingId(), markers.size());
+        boolean useTrim = request.getTrimStartSec() != null && request.getTrimEndSec() != null;
+        List<VideoSegment> segments;
+        boolean useMarkerMode = false;
+        String trimmedFilePath = null;
 
-        // 마커 기반 영상 구간 계산 (최대 3개)
-        List<VideoSegment> segments = calculateSegments(markers, recording);
+        if (useTrim) {
+            // 트림 모드: 선택 구간을 먼저 잘라서 임시 파일 생성
+            double trimStart = request.getTrimStartSec();
+            double trimEnd = request.getTrimEndSec();
+            double trimmedDuration = trimEnd - trimStart;
+            log.info("트림 모드: {}s ~ {}s ({}분)", trimStart, trimEnd, Math.round(trimmedDuration / 60));
 
-        boolean useMarkerMode = !segments.isEmpty();
-        if (!useMarkerMode) {
-            // 마커가 없으면 영상을 균등 분할하여 최대 3개 구간으로 나눔
-            log.info("마커 없음 - 균등 분할 모드");
-            segments = calculateEvenSegments(recording);
+            String trimDir = storageBasePath + "/temp/trim/" + UUID.randomUUID();
+            new java.io.File(trimDir).mkdirs();
+            trimmedFilePath = trimDir + "/trimmed.mp4";
+
+            String cutResult = cutVideoSegment(resolveFilePath(recording), trimStart, trimEnd, trimmedFilePath);
+            if (cutResult == null) {
+                throw new IllegalStateException("트림 영상 생성에 실패했습니다.");
+            }
+
+            // 트림된 영상을 기준으로 segmentation (마커는 트림 시 비활성화)
+            segments = calculateEvenSegmentsFromTrimmed(trimmedFilePath, trimmedDuration);
+        } else {
+            // 기존 로직: 마커 기반 또는 균등 분할
+            List<MarkerInfo> markers = fetchMarkers(request.getRecordingId());
+            log.info("마커 조회 결과: recordingId={}, 마커 수={}", request.getRecordingId(), markers.size());
+
+            segments = calculateSegments(markers, recording);
+            useMarkerMode = !segments.isEmpty();
+
+            if (!useMarkerMode) {
+                log.info("마커 없음 - 균등 분할 모드");
+                segments = calculateEvenSegments(recording);
+            }
         }
 
         // Job 생성
@@ -136,9 +161,15 @@ public class AiShortsService {
         // AI 서비스에 비동기 요청
         sendToAiService(savedJob, recording, segments, useMarkerMode);
 
-        String message = useMarkerMode
-                ? String.format("마커 기반 %d개 구간 처리 시작", segments.size())
-                : "AI 자동 하이라이트 선정 모드로 처리 시작";
+        String message;
+        if (useTrim) {
+            message = String.format("트림 구간(%.0fs~%.0fs) 기반 %d개 구간 처리 시작",
+                    request.getTrimStartSec(), request.getTrimEndSec(), segments.size());
+        } else {
+            message = useMarkerMode
+                    ? String.format("마커 기반 %d개 구간 처리 시작", segments.size())
+                    : "AI 자동 하이라이트 선정 모드로 처리 시작";
+        }
 
         return ShortsGenerateResponse.builder()
                 .jobId(savedJob.getJobId())
@@ -300,6 +331,41 @@ public class AiShortsService {
             log.info("균등 분할: short_{}, 구간 {}/3, range={}s~{}s ({}분)",
                     i + 1, i + 1,
                     Math.round(startSec), Math.round(endSec), Math.round((endSec - startSec) / 60));
+        }
+
+        return segments;
+    }
+
+    /**
+     * 트림된 영상 파일 기준 균등 분할
+     * 기존 calculateEvenSegments와 같은 로직이지만 트림된 파일 경로와 duration을 사용
+     */
+    private List<VideoSegment> calculateEvenSegmentsFromTrimmed(String trimmedFilePath, double duration) {
+        List<VideoSegment> segments = new ArrayList<>();
+
+        if (duration < MIN_SPLIT_DURATION) {
+            segments.add(VideoSegment.builder()
+                    .videoId("short_1")
+                    .videoPath(trimmedFilePath)
+                    .build());
+            log.info("트림 영상({}분) - 전체를 AI에 전송", Math.round(duration / 60));
+            return segments;
+        }
+
+        double segmentDuration = duration / MAX_SEGMENTS;
+        for (int i = 0; i < MAX_SEGMENTS; i++) {
+            double startSec = segmentDuration * i;
+            double endSec = (i == MAX_SEGMENTS - 1) ? duration : segmentDuration * (i + 1);
+
+            segments.add(VideoSegment.builder()
+                    .videoId("short_" + (i + 1))
+                    .videoPath(trimmedFilePath)
+                    .startSec(startSec)
+                    .endSec(endSec)
+                    .build());
+
+            log.info("트림 균등 분할: short_{}, range={}s~{}s ({}분)",
+                    i + 1, Math.round(startSec), Math.round(endSec), Math.round((endSec - startSec) / 60));
         }
 
         return segments;
@@ -662,6 +728,14 @@ public class AiShortsService {
                         titlesJson,
                         payload.getProcessingTimeSec()
                 );
+
+                // 파일 크기 저장
+                if (shortInfo.getFilePath() != null) {
+                    File outputFile = new File(shortInfo.getFilePath());
+                    if (outputFile.exists()) {
+                        result.setFileSize(outputFile.length());
+                    }
+                }
             } else {
                 // data가 없으면 기본 완료 처리
                 result.markCompleted(null, payload.getProcessingTimeSec());
@@ -694,5 +768,41 @@ public class AiShortsService {
 
         shortsResultRepository.save(result);
         shortsJobRepository.save(job);
+    }
+
+    /**
+     * 미저장 숏츠 자동 정리
+     * 24시간 이전 saved=false & status=COMPLETED 인 숏츠:
+     * - 파일 삭제 (outputPath 기반)
+     * - DB 상태를 EXPIRED로 변경
+     */
+    @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 3 * * *")
+    @Transactional
+    public void cleanupExpiredShorts() {
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
+        List<ShortsResult> expired = shortsResultRepository.findExpiredUnsaved(cutoff);
+
+        if (expired.isEmpty()) {
+            log.info("정리할 미저장 숏츠 없음");
+            return;
+        }
+
+        log.info("미저장 숏츠 정리 시작: {}건", expired.size());
+
+        for (ShortsResult result : expired) {
+            if (result.getOutputPath() != null) {
+                File file = new File(result.getOutputPath());
+                if (file.exists()) {
+                    boolean deleted = file.delete();
+                    log.info("숏츠 파일 삭제 {}: {}", deleted ? "성공" : "실패", result.getOutputPath());
+                }
+            }
+            result.setStatus(ShortsResultStatus.EXPIRED);
+            result.setOutputPath(null);
+            result.setFileSize(null);
+        }
+
+        shortsResultRepository.saveAll(expired);
+        log.info("미저장 숏츠 정리 완료: {}건 처리", expired.size());
     }
 }

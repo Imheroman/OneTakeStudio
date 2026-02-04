@@ -145,7 +145,8 @@ export async function getStorage(): Promise<StorageDataFromApi> {
   return {
     used: d.usedBytes / gb,
     total: d.limitBytes / gb,
-    videoUsage: 0,
-    assetUsage: 0,
+    videoUsage: d.videoUsage ?? 0,
+    assetUsage: d.assetUsage ?? 0,
+    shortsUsage: d.shortsUsage ?? 0,
   };
 }
