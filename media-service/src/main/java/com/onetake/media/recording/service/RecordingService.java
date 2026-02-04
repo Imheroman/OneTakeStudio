@@ -40,22 +40,22 @@ public class RecordingService {
     private final ChunkedUploadService chunkedUploadService;
 
     @Transactional
-    public RecordingResponse startRecording(Long userId, RecordingStartRequest request) {
+    public RecordingResponse startRecording(Long userId, Long studioId, RecordingStartRequest request) {
         // 이미 녹화 중인지 확인
-        if (recordingSessionRepository.existsByStudioIdAndStatus(request.getStudioId(), RecordingStatus.RECORDING)) {
+        if (recordingSessionRepository.existsByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)) {
             throw new BusinessException(ErrorCode.RECORDING_ALREADY_IN_PROGRESS);
         }
 
         // 활성 스트림 세션 확인
         StreamSession streamSession = streamSessionRepository
-                .findByStudioIdAndStatus(request.getStudioId(), SessionStatus.ACTIVE)
+                .findByStudioIdAndStatus(studioId, SessionStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
 
         // 녹화 세션 생성
-        String fileName = generateFileName(request.getStudioId(), request.getOutputFormat());
+        String fileName = generateFileName(studioId, request.getOutputFormat());
 
         RecordingSession recordingSession = RecordingSession.builder()
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .userId(userId)
                 .streamSessionId(streamSession.getId())
                 .status(RecordingStatus.PENDING)
@@ -69,9 +69,9 @@ public class RecordingService {
         recordingSessionRepository.save(recordingSession);
 
         // 분당 댓글 수 집계 시작 (AI 하이라이트 추출용)
-        commentCounterService.startCounting(request.getStudioId());
+        commentCounterService.startCounting(studioId);
 
-        log.info("Recording started: studioId={}, recordingId={}", request.getStudioId(), recordingSession.getRecordingId());
+        log.info("Recording started: studioId={}, recordingId={}", studioId, recordingSession.getRecordingId());
 
         return RecordingResponse.from(recordingSession);
     }

@@ -6,6 +6,7 @@ import com.onetake.media.chat.dto.ChatStatsResponse;
 import com.onetake.media.chat.entity.ChatPlatform;
 import com.onetake.media.chat.service.ChatService;
 import com.onetake.media.global.common.ApiResponse;
+import com.onetake.media.global.resolver.StudioIdResolver;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,50 +20,57 @@ import java.util.List;
 public class ChatController {
 
     private final ChatService chatService;
+    private final StudioIdResolver studioIdResolver;
 
     @PostMapping
     public ResponseEntity<ApiResponse<ChatMessageResponse>> sendMessage(
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ChatMessageRequest request) {
-        ChatMessageResponse response = chatService.sendMessage(userId, request);
+        Long studioId = studioIdResolver.resolveStudioId(request.getStudioId());
+        ChatMessageResponse response = chatService.sendMessage(userId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/external")
     public ResponseEntity<ApiResponse<Void>> receiveExternalMessage(
             @Valid @RequestBody ChatMessageRequest request) {
-        chatService.receiveExternalMessage(request);
+        Long studioId = studioIdResolver.resolveStudioId(request.getStudioId());
+        chatService.receiveExternalMessage(studioId, request);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
     @GetMapping("/{studioId}")
     public ResponseEntity<ApiResponse<List<ChatMessageResponse>>> getMessages(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestParam(defaultValue = "100") int limit) {
-        List<ChatMessageResponse> response = chatService.getMessages(studioId, limit);
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        List<ChatMessageResponse> response = chatService.getMessages(resolvedStudioId, limit);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{studioId}/platform/{platform}")
     public ResponseEntity<ApiResponse<List<ChatMessageResponse>>> getMessagesByPlatform(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable ChatPlatform platform) {
-        List<ChatMessageResponse> response = chatService.getMessagesByPlatform(studioId, platform);
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        List<ChatMessageResponse> response = chatService.getMessagesByPlatform(resolvedStudioId, platform);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{studioId}/recent")
     public ResponseEntity<ApiResponse<List<ChatMessageResponse>>> getRecentMessages(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestParam(defaultValue = "5") int minutes) {
-        List<ChatMessageResponse> response = chatService.getRecentMessages(studioId, minutes);
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        List<ChatMessageResponse> response = chatService.getRecentMessages(resolvedStudioId, minutes);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/{studioId}/highlighted")
     public ResponseEntity<ApiResponse<List<ChatMessageResponse>>> getHighlightedMessages(
-            @PathVariable Long studioId) {
-        List<ChatMessageResponse> response = chatService.getHighlightedMessages(studioId);
+            @PathVariable String studioId) {
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        List<ChatMessageResponse> response = chatService.getHighlightedMessages(resolvedStudioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -82,8 +90,9 @@ public class ChatController {
 
     @GetMapping("/{studioId}/stats")
     public ResponseEntity<ApiResponse<ChatStatsResponse>> getChatStats(
-            @PathVariable Long studioId) {
-        ChatStatsResponse response = chatService.getChatStats(studioId);
+            @PathVariable String studioId) {
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        ChatStatsResponse response = chatService.getChatStats(resolvedStudioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

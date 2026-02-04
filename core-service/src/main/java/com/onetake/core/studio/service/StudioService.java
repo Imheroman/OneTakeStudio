@@ -1,6 +1,7 @@
 package com.onetake.core.studio.service;
 
 import com.onetake.core.studio.dto.*;
+import com.onetake.core.studio.dto.StudioIdResponse;
 import com.onetake.core.studio.entity.RecordingStorage;
 import com.onetake.core.studio.entity.Studio;
 import com.onetake.core.studio.entity.StudioMember;
@@ -204,5 +205,20 @@ public class StudioService {
 
         log.info("스튜디오 노트 업데이트: studioId={}", studioId);
         return NoteResponse.of(content);
+    }
+
+    // ==================== Internal API ====================
+
+    /**
+     * UUID로 스튜디오 내부 ID 조회 (서비스 간 통신용)
+     */
+    public StudioIdResponse getStudioIdByUuid(String uuid) {
+        log.debug("스튜디오 ID 조회 by UUID: {}", uuid);
+        Studio studio = studioRepository.findByStudioId(uuid)
+                .orElseThrow(() -> new StudioNotFoundException("UUID로 스튜디오를 찾을 수 없습니다: " + uuid));
+        return StudioIdResponse.builder()
+                .id(studio.getId())
+                .studioId(studio.getStudioId())
+                .build();
     }
 }

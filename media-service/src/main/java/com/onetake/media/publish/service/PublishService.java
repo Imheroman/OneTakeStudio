@@ -50,10 +50,10 @@ public class PublishService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public PublishResponse startPublish(Long userId, PublishStartRequest request) {
+    public PublishResponse startPublish(Long userId, Long studioId, PublishStartRequest request) {
         // 이미 송출 중인 세션이 있으면 정리 후 새로 시작 (이중 클릭·끊긴 세션 복구)
         Optional<PublishSession> existingOpt = publishSessionRepository.findByStudioIdAndStatus(
-                request.getStudioId(), PublishStatus.PUBLISHING);
+                studioId, PublishStatus.PUBLISHING);
         if (existingOpt.isPresent()) {
             PublishSession existing = existingOpt.get();
             try {
@@ -69,13 +69,13 @@ public class PublishService {
             existing.stopPublishing();
             publishSessionRepository.save(existing);
             log.info("기존 송출 세션 정리 후 재시작: studioId={}, publishSessionId={}",
-                    request.getStudioId(), existing.getPublishSessionId());
+                    studioId, existing.getPublishSessionId());
         }
 
         // 스트림 세션 확인 (CONNECTING 또는 ACTIVE — 웹훅 지연 시 CONNECTING도 허용)
         StreamSession streamSession = streamSessionRepository
                 .findFirstByStudioIdAndStatusInOrderByCreatedAtDesc(
-                        request.getStudioId(),
+                        studioId,
                         List.of(SessionStatus.CONNECTING, SessionStatus.ACTIVE))
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
 
@@ -103,7 +103,7 @@ public class PublishService {
                 .toList());
 
         PublishSession publishSession = PublishSession.builder()
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .userId(userId)
                 .streamSessionId(streamSession.getId())
                 .status(PublishStatus.PENDING)
@@ -141,10 +141,10 @@ public class PublishService {
         savePublishDestinations(publishSession, rtmpDestinations);
 
         log.info("Publishing started: studioId={}, publishSessionId={}, destinations={}",
-                request.getStudioId(), publishSession.getPublishSessionId(), request.getDestinationIds());
+                studioId, publishSession.getPublishSessionId(), request.getDestinationIds());
 
         // 송출 시작 이벤트 발행
-        eventPublisher.publishStarted(request.getStudioId(), publishSession.getPublishSessionId());
+        eventPublisher.publishStarted(studioId, publishSession.getPublishSessionId());
 
         return PublishResponse.from(publishSession);
     }

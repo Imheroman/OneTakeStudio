@@ -77,7 +77,7 @@ public class AiShortsService {
             log.info("마커 없음 - AI 자동 하이라이트 선정 모드");
             segments = List.of(VideoSegment.builder()
                     .videoId("short_1")
-                    .videoPath(recording.getFilePath())
+                    .videoPath(recording.getS3Url())
                     .startSec(0.0)
                     .endSec(null)  // null이면 전체 영상
                     .build());
@@ -176,10 +176,8 @@ public class AiShortsService {
         List<VideoSegment> segments = new ArrayList<>();
 
         // 영상 길이 (초) - 없으면 기본값
-        Double recordingDuration = recording.getDurationSec();
-        if (recordingDuration == null) {
-            recordingDuration = 3600.0;  // 기본 1시간
-        }
+        Integer durationSec = recording.getDurationSeconds();
+        Double recordingDuration = durationSec != null ? durationSec.doubleValue() : 3600.0;
 
         int count = 0;
         Set<Double> usedRanges = new HashSet<>();  // 중복 방지
@@ -202,7 +200,7 @@ public class AiShortsService {
             count++;
             segments.add(VideoSegment.builder()
                     .videoId("short_" + count)
-                    .videoPath(recording.getFilePath())
+                    .videoPath(recording.getS3Url())
                     .startSec(startSec)
                     .endSec(endSec)
                     .markerId(marker.getMarkerId())

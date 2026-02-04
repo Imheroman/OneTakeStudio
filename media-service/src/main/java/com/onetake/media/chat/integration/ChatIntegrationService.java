@@ -184,7 +184,7 @@ public class ChatIntegrationService {
                 try {
                     List<ChatMessageRequest> messages = client.fetchNewMessages();
                     for (ChatMessageRequest message : messages) {
-                        chatService.receiveExternalMessage(message);
+                        chatService.receiveExternalMessage(studioId, message);
                     }
 
                     if (!messages.isEmpty()) {

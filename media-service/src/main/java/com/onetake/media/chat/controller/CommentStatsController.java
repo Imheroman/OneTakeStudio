@@ -6,6 +6,7 @@ import com.onetake.media.chat.repository.CommentStatsRepository;
 import com.onetake.media.chat.service.CommentCounterService;
 import com.onetake.media.global.exception.BusinessException;
 import com.onetake.media.global.exception.ErrorCode;
+import com.onetake.media.global.resolver.StudioIdResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ public class CommentStatsController {
 
     private final CommentStatsRepository commentStatsRepository;
     private final CommentCounterService commentCounterService;
+    private final StudioIdResolver studioIdResolver;
 
     /**
      * 녹화별 분당 댓글 수 조회
@@ -52,9 +54,10 @@ public class CommentStatsController {
      */
     @GetMapping("/studios/{studioId}/comment-counts")
     public ResponseEntity<CommentCountsResponse> getCommentCountsByStudio(
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
-        CommentStats stats = commentStatsRepository.findFirstByStudioIdOrderByCreatedAtDesc(studioId)
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        CommentStats stats = commentStatsRepository.findFirstByStudioIdOrderByCreatedAtDesc(resolvedStudioId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
         return ResponseEntity.ok(CommentCountsResponse.from(stats));
@@ -67,14 +70,15 @@ public class CommentStatsController {
      */
     @GetMapping("/studios/{studioId}/comment-counts/live")
     public ResponseEntity<Map<String, Object>> getLiveCommentCounts(
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
-        boolean isActive = commentCounterService.isCountingActive(studioId);
-        List<Integer> counts = commentCounterService.getCurrentCounts(studioId);
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        boolean isActive = commentCounterService.isCountingActive(resolvedStudioId);
+        List<Integer> counts = commentCounterService.getCurrentCounts(resolvedStudioId);
         int totalCount = counts.stream().mapToInt(Integer::intValue).sum();
 
         return ResponseEntity.ok(Map.of(
-                "studioId", studioId,
+                "studioId", resolvedStudioId,
                 "isActive", isActive,
                 "currentMinute", counts.size(),
                 "counts", counts,

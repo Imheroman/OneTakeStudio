@@ -1,6 +1,7 @@
 package com.onetake.media.screenshare.controller;
 
 import com.onetake.media.global.common.ApiResponse;
+import com.onetake.media.global.resolver.StudioIdResolver;
 import com.onetake.media.screenshare.dto.ScreenShareResponse;
 import com.onetake.media.screenshare.dto.ScreenShareStartRequest;
 import com.onetake.media.screenshare.service.ScreenShareService;
@@ -15,12 +16,14 @@ import org.springframework.web.bind.annotation.*;
 public class ScreenShareController {
 
     private final ScreenShareService screenShareService;
+    private final StudioIdResolver studioIdResolver;
 
     @PostMapping("/start")
     public ResponseEntity<ApiResponse<ScreenShareResponse>> startScreenShare(
             @RequestHeader("X-User-Id") Long userId,
             @Valid @RequestBody ScreenShareStartRequest request) {
-        ScreenShareResponse response = screenShareService.startScreenShare(userId, request);
+        Long studioId = studioIdResolver.resolveStudioId(request.getStudioId());
+        ScreenShareResponse response = screenShareService.startScreenShare(userId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -33,8 +36,9 @@ public class ScreenShareController {
 
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<ScreenShareResponse>> getActiveScreenShare(
-            @RequestParam Long studioId) {
-        ScreenShareResponse response = screenShareService.getActiveScreenShare(studioId);
+            @RequestParam String studioId) {
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        ScreenShareResponse response = screenShareService.getActiveScreenShare(resolvedStudioId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

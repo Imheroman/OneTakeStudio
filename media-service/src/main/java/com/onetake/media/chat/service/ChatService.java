@@ -34,7 +34,7 @@ public class ChatService {
     private static final String CHAT_TOPIC = "/topic/chat/";
 
     @Transactional
-    public ChatMessageResponse sendMessage(Long userId, ChatMessageRequest request) {
+    public ChatMessageResponse sendMessage(Long userId, Long studioId, ChatMessageRequest request) {
         // 외부 메시지 중복 체크
         if (request.getExternalMessageId() != null &&
                 chatMessageRepository.existsByExternalMessageId(request.getExternalMessageId())) {
@@ -43,7 +43,7 @@ public class ChatService {
         }
 
         ChatMessage message = ChatMessage.builder()
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .platform(request.getPlatform())
                 .messageType(request.getMessageType())
                 .userId(userId)
@@ -59,15 +59,15 @@ public class ChatService {
         ChatMessageResponse response = ChatMessageResponse.from(saved);
 
         // WebSocket으로 브로드캐스트
-        broadcastMessage(request.getStudioId(), response);
+        broadcastMessage(studioId, response);
 
         // 분당 댓글 수 카운터 증가 (AI 하이라이트 추출용)
-        if (commentCounterService.isCountingActive(request.getStudioId())) {
-            commentCounterService.incrementCount(request.getStudioId());
+        if (commentCounterService.isCountingActive(studioId)) {
+            commentCounterService.incrementCount(studioId);
         }
 
         log.info("Chat message sent: studioId={}, platform={}, sender={}",
-                request.getStudioId(), request.getPlatform(), request.getSenderName());
+                studioId, request.getPlatform(), request.getSenderName());
 
         return response;
     }
@@ -76,12 +76,12 @@ public class ChatService {
      * 외부 플랫폼(YouTube, Chzzk 등)에서 수신한 메시지 처리
      * DB 저장 없이 WebSocket 브로드캐스트 + 분당 댓글 수 카운팅
      */
-    public void receiveExternalMessage(ChatMessageRequest request) {
+    public void receiveExternalMessage(Long studioId, ChatMessageRequest request) {
         ChatMessageResponse response = ChatMessageResponse.builder()
                 .messageId(request.getExternalMessageId() != null
                         ? request.getExternalMessageId()
                         : java.util.UUID.randomUUID().toString())
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .platform(request.getPlatform())
                 .messageType(request.getMessageType())
                 .senderName(request.getSenderName())
@@ -94,15 +94,15 @@ public class ChatService {
                 .build();
 
         // WebSocket 브로드캐스트
-        broadcastMessage(request.getStudioId(), response);
+        broadcastMessage(studioId, response);
 
         // 분당 댓글 수 카운팅 (AI 하이라이트 추출 기준)
-        if (commentCounterService.isCountingActive(request.getStudioId())) {
-            commentCounterService.incrementCount(request.getStudioId());
+        if (commentCounterService.isCountingActive(studioId)) {
+            commentCounterService.incrementCount(studioId);
         }
 
         log.debug("External chat broadcasted: studioId={}, platform={}, sender={}",
-                request.getStudioId(), request.getPlatform(), request.getSenderName());
+                studioId, request.getPlatform(), request.getSenderName());
     }
 
     public List<ChatMessageResponse> getMessages(Long studioId, int limit) {
@@ -194,13 +194,13 @@ public class ChatService {
     @Transactional
     public void sendSystemMessage(Long studioId, String content) {
         ChatMessageRequest request = ChatMessageRequest.builder()
-                .studioId(studioId)
+                .studioId(String.valueOf(studioId))
                 .platform(ChatPlatform.INTERNAL)
                 .messageType(com.onetake.media.chat.entity.MessageType.SYSTEM)
                 .senderName("System")
                 .content(content)
                 .build();
 
-        sendMessage(null, request);
+        sendMessage(null, studioId, request);
     }
 }

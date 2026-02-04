@@ -5,6 +5,7 @@ import com.onetake.media.chat.integration.ChatIntegrationService;
 import com.onetake.media.chat.integration.PlatformCredentials;
 import com.onetake.media.chat.integration.YouTubeBroadcastService;
 import com.onetake.media.global.common.ApiResponse;
+import com.onetake.media.global.resolver.StudioIdResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,7 @@ public class ChatIntegrationAutoController {
 
     private final ChatIntegrationService chatIntegrationService;
     private final YouTubeBroadcastService youTubeBroadcastService;
+    private final StudioIdResolver studioIdResolver;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${core-service.url:http://localhost:8080}")
@@ -40,9 +42,11 @@ public class ChatIntegrationAutoController {
      */
     @PostMapping("/{studioId}/destination/{destinationId}")
     public ResponseEntity<ApiResponse<ChatIntegrationResult>> startChatByDestination(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @PathVariable Long destinationId,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
 
         try {
             // Core Service에서 destination 정보 조회
@@ -59,11 +63,11 @@ public class ChatIntegrationAutoController {
                         .body(ApiResponse.error("지원하지 않는 플랫폼입니다: " + destination.platform));
             }
 
-            boolean success = startChatIntegration(studioId, platform, destination);
+            boolean success = startChatIntegration(resolvedStudioId, platform, destination);
 
             if (success) {
                 log.info("Chat integration started: studioId={}, platform={}, destinationId={}",
-                        studioId, platform, destinationId);
+                        resolvedStudioId, platform, destinationId);
                 return ResponseEntity.ok(ApiResponse.success(
                         new ChatIntegrationResult(platform.name(), true, "채팅 연동 성공")
                 ));
@@ -74,7 +78,7 @@ public class ChatIntegrationAutoController {
             }
 
         } catch (Exception e) {
-            log.error("Chat integration failed: studioId={}, destinationId={}", studioId, destinationId, e);
+            log.error("Chat integration failed: studioId={}, destinationId={}", resolvedStudioId, destinationId, e);
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("채팅 연동 시작 실패: " + e.getMessage()));
         }
@@ -85,9 +89,11 @@ public class ChatIntegrationAutoController {
      */
     @PostMapping("/{studioId}/destinations")
     public ResponseEntity<ApiResponse<List<ChatIntegrationResult>>> startChatByDestinations(
-            @PathVariable Long studioId,
+            @PathVariable String studioId,
             @RequestBody DestinationsRequest request,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
 
         List<ChatIntegrationResult> results = request.destinationIds().stream()
                 .map(destId -> {
@@ -102,7 +108,7 @@ public class ChatIntegrationAutoController {
                             return new ChatIntegrationResult(dest.platform, false, "지원하지 않는 플랫폼");
                         }
 
-                        boolean success = startChatIntegration(studioId, platform, dest);
+                        boolean success = startChatIntegration(resolvedStudioId, platform, dest);
                         return new ChatIntegrationResult(
                                 platform.name(),
                                 success,
@@ -115,7 +121,7 @@ public class ChatIntegrationAutoController {
                 })
                 .toList();
 
-        log.info("Chat integrations started for studioId={}: {}", studioId, results);
+        log.info("Chat integrations started for studioId={}: {}", resolvedStudioId, results);
         return ResponseEntity.ok(ApiResponse.success(results));
     }
 

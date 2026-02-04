@@ -1,5 +1,6 @@
 package com.onetake.media.shorts.controller;
 
+import com.onetake.media.global.resolver.StudioIdResolver;
 import com.onetake.media.shorts.dto.ShortsCreateRequest;
 import com.onetake.media.shorts.dto.ShortsResponse;
 import com.onetake.media.shorts.service.ShortsService;
@@ -20,6 +21,7 @@ import java.util.List;
 public class ShortsController {
 
     private final ShortsService shortsService;
+    private final StudioIdResolver studioIdResolver;
 
     /**
      * 숏츠 생성 요청
@@ -68,9 +70,10 @@ public class ShortsController {
      */
     @GetMapping("/studios/{studioId}")
     public ResponseEntity<List<ShortsResponse>> getJobsByStudio(
-            @PathVariable Long studioId) {
+            @PathVariable String studioId) {
 
-        List<ShortsResponse> responses = shortsService.getJobsByStudio(studioId);
+        Long resolvedStudioId = studioIdResolver.resolveStudioId(studioId);
+        List<ShortsResponse> responses = shortsService.getJobsByStudio(resolvedStudioId);
         return ResponseEntity.ok(responses);
     }
 

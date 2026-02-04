@@ -47,11 +47,11 @@ public class StreamService {
     private String turnCredential;
 
     @Transactional
-    public StreamTokenResponse joinStream(Long userId, StreamTokenRequest request) {
-        String roomName = "studio-" + request.getStudioId();
+    public StreamTokenResponse joinStream(Long userId, Long studioId, StreamTokenRequest request) {
+        String roomName = "studio-" + studioId;
 
         // LiveKit 토큰 생성 (participantIdentity 필요)
-        StreamTokenResponse tokenResponse = liveKitService.generateToken(userId, request);
+        StreamTokenResponse tokenResponse = liveKitService.generateToken(userId, studioId, request);
 
         // room_name 유니크: 이미 해당 스튜디오 세션이 있으면 재사용 (중복 삽입 방지)
         Optional<StreamSession> existing = streamSessionRepository.findByRoomName(roomName);
@@ -59,8 +59,8 @@ public class StreamService {
             StreamSession session = existing.get();
             session.reuseForNewParticipant(userId, tokenResponse.getParticipantIdentity(), request.getMetadata());
             streamSessionRepository.save(session);
-            mediaSettingsService.initializeSessionState(userId, request.getStudioId(), session.getId());
-            log.info("Reused stream session for studio {} (roomName={})", request.getStudioId(), roomName);
+            mediaSettingsService.initializeSessionState(userId, studioId, session.getId());
+            log.info("Reused stream session for studio {} (roomName={})", studioId, roomName);
             return tokenResponse;
         }
 
@@ -70,14 +70,14 @@ public class StreamService {
             StreamSession session = existingAgain.get();
             session.reuseForNewParticipant(userId, tokenResponse.getParticipantIdentity(), request.getMetadata());
             streamSessionRepository.save(session);
-            mediaSettingsService.initializeSessionState(userId, request.getStudioId(), session.getId());
-            log.info("Reused stream session (race) for studio {} (roomName={})", request.getStudioId(), roomName);
+            mediaSettingsService.initializeSessionState(userId, studioId, session.getId());
+            log.info("Reused stream session (race) for studio {} (roomName={})", studioId, roomName);
             return tokenResponse;
         }
 
         // 새 세션 저장 (중복 키 시 재조회 후 재사용)
         StreamSession session = StreamSession.builder()
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .userId(userId)
                 .roomName(roomName)
                 .participantIdentity(tokenResponse.getParticipantIdentity())
@@ -87,15 +87,15 @@ public class StreamService {
 
         try {
             StreamSession savedSession = streamSessionRepository.save(session);
-            mediaSettingsService.initializeSessionState(userId, request.getStudioId(), savedSession.getId());
+            mediaSettingsService.initializeSessionState(userId, studioId, savedSession.getId());
             log.info("Stream session created: studioId={}, userId={}, roomName={}",
-                    request.getStudioId(), userId, roomName);
+                    studioId, userId, roomName);
             return tokenResponse;
         } catch (DataIntegrityViolationException e) {
             // 동시 요청 등으로 중복 키 발생 시 새 트랜잭션에서 기존 행 재사용 후 토큰 반환
             String participantIdentity = tokenResponse.getParticipantIdentity();
-            Long studioId = request.getStudioId();
             String metadata = request.getMetadata();
+            final Long finalStudioId = studioId;
             DefaultTransactionDefinition def = new DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
             TransactionStatus txStatus = transactionManager.getTransaction(def);
             try {
@@ -103,7 +103,7 @@ public class StreamService {
                         .ifPresent(s -> {
                             s.reuseForNewParticipant(userId, participantIdentity, metadata);
                             streamSessionRepository.save(s);
-                            mediaSettingsService.initializeSessionState(userId, studioId, s.getId());
+                            mediaSettingsService.initializeSessionState(userId, finalStudioId, s.getId());
                         });
                 transactionManager.commit(txStatus);
             } catch (Exception ex) {
@@ -111,7 +111,7 @@ public class StreamService {
                 log.warn("Reuse after duplicate key failed for roomName={}", roomName, ex);
             }
             log.info("Stream session reused after duplicate key for studio {} (roomName={})",
-                    request.getStudioId(), roomName);
+                    studioId, roomName);
             return tokenResponse;
         }
     }

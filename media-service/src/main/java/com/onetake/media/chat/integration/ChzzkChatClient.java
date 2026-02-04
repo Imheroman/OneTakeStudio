@@ -294,7 +294,7 @@ public class ChzzkChatClient implements ExternalChatClient {
                     : MessageType.CHAT;
 
             ChatMessageRequest chatMessage = ChatMessageRequest.builder()
-                    .studioId(credentials.getStudioId())
+                    .studioId(String.valueOf(credentials.getStudioId()))
                     .platform(ChatPlatform.CHZZK)
                     .messageType(messageType)
                     .senderName(nickname)

@@ -273,7 +273,7 @@ public class YouTubeChatClient implements ExternalChatClient {
             }
 
             return ChatMessageRequest.builder()
-                    .studioId(credentials.getStudioId())
+                    .studioId(String.valueOf(credentials.getStudioId()))
                     .platform(ChatPlatform.YOUTUBE)
                     .messageType(messageType)
                     .senderName(displayName)

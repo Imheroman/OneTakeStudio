@@ -15,6 +15,9 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN, "C004", "접근 권한이 없습니다"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "C005", "리소스를 찾을 수 없습니다"),
 
+    // Studio
+    STUDIO_NOT_FOUND(HttpStatus.NOT_FOUND, "ST001", "스튜디오를 찾을 수 없습니다"),
+
     // Stream
     STREAM_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "스트림 세션을 찾을 수 없습니다"),
     STREAM_ALREADY_ACTIVE(HttpStatus.CONFLICT, "S002", "이미 활성화된 스트림이 있습니다"),

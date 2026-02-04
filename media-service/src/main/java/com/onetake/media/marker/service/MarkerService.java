@@ -24,11 +24,11 @@ public class MarkerService {
      * 수동 마커 생성 (사용자가 버튼 클릭)
      */
     @Transactional
-    public MarkerResponse createManualMarker(Long userId, CreateMarkerRequest request) {
-        log.info("수동 마커 생성: studioId={}, timestamp={}", request.getStudioId(), request.getTimestampSec());
+    public MarkerResponse createManualMarker(Long userId, Long studioId, CreateMarkerRequest request) {
+        log.info("수동 마커 생성: studioId={}, timestamp={}", studioId, request.getTimestampSec());
 
         Marker marker = Marker.builder()
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .recordingId(request.getRecordingId())
                 .userId(userId)
                 .timestampSec(request.getTimestampSec())

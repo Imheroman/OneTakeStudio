@@ -88,13 +88,6 @@
             <version>${livekit.version}</version>
         </dependency>
 
-        <!-- AWS S3 -->
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>s3</artifactId>
-            <version>2.25.0</version>
-        </dependency>
-
         <!-- Java WebSocket Client -->
         <dependency>
             <groupId>org.java-websocket</groupId>

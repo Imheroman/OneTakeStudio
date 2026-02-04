@@ -29,7 +29,7 @@ public class ChatWebSocketController {
 
         // studioId 설정
         ChatMessageRequest messageRequest = ChatMessageRequest.builder()
-                .studioId(studioId)
+                .studioId(String.valueOf(studioId))
                 .platform(request.getPlatform())
                 .messageType(request.getMessageType())
                 .senderName(request.getSenderName())
@@ -37,7 +37,7 @@ public class ChatWebSocketController {
                 .content(request.getContent())
                 .build();
 
-        chatService.sendMessage(userId, messageRequest);
+        chatService.sendMessage(userId, studioId, messageRequest);
 
         log.debug("WebSocket message received: studioId={}, sender={}",
                 studioId, request.getSenderName());
