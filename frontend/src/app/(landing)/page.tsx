@@ -30,16 +30,14 @@ export default function LandingPage() {
     }
   }, [hasHydrated, isLoggedIn, user, router]);
 
-  // 로그아웃 후 /?auth=login으로 이동 시 로그인 모달 자동 열기
+  // 로그아웃 후 /?auth=login으로 이동 시 로그인 모달 자동 열기 (URL 정리는 AuthModal에서 처리)
   useEffect(() => {
     if (searchParams.get("auth") === "login") {
       openLoginModal();
-      // redirect 파라미터가 있으면 유지 (로그인 후 해당 경로로 이동용)
-      const redirect = searchParams.get("redirect");
-      const cleanUrl = redirect ? `/?redirect=${redirect}` : "/";
-      router.replace(cleanUrl, { scroll: false });
+    } else if (searchParams.get("auth") === "signup") {
+      openSignupModal();
     }
-  }, [searchParams, openLoginModal, router]);
+  }, [searchParams, openLoginModal, openSignupModal]);
 
   return (
     <div

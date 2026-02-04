@@ -1,13 +1,38 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
-import { LoginForm } from "@/features/auth/login/ui/LoginForm";
-import { SignupForm } from "@/features/auth/signup/ui/SignupForm";
 import { useAuthModal } from "./auth-modal-context";
 import { cn } from "@/shared/lib/utils";
+
+const LoginForm = dynamic(
+  () =>
+    import("@/features/auth/login/ui/LoginForm").then((m) => ({
+      default: m.LoginForm,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-8 text-center text-gray-500">로딩 중...</div>
+    ),
+  }
+);
+
+const SignupForm = dynamic(
+  () =>
+    import("@/features/auth/signup/ui/SignupForm").then((m) => ({
+      default: m.SignupForm,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="p-8 text-center text-gray-500">로딩 중...</div>
+    ),
+  }
+);
 
 export function AuthModal() {
   const { authModal, closeAuthModal, openLoginModal, openSignupModal } =
@@ -17,11 +42,75 @@ export function AuthModal() {
   const [isHovering, setIsHovering] = useState(false);
   const [mounted, setMounted] = useState(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pushedRef = useRef(false);
 
   // SSR 시 document 미존재 → 클라이언트 마운트 후에만 포탈 렌더
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const prevAuthRef = useRef<typeof authModal>(null);
+
+  // 모달 열릴 때 history push → 뒤로가기로 닫을 수 있게 (null → login/signup 시에만 push)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!authModal) {
+      prevAuthRef.current = null;
+      pushedRef.current = false;
+      return;
+    }
+
+    const isOpening = prevAuthRef.current === null;
+    prevAuthRef.current = authModal;
+
+    if (isOpening) {
+      const url = new URL(window.location.href);
+      const hasAuth = url.searchParams.has("auth");
+
+      if (hasAuth) {
+        url.searchParams.set("auth", authModal);
+        const withAuth = url.pathname + url.search;
+        url.searchParams.delete("auth");
+        const clean = url.pathname + url.search || url.pathname;
+        window.history.replaceState(null, "", clean);
+        window.history.pushState({ authModal: true }, "", withAuth);
+      } else {
+        url.searchParams.set("auth", authModal);
+        window.history.pushState(
+          { authModal: true },
+          "",
+          url.pathname + url.search
+        );
+      }
+      pushedRef.current = true;
+    } else {
+      // login ↔ signup 전환 시 replaceState
+      const url = new URL(window.location.href);
+      url.searchParams.set("auth", authModal);
+      window.history.replaceState(
+        { authModal: true },
+        "",
+        url.pathname + url.search
+      );
+    }
+
+    return () => {
+      if (!authModal) pushedRef.current = false;
+    };
+  }, [authModal]);
+
+  // popstate(뒤로가기) 시 모달 닫기
+  useEffect(() => {
+    const handlePopState = () => {
+      if (pushedRef.current) {
+        pushedRef.current = false;
+      }
+      closeAuthModal();
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [closeAuthModal]);
 
   useEffect(() => {
     if (authModal) {
@@ -52,6 +141,14 @@ export function AuthModal() {
     return () => el.removeEventListener("scroll", handleScroll);
   }, [handleScroll, authModal]);
 
+  const handleClose = useCallback(() => {
+    if (pushedRef.current) {
+      window.history.back();
+    } else {
+      closeAuthModal();
+    }
+  }, [closeAuthModal]);
+
   if (!mounted) return null;
 
   return createPortal(
@@ -68,7 +165,7 @@ export function AuthModal() {
           {/* 블러 배경 - 부드러운 페이드인 */}
           <motion.button
             type="button"
-            onClick={closeAuthModal}
+            onClick={handleClose}
             className="absolute inset-0 -z-10 backdrop-blur-md bg-black/40"
             aria-label="모달 닫기"
             initial={{ opacity: 0 }}
@@ -87,7 +184,7 @@ export function AuthModal() {
           >
             <button
               type="button"
-              onClick={closeAuthModal}
+              onClick={handleClose}
               className={cn(
                 "absolute top-4 right-4 z-10 w-10 h-10 rounded-full",
                 "bg-white/90 dark:bg-gray-800/90 shadow-lg",
@@ -115,10 +212,7 @@ export function AuthModal() {
               {authModal === "signup" && (
                 <SignupForm
                   onSwitchToLogin={openLoginModal}
-                  onSignupSuccess={() => {
-                    closeAuthModal();
-                    openLoginModal();
-                  }}
+                  onSignupSuccess={openLoginModal}
                 />
               )}
             </div>
