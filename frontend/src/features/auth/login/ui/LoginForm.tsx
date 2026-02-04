@@ -34,6 +34,7 @@ import {
 } from "@/shared/ui/card";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/shared/ui/logo";
+import { cn } from "@/shared/lib/utils";
 
 const formSchema = z.object({
   email: z.string().email({ message: "올바른 이메일 형식을 입력해주세요." }),
@@ -62,9 +63,17 @@ const OAUTH_PROVIDERS = {
 interface LoginFormProps {
   /** 모달 모드: 회원가입 링크 대신 클릭 핸들러 사용 */
   onSwitchToSignup?: () => void;
+  /** 랜딩 모달용: 테마 색상 적용 */
+  variant?: "default" | "landing";
+  isDark?: boolean;
 }
 
-export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
+export function LoginForm({
+  onSwitchToSignup,
+  variant = "default",
+  isDark = false,
+}: LoginFormProps = {}) {
+  const isLanding = variant === "landing";
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useAuthStore((state) => state.login);
@@ -163,15 +172,37 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
   };
 
   return (
-    <Card className="w-full max-w-md border-0 shadow-xl bg-white rounded-2xl">
+    <Card
+      className={cn(
+        "w-full max-w-md border-0 shadow-xl rounded-2xl",
+        isLanding && "bg-transparent shadow-none"
+      )}
+    >
       <div className="flex justify-center pt-1 pb-1">
-        <Logo href="/" size="lg" />
+        <Logo href="/" size="lg" dark={isLanding && isDark} />
       </div>
       <CardHeader className="space-y-1 text-center pb-6">
-        <CardTitle className="text-xl font-bold text-gray-900">
+        <CardTitle
+          className={cn(
+            "text-xl font-bold",
+            isLanding && isDark
+              ? "text-white"
+              : isLanding
+              ? "text-gray-900"
+              : "text-gray-900"
+          )}
+        >
           로그인
         </CardTitle>
-        <CardDescription className="text-gray-500">
+        <CardDescription
+          className={cn(
+            isLanding && isDark
+              ? "text-gray-400"
+              : isLanding
+              ? "text-gray-500"
+              : "text-gray-500"
+          )}
+        >
           서비스 이용을 위해 이메일과 비밀번호를 입력해주세요.
         </CardDescription>
       </CardHeader>
@@ -184,14 +215,26 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">
+                  <FormLabel
+                    className={cn(
+                      "font-medium",
+                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                    )}
+                  >
                     이메일
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="email"
                       placeholder="이메일을 입력하세요"
-                      className="h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all"
+                      className={cn(
+                        "h-11 transition-all",
+                        isLanding && isDark
+                          ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
+                          : isLanding
+                          ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
+                          : "bg-gray-50 border-gray-200 focus:bg-white"
+                      )}
                       {...field}
                     />
                   </FormControl>
@@ -204,14 +247,26 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">
+                  <FormLabel
+                    className={cn(
+                      "font-medium",
+                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                    )}
+                  >
                     비밀번호
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="password"
                       placeholder="********"
-                      className="h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all"
+                      className={cn(
+                        "h-11 transition-all",
+                        isLanding && isDark
+                          ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
+                          : isLanding
+                          ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
+                          : "bg-gray-50 border-gray-200 focus:bg-white"
+                      )}
                       {...field}
                     />
                   </FormControl>
@@ -221,7 +276,14 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
             />
 
             {errorMsg && (
-              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg text-center font-medium animate-in fade-in slide-in-from-top-1">
+              <div
+                className={cn(
+                  "text-sm p-3 rounded-lg text-center font-medium animate-in fade-in slide-in-from-top-1",
+                  isLanding && isDark
+                    ? "bg-red-500/20 text-red-300"
+                    : "bg-red-50 text-red-600"
+                )}
+              >
                 {errorMsg}
               </div>
             )}
@@ -229,7 +291,12 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all shadow-md hover:shadow-lg"
+              className={cn(
+                "w-full h-11 font-bold rounded-lg transition-all",
+                isLanding
+                  ? "bg-violet-600 hover:bg-violet-500 text-white shadow-md hover:shadow-lg"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg"
+              )}
             >
               {isSubmitting ? (
                 <Loader2 className="animate-spin h-5 w-5" />
@@ -242,10 +309,24 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
 
         <div className="relative my-2">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-200" />
+            <span
+              className={cn(
+                "w-full border-t",
+                isLanding && isDark ? "border-white/20" : "border-gray-200"
+              )}
+            />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-400 font-medium">
+            <span
+              className={cn(
+                "px-2 font-medium",
+                isLanding && isDark
+                  ? "bg-[#1a1a1f] text-gray-400"
+                  : isLanding
+                  ? "bg-[#F5F5F8] text-gray-500"
+                  : "bg-white text-gray-400"
+              )}
+            >
               또는 다음으로 로그인하기
             </span>
           </div>
@@ -256,7 +337,12 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
             type="button"
             variant="outline"
             onClick={() => handleOAuthLogin("google")}
-            className="google-oauth-hover h-11 font-medium text-gray-600 border-gray-200 transition-colors"
+            className={cn(
+              "google-oauth-hover h-11 font-medium transition-colors",
+              isLanding && isDark
+                ? "border-white/20 text-black hover:bg-white hover:!bg-white"
+                : "text-gray-600 border-gray-200"
+            )}
           >
             Google
           </Button>
@@ -279,13 +365,18 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps = {}) {
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-center text-sm text-gray-500 pb-8">
+      <CardFooter
+        className={cn(
+          "flex justify-center text-sm pb-8",
+          isLanding && isDark ? "text-gray-400" : "text-gray-500"
+        )}
+      >
         계정이 없으신가요?&nbsp;
         {onSwitchToSignup ? (
           <button
             type="button"
             onClick={onSwitchToSignup}
-            className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
+            className="text-violet-400 hover:text-violet-300 font-bold hover:underline transition-colors"
           >
             회원가입
           </button>

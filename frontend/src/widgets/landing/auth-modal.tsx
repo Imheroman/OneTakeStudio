@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
 import { useAuthModal } from "./auth-modal-context";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 
 const LoginForm = dynamic(
@@ -37,6 +38,8 @@ const SignupForm = dynamic(
 export function AuthModal() {
   const { authModal, closeAuthModal, openLoginModal, openSignupModal } =
     useAuthModal();
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isScrolling, setIsScrolling] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -174,9 +177,15 @@ export function AuthModal() {
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
           />
 
-          {/* 모달 카드 - 둥근 모서리 + 부드러운 등장 */}
+          {/* 모달 카드 - 랜딩 테마 배경색 */}
           <motion.div
-            className="relative w-full max-w-md max-h-[90vh] rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-2xl"
+            className={cn(
+              "relative w-full max-w-md max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl",
+              "border transition-colors duration-300",
+              isDark
+                ? "bg-[#1a1a1f] border-white/10"
+                : "bg-[#F5F5F8] border-gray-200/80"
+            )}
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
@@ -187,10 +196,11 @@ export function AuthModal() {
               onClick={handleClose}
               className={cn(
                 "absolute top-4 right-4 z-10 w-10 h-10 rounded-full",
-                "bg-white/90 dark:bg-gray-800/90 shadow-lg",
                 "flex items-center justify-center",
-                "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white",
-                "transition-colors"
+                "transition-colors",
+                isDark
+                  ? "bg-white/10 hover:bg-white/15 text-gray-300 hover:text-white"
+                  : "bg-white/80 hover:bg-white shadow-lg text-gray-600 hover:text-gray-900"
               )}
               aria-label="닫기"
             >
@@ -207,12 +217,18 @@ export function AuthModal() {
               )}
             >
               {authModal === "login" && (
-                <LoginForm onSwitchToSignup={openSignupModal} />
+                <LoginForm
+                  onSwitchToSignup={openSignupModal}
+                  variant="landing"
+                  isDark={isDark}
+                />
               )}
               {authModal === "signup" && (
                 <SignupForm
                   onSwitchToLogin={openLoginModal}
                   onSignupSuccess={openLoginModal}
+                  variant="landing"
+                  isDark={isDark}
                 />
               )}
             </div>

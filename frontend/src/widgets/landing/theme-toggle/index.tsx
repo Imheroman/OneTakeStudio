@@ -1,7 +1,10 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
+import {
+  useWorkspaceThemeStore,
+  useResolvedTheme,
+} from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 
 interface ThemeToggleProps {
@@ -11,13 +14,15 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ darkNav = true, className }: ThemeToggleProps) {
-  const { theme, toggleTheme } = useLandingThemeStore();
+  const { toggleTheme } = useWorkspaceThemeStore();
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+      aria-label={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
       className={cn(
         "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         darkNav
@@ -26,7 +31,7 @@ export function ThemeToggle({ darkNav = true, className }: ThemeToggleProps) {
         className
       )}
     >
-      {theme === "dark" ? (
+      {isDark ? (
         <>
           <Sun className="h-4 w-4" />
           <span>라이트 모드</span>

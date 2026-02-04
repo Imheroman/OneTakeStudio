@@ -5,13 +5,12 @@ import { motion } from "motion/react";
 import {
   Radio,
   Video,
-  Users,
   VideoIcon,
   Crown,
   Shield,
-  User,
+  Trash2,
+  Loader2,
 } from "lucide-react";
-import { PageHeader } from "@/shared/common";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
@@ -26,12 +25,14 @@ function RoleBadge({ role }: { role?: string }) {
     HOST: {
       label: "호스트",
       icon: Crown,
-      className: "bg-amber-100 text-amber-700 border-amber-200",
+      className:
+        "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700",
     },
     MANAGER: {
       label: "관리자",
       icon: Shield,
-      className: "bg-blue-100 text-blue-700 border-blue-200",
+      className:
+        "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700",
     },
   }[role];
 
@@ -56,85 +57,91 @@ interface WorkspaceHomeProps {
   userName?: string;
 }
 
-function StudioBentoCard({
+function StudioListItem({
   studio,
   isDark,
-  span = 1,
+  onDelete,
+  isDeleting,
 }: {
   studio: RecentStudio;
   isDark: boolean;
-  span?: 1 | 2;
+  onDelete: (id: number) => void;
+  isDeleting: boolean;
 }) {
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className={span === 2 ? "md:col-span-2" : ""}
+      layout
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "glass-card flex items-center gap-4 px-4 py-3 rounded-xl transition-colors",
+        isDark ? "hover:bg-white/5" : "hover:bg-gray-50/80"
+      )}
     >
-      <Link
-        href={`/studio/${studio.id}`}
+      <div
         className={cn(
-          "glass-card gpu-layer gpu-layer-hover flex flex-col transition-shadow duration-200 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-onetake-point focus-visible:ring-offset-2 focus-visible:ring-offset-transparent h-full",
-          span === 2 && "md:col-span-2"
+          "shrink-0 w-12 h-12 rounded-lg flex items-center justify-center",
+          isDark ? "bg-gray-800/80" : "bg-gray-100/80"
         )}
       >
-        <div
+        <VideoIcon
+          className={cn("w-6 h-6", isDark ? "text-gray-500" : "text-gray-400")}
+        />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h3
           className={cn(
-            "relative aspect-video w-full flex items-center justify-center shrink-0",
-            isDark ? "bg-gray-800/80" : "bg-gray-100/80"
+            "font-semibold truncate",
+            isDark ? "text-gray-100" : "text-gray-900"
           )}
         >
-          <VideoIcon
+          {studio.title}
+        </h3>
+        <div className="flex items-center gap-2 mt-0.5">
+          <p
             className={cn(
-              "w-12 h-12 opacity-40",
-              isDark ? "text-gray-500" : "text-gray-400"
-            )}
-          />
-          <div
-            className={cn(
-              "absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-              isDark
-                ? "bg-gray-800/90 text-gray-300"
-                : "bg-white/90 text-gray-600"
+              "text-sm",
+              isDark ? "text-gray-400" : "text-gray-500"
             )}
           >
-            <Users className="w-3.5 h-3.5" />
-            팀원 —
-          </div>
+            {studio.date}
+          </p>
+          {studio.role && <RoleBadge role={studio.role} />}
         </div>
-        <div className="flex flex-1 flex-col justify-between p-4">
-          <div>
-            <h3
-              className={cn(
-                "font-semibold line-clamp-1",
-                isDark ? "text-gray-100" : "text-gray-900"
-              )}
-            >
-              {studio.title}
-            </h3>
-            <p
-              className={cn(
-                "mt-1 text-sm",
-                isDark ? "text-gray-400" : "text-gray-500"
-              )}
-            >
-              {studio.date}
-            </p>
-            {studio.role && (
-              <div className="mt-1">
-                <RoleBadge role={studio.role} />
-              </div>
-            )}
-          </div>
-          <span
-            className={cn(
-              "mt-3 inline-flex h-9 w-full items-center justify-center rounded-md text-sm font-medium bg-onetake-point text-white hover:bg-onetake-point/90"
-            )}
-          >
-            스튜디오 입장
-          </span>
-        </div>
-      </Link>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Link
+          href={`/studio/${studio.id}`}
+          className={cn(
+            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            "bg-onetake-point text-white hover:bg-onetake-point/90",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-onetake-point focus-visible:ring-offset-2"
+          )}
+        >
+          입장
+        </Link>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            onDelete(studio.id);
+          }}
+          disabled={isDeleting}
+          className={cn(
+            "p-2 rounded-lg transition-colors",
+            "text-red-500 hover:bg-red-500/10 hover:text-red-600",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+          )}
+          aria-label="스튜디오 삭제"
+        >
+          {isDeleting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4" />
+          )}
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -149,20 +156,12 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
     setIsCreateDialogOpen,
     createDialogType,
     openCreateDialog,
+    handleDeleteStudio,
+    deletingId,
   } = useWorkspaceHome(userId);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
-      <PageHeader
-        title={
-          <>
-            <span className="text-indigo-600">{userName ?? userId}</span>님,
-            반가워요!
-          </>
-        }
-        description="오늘도 당신만의 멋진 방송을 만들어보세요."
-      />
-
       {/* 상단 얇은 배너: 라이브 / 녹화 진입점 */}
       <div
         className={cn(
@@ -210,22 +209,34 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
         </motion.button>
       </div>
 
-      {/* 최근 스튜디오 벤토 그리드 */}
-      <div className="space-y-4">
+      {/* 스튜디오 목록 섹션 */}
+      <section
+        className={cn(
+          "rounded-2xl p-6",
+          isDark
+            ? "bg-white/5 backdrop-blur-sm"
+            : "bg-white/70 backdrop-blur-sm",
+          "border",
+          isDark ? "border-white/10" : "border-gray-200/80",
+          "shadow-sm"
+        )}
+      >
         <h2
           className={cn(
-            "text-lg font-bold",
+            "text-lg font-bold mb-4",
             isDark ? "text-gray-100" : "text-gray-900"
           )}
         >
-          최근 스튜디오
+          스튜디오 목록
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 auto-rows-fr">
+        <div className="space-y-2">
           {isLoading ? (
             <div
               className={cn(
-                "md:col-span-4 py-16 text-center rounded-2xl glass-card flex items-center justify-center",
-                isDark ? "text-gray-400" : "text-gray-500"
+                "py-16 text-center rounded-xl flex items-center justify-center",
+                isDark
+                  ? "bg-white/5 text-gray-400"
+                  : "bg-gray-50/80 text-gray-500"
               )}
             >
               로딩 중...
@@ -233,24 +244,27 @@ export function WorkspaceHome({ userId, userName }: WorkspaceHomeProps) {
           ) : recentStudios.length === 0 ? (
             <div
               className={cn(
-                "md:col-span-4 py-16 text-center rounded-2xl glass-card",
-                isDark ? "text-gray-400" : "text-gray-500"
+                "py-16 text-center rounded-xl",
+                isDark
+                  ? "bg-white/5 text-gray-400"
+                  : "bg-gray-50/80 text-gray-500"
               )}
             >
-              최근 스튜디오가 없습니다.
+              스튜디오가 없습니다.
             </div>
           ) : (
-            recentStudios.map((studio, index) => (
-              <StudioBentoCard
+            recentStudios.map((studio) => (
+              <StudioListItem
                 key={studio.id}
                 studio={studio}
                 isDark={isDark}
-                span={index === 0 ? 2 : 1}
+                onDelete={handleDeleteStudio}
+                isDeleting={deletingId === studio.id}
               />
             ))
           )}
         </div>
-      </div>
+      </section>
 
       <StudioCreation
         open={isCreateDialogOpen}

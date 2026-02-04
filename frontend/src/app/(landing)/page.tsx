@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useAuthModal } from "@/widgets/landing/auth-modal-context";
-import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { SocialProofBand } from "@/components/landing/SocialProofBand";
 import { TimelineScanAnimation } from "@/components/landing/TimelineScanAnimation";
 import { GlassmorphicFeatureCard } from "@/components/landing/GlassmorphicFeatureCard";
@@ -20,8 +20,8 @@ export default function LandingPage() {
   const { openSignupModal, openLoginModal } = useAuthModal();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const theme = useLandingThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   useEffect(() => {
     if (!hasHydrated) return;

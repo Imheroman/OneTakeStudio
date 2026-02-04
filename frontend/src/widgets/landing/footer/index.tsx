@@ -1,20 +1,18 @@
 "use client";
 
 import { Logo } from "@/shared/ui/logo";
-import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 
 export function LandingFooter() {
-  const theme = useLandingThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   return (
     <footer
       className={cn(
         "border-t py-8 px-6 transition-colors duration-300",
-        isDark
-          ? "bg-[#121212] border-white/10"
-          : "bg-white border-gray-200"
+        isDark ? "bg-[#121212] border-white/10" : "bg-white border-gray-200"
       )}
     >
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -30,10 +28,7 @@ export function LandingFooter() {
           </p>
         </div>
         <div
-          className={cn(
-            "text-xs",
-            isDark ? "text-white/50" : "text-gray-500"
-          )}
+          className={cn("text-xs", isDark ? "text-white/50" : "text-gray-500")}
         >
           © {new Date().getFullYear()} OneTake. All rights reserved.
         </div>

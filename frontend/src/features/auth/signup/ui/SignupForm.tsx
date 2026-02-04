@@ -67,12 +67,18 @@ interface SignupFormProps {
   onSwitchToLogin?: () => void;
   /** 모달 모드: 회원가입 성공 시 호출 (예: 모달 닫고 로그인 모달 열기) */
   onSignupSuccess?: () => void;
+  /** 랜딩 모달용: 테마 색상 적용 */
+  variant?: "default" | "landing";
+  isDark?: boolean;
 }
 
 export function SignupForm({
   onSwitchToLogin,
   onSignupSuccess,
+  variant = "default",
+  isDark = false,
 }: SignupFormProps = {}) {
+  const isLanding = variant === "landing";
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
 
@@ -309,15 +315,37 @@ export function SignupForm({
   }
 
   return (
-    <Card className="w-full max-w-[500px] border-0 shadow-xl bg-white rounded-2xl">
+    <Card
+      className={cn(
+        "w-full max-w-[500px] border-0 shadow-xl rounded-2xl",
+        isLanding ? "bg-transparent shadow-none" : "bg-white"
+      )}
+    >
       <div className="flex justify-center pt-1 pb-1">
-        <Logo href="/" size="lg" />
+        <Logo href="/" size="lg" dark={isLanding && isDark} />
       </div>
       <CardHeader className="space-y-1 text-center pb-6">
-        <CardTitle className="text-2xl font-bold text-gray-900">
+        <CardTitle
+          className={cn(
+            "text-2xl font-bold",
+            isLanding && isDark
+              ? "text-white"
+              : isLanding
+              ? "text-gray-900"
+              : "text-gray-900"
+          )}
+        >
           회원가입
         </CardTitle>
-        <CardDescription className="text-gray-500">
+        <CardDescription
+          className={cn(
+            isLanding && isDark
+              ? "text-gray-400"
+              : isLanding
+              ? "text-gray-500"
+              : "text-gray-500"
+          )}
+        >
           원테이크의 모든 기능을 사용하려면 계정을 생성하세요.
         </CardDescription>
       </CardHeader>
@@ -330,13 +358,25 @@ export function SignupForm({
               name="nickname"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">
+                  <FormLabel
+                    className={cn(
+                      "font-medium",
+                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                    )}
+                  >
                     닉네임
                   </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="닉네임을 입력하세요"
-                      className="h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all"
+                      className={cn(
+                        "h-11 transition-all",
+                        isLanding && isDark
+                          ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
+                          : isLanding
+                          ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
+                          : "bg-gray-50 border-gray-200 focus:bg-white"
+                      )}
                       {...field}
                     />
                   </FormControl>
@@ -350,7 +390,12 @@ export function SignupForm({
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">
+                  <FormLabel
+                    className={cn(
+                      "font-medium",
+                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                    )}
+                  >
                     이메일
                   </FormLabel>
                   <div className="flex gap-2">
@@ -358,7 +403,14 @@ export function SignupForm({
                       <Input
                         type="email"
                         placeholder="이메일을 입력하세요"
-                        className="h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all"
+                        className={cn(
+                          "h-11 transition-all",
+                          isLanding && isDark
+                            ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
+                            : isLanding
+                            ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
+                            : "bg-gray-50 border-gray-200 focus:bg-white"
+                        )}
                         {...field}
                         onChange={(e) => {
                           field.onChange(e);
@@ -376,7 +428,12 @@ export function SignupForm({
                       variant="outline"
                       onClick={handleSendVerificationCode}
                       disabled={isSendingCode || !form.getValues("email")}
-                      className="whitespace-nowrap"
+                      className={cn(
+                        "whitespace-nowrap",
+                        isLanding &&
+                          isDark &&
+                          "border-white/20 text-black hover:bg-white/10"
+                      )}
                     >
                       {isSendingCode ? (
                         <Loader2 className="animate-spin h-4 w-4" />
@@ -398,7 +455,12 @@ export function SignupForm({
                 name="verificationCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-gray-700 font-medium">
+                    <FormLabel
+                      className={cn(
+                        "font-medium",
+                        isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                      )}
+                    >
                       인증 코드
                     </FormLabel>
                     <div className="flex gap-2">
@@ -406,8 +468,16 @@ export function SignupForm({
                         <Input
                           placeholder="이메일로 받은 인증 코드를 입력하세요"
                           className={cn(
-                            "h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all",
-                            isEmailVerified && "bg-green-50 border-green-500"
+                            "h-11 transition-all",
+                            isLanding && isDark
+                              ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
+                              : isLanding
+                              ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
+                              : "bg-gray-50 border-gray-200 focus:bg-white",
+                            isEmailVerified &&
+                              (isLanding && isDark
+                                ? "bg-green-500/20 border-green-400"
+                                : "bg-green-50 border-green-500")
                           )}
                           {...field}
                           disabled={isEmailVerified}
@@ -422,7 +492,13 @@ export function SignupForm({
                           isEmailVerified ||
                           !form.getValues("verificationCode")
                         }
-                        className="whitespace-nowrap"
+                        className={cn(
+                          "whitespace-nowrap",
+                          isLanding &&
+                            isDark &&
+                            !isEmailVerified &&
+                            "bg-violet-600 hover:bg-violet-500"
+                        )}
                       >
                         {isVerifying ? (
                           <Loader2 className="animate-spin h-4 w-4" />
@@ -434,7 +510,14 @@ export function SignupForm({
                       </Button>
                     </div>
                     {isEmailVerified && (
-                      <p className="text-sm text-green-600 font-medium">
+                      <p
+                        className={cn(
+                          "text-sm font-medium",
+                          isLanding && isDark
+                            ? "text-green-400"
+                            : "text-green-600"
+                        )}
+                      >
                         이메일 인증이 완료되었습니다.
                       </p>
                     )}
@@ -449,7 +532,12 @@ export function SignupForm({
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">
+                  <FormLabel
+                    className={cn(
+                      "font-medium",
+                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                    )}
+                  >
                     비밀번호
                   </FormLabel>
                   <div className="relative">
@@ -457,14 +545,26 @@ export function SignupForm({
                       <Input
                         type={showPassword ? "text" : "password"}
                         placeholder="비밀번호를 입력하세요"
-                        className="h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all pr-10"
+                        className={cn(
+                          "h-11 transition-all pr-10",
+                          isLanding && isDark
+                            ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
+                            : isLanding
+                            ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
+                            : "bg-gray-50 border-gray-200 focus:bg-white"
+                        )}
                         {...field}
                       />
                     </FormControl>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className={cn(
+                        "absolute right-3 top-1/2 -translate-y-1/2",
+                        isLanding && isDark
+                          ? "text-gray-400 hover:text-white"
+                          : "text-gray-500 hover:text-gray-700"
+                      )}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -479,7 +579,12 @@ export function SignupForm({
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">
+                  <FormLabel
+                    className={cn(
+                      "font-medium",
+                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                    )}
+                  >
                     비밀번호 확인
                   </FormLabel>
                   <div className="relative">
@@ -487,7 +592,14 @@ export function SignupForm({
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="비밀번호를 다시 입력하세요"
-                        className="h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all pr-10"
+                        className={cn(
+                          "h-11 transition-all pr-10",
+                          isLanding && isDark
+                            ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
+                            : isLanding
+                            ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
+                            : "bg-gray-50 border-gray-200 focus:bg-white"
+                        )}
                         {...field}
                       />
                     </FormControl>
@@ -496,7 +608,12 @@ export function SignupForm({
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className={cn(
+                        "absolute right-3 top-1/2 -translate-y-1/2",
+                        isLanding && isDark
+                          ? "text-gray-400 hover:text-white"
+                          : "text-gray-500 hover:text-gray-700"
+                      )}
                     >
                       {showConfirmPassword ? (
                         <EyeOff size={16} />
@@ -522,12 +639,27 @@ export function SignupForm({
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel className="text-sm font-normal text-gray-600">
-                      <span className="text-indigo-600 font-medium">
+                    <FormLabel
+                      className={cn(
+                        "text-sm font-normal",
+                        isLanding && isDark ? "text-gray-400" : "text-gray-600"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "font-medium",
+                          isLanding ? "text-violet-400" : "text-indigo-600"
+                        )}
+                      >
                         이용약관
                       </span>
                       과{" "}
-                      <span className="text-indigo-600 font-medium">
+                      <span
+                        className={cn(
+                          "font-medium",
+                          isLanding ? "text-violet-400" : "text-indigo-600"
+                        )}
+                      >
                         개인정보처리방침
                       </span>
                       에 동의합니다
@@ -537,13 +669,25 @@ export function SignupForm({
               )}
             />
             {form.formState.errors.terms && (
-              <p className="text-[0.8rem] font-medium text-red-500">
+              <p
+                className={cn(
+                  "text-[0.8rem] font-medium",
+                  isLanding && isDark ? "text-red-300" : "text-red-500"
+                )}
+              >
                 {form.formState.errors.terms.message}
               </p>
             )}
 
             {serverError && (
-              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg text-center font-medium animate-in fade-in slide-in-from-top-1">
+              <div
+                className={cn(
+                  "text-sm p-3 rounded-lg text-center font-medium animate-in fade-in slide-in-from-top-1",
+                  isLanding && isDark
+                    ? "bg-red-500/20 text-red-300"
+                    : "bg-red-50 text-red-600"
+                )}
+              >
                 {serverError}
               </div>
             )}
@@ -551,7 +695,12 @@ export function SignupForm({
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all shadow-md hover:shadow-lg mt-4"
+              className={cn(
+                "w-full h-11 font-bold rounded-lg transition-all shadow-md hover:shadow-lg mt-4",
+                isLanding
+                  ? "bg-violet-600 hover:bg-violet-500 text-white"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
+              )}
             >
               {isSubmitting ? (
                 <Loader2 className="animate-spin h-5 w-5" />
@@ -564,10 +713,24 @@ export function SignupForm({
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-gray-200" />
+            <span
+              className={cn(
+                "w-full border-t",
+                isLanding && isDark ? "border-white/20" : "border-gray-200"
+              )}
+            />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-400 font-medium">
+            <span
+              className={cn(
+                "px-2 font-medium",
+                isLanding && isDark
+                  ? "bg-[#1a1a1f] text-gray-400"
+                  : isLanding
+                  ? "bg-[#F5F5F8] text-gray-500"
+                  : "bg-white text-gray-400"
+              )}
+            >
               또는 다음으로 가입하기
             </span>
           </div>
@@ -576,7 +739,12 @@ export function SignupForm({
         <div className="grid grid-cols-3 gap-3">
           <Button
             variant="outline"
-            className="google-oauth-hover h-11 transition-colors"
+            className={cn(
+              "google-oauth-hover h-11 transition-colors",
+              isLanding &&
+                isDark &&
+                "border-white/20 text-black hover:bg-white hover:!bg-white"
+            )}
           >
             Google
           </Button>
@@ -595,13 +763,18 @@ export function SignupForm({
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-center text-sm text-gray-500 pb-8">
+      <CardFooter
+        className={cn(
+          "flex justify-center text-sm pb-8",
+          isLanding && isDark ? "text-gray-400" : "text-gray-500"
+        )}
+      >
         이미 계정이 있으신가요?&nbsp;
         {onSwitchToLogin ? (
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
+            className="text-violet-400 hover:text-violet-300 font-bold hover:underline transition-colors"
           >
             로그인
           </button>

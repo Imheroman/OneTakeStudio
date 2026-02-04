@@ -6,7 +6,10 @@ import { ThemeToggle } from "@/widgets/landing/theme-toggle";
 import { AuthModalProvider } from "@/widgets/landing/auth-modal-context";
 import { AuthModal } from "@/widgets/landing/auth-modal";
 import { AuthButtons } from "@/widgets/landing/auth-buttons";
-import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
+import {
+  useWorkspaceThemeStore,
+  useResolvedTheme,
+} from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 
 const menuItems = [
@@ -31,17 +34,17 @@ export function LandingThemeWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const theme = useLandingThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   return (
     <AuthModalProvider>
       <div
         className={cn(
           "min-h-screen flex flex-col transition-colors duration-300",
-          isDark ? "bg-[#121212] text-white" : "bg-[#F9F9F9] text-gray-900"
+          isDark ? "dark bg-[#121212] text-white" : "bg-[#F9F9F9] text-gray-900"
         )}
-        data-theme={theme}
+        data-theme={resolved}
       >
         <Navbar
           variant={isDark ? "dark" : "solid"}
