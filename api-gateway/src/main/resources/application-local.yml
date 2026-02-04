@@ -1,0 +1,56 @@
+# 로컬 개발용: Eureka 대신 서비스 직접 연결 (503 방지)
+# 사용법: -Dspring.profiles.active=local 또는 SPRING_PROFILES_ACTIVE=local
+spring:
+  cloud:
+    gateway:
+      routes:
+        # Core Service - 직접 URL
+        - id: core-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**
+          filters:
+            - StripPrefix=0
+
+        # Media Service - 직접 URL 사용 (lb 대신)
+        - id: media-service-publish
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/publish/**
+          filters:
+            - RewritePath=/api/publish(?<segment>.*),/api/media/publish${segment}
+
+        - id: media-service-publish-v1
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/media/publish/**
+          filters:
+            - RewritePath=/api/v1/media/publish(?<segment>.*),/api/media/publish${segment}
+
+        - id: media-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/media/**
+          filters:
+            - RewritePath=/api/v1/media(?<segment>.*),/api/media${segment}
+
+        - id: media-service-stream
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/streams/**
+          filters:
+            - RewritePath=/api/streams/(?<segment>.*),/api/media/stream/${segment}
+
+        - id: media-service-chat
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/media/chat/**
+          filters:
+            - StripPrefix=0
+
+        - id: media-service-recording
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/recordings/**
+          filters:
+            - RewritePath=/api/recordings/(?<segment>.*),/api/media/record/${segment}

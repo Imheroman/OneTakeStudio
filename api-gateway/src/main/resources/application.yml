@@ -51,7 +51,7 @@ spring:
               predicates:
                 - Path=/api/streams/**
               filters:
-                - RewritePath=/api/streams/(?<segment>.*), /api/media/stream/${segment}
+                - RewritePath=/api/streams/(?<segment>.*),/api/media/stream/${segment}
 
             # Media Service - Chat Routes
             - id: media-service-chat
@@ -73,7 +73,7 @@ spring:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
           globalcors:
             cors-configurations:
-              '[/**]':
+              "[/**]":
                 allowedOriginPatterns:
                   - "*"
                 allowedMethods:
