@@ -55,7 +55,7 @@ export function Logo({
             textClass
           )}
         >
-          <span className={dark ? "text-white" : "text-indigo-600"}>원</span>
+          <span className={dark ? "text-white" : "text-[#6366f1]"}>원</span>
           <span className={dark ? "text-white" : "text-black"}>테이크</span>
         </span>
       )}

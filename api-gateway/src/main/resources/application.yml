@@ -25,7 +25,7 @@ spring:
             - id: media-service-publish
               uri: lb://media-service
               predicates:
-                - Path=/api/publish/**
+                - Path=/api/publish,/api/publish/**
               filters:
                 - RewritePath=/api/publish(?<segment>.*),/api/media/publish${segment}
 
@@ -41,17 +41,17 @@ spring:
             - id: media-service
               uri: lb://media-service
               predicates:
-                - Path=/api/v1/media/**
+                - Path=/api/media/**, /api/shorts/**, /api/callback/**
               filters:
                 - RewritePath=/api/v1/media(?<segment>.*),/api/media${segment}
 
-            # Media Service - Stream Routes
+            # Media Service - Stream Routes (별칭)
             - id: media-service-stream
               uri: lb://media-service
               predicates:
                 - Path=/api/streams/**
               filters:
-                - RewritePath=/api/streams/(?<segment>.*), /api/media/stream/${segment}
+                - RewritePath=/api/streams/(?<segment>.*),/api/media/stream/${segment}
 
             # Media Service - Chat Routes
             - id: media-service-chat
@@ -61,13 +61,13 @@ spring:
               filters:
                 - StripPrefix=0
 
-            # Media Service - Recording Routes
+            # Media Service - Recording Routes (별칭)
             - id: media-service-recording
               uri: lb://media-service
               predicates:
                 - Path=/api/recordings/**
               filters:
-                - RewritePath=/api/recordings/(?<segment>.*), /api/media/record/${segment}
+                - RewritePath=/api/recordings/(?<segment>.*),/api/media/record/${segment}
 
           default-filters:
             - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE

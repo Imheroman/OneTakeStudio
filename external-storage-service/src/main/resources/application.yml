@@ -1,0 +1,63 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: external-storage-service
+
+  # H2 Database (로컬 개발용)
+  datasource:
+    url: jdbc:h2:file:./data/storage_db;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+
+  # H2 Console (개발용)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # Multipart 설정 (청크 업로드를 위한 대용량 허용)
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+# Storage 설정
+storage:
+  base-path: ${STORAGE_BASE_PATH:./storage/files}
+  chunk-path: ${STORAGE_CHUNK_PATH:./storage/chunks}
+  base-url: ${STORAGE_BASE_URL:http://localhost:8090/files}
+
+# Security 설정
+security:
+  enabled: ${SECURITY_ENABLED:false}
+  api-key: ${API_KEY:}
+
+# Logging
+logging:
+  level:
+    com.onetake.storage: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

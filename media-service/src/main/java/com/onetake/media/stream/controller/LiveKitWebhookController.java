@@ -8,6 +8,7 @@ import com.onetake.media.stream.service.LiveKitService;
 import com.onetake.media.stream.service.StreamService;
 import io.livekit.server.WebhookReceiver;
 import livekit.LivekitWebhook;
+import livekit.LivekitModels;
 import livekit.LivekitEgress;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +18,9 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * LiveKit Webhook 수신 Controller
- * Egress 완료 이벤트 처리
+ * - participant_joined: 세션 활성화 (CONNECTING → ACTIVE)
+ * - participant_left: 참가자 퇴장 시 송출 종료 처리
+ * - egress_started/ended: 녹화 상태 처리
  */
 @Slf4j
 @RestController
@@ -79,14 +82,22 @@ public class LiveKitWebhookController {
     }
 
     /**
-     * 참가자 연결 시 스트림 세션을 ACTIVE로 전환 (Go Live 전제 조건)
+     * 참가자 참여 이벤트 처리 - 세션 활성화
      */
     private void handleParticipantJoined(LivekitWebhook.WebhookEvent event) {
-        if (event.getRoom() == null || event.getParticipant() == null) {
+        if (!event.hasParticipant() || !event.hasRoom()) {
             return;
         }
-        String roomName = event.getRoom().getName();
-        String participantIdentity = event.getParticipant().getIdentity();
+
+        LivekitModels.ParticipantInfo participant = event.getParticipant();
+        LivekitModels.Room room = event.getRoom();
+
+        String roomName = room.getName();
+        String participantIdentity = participant.getIdentity();
+
+        log.info("Participant joined: roomName={}, identity={}", roomName, participantIdentity);
+
+        // 세션 활성화
         streamService.activateSession(roomName, participantIdentity);
     }
 

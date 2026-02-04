@@ -2,6 +2,7 @@ package com.onetake.media.recording.dto;
 
 import com.onetake.media.recording.entity.RecordingSession;
 import com.onetake.media.recording.entity.RecordingStatus;
+import com.onetake.media.recording.entity.UploadStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -25,6 +26,11 @@ public class RecordingResponse {
     private LocalDateTime createdAt;
     private String errorMessage;
 
+    // 외부 EC2 업로드 상태
+    private UploadStatus externalUploadStatus;
+    private String externalFileUrl;
+    private LocalDateTime externalUploadedAt;
+
     public static RecordingResponse from(RecordingSession session) {
         return RecordingResponse.builder()
                 .recordingId(session.getRecordingId())
@@ -40,6 +46,9 @@ public class RecordingResponse {
                 .endedAt(session.getEndedAt())
                 .createdAt(session.getCreatedAt())
                 .errorMessage(session.getErrorMessage())
+                .externalUploadStatus(session.getExternalUploadStatus())
+                .externalFileUrl(session.getExternalFileUrl())
+                .externalUploadedAt(session.getExternalUploadedAt())
                 .build();
     }
 }

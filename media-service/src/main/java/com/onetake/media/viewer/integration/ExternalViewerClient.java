@@ -8,7 +8,7 @@ import java.util.Optional;
 /**
  * 외부 플랫폼 시청자 수 조회 인터페이스
  *
- * YouTube, Twitch, 치지직 등 외부 플랫폼에서 실시간 시청자 수를 가져오는 클라이언트의 공통 인터페이스
+ * YouTube, 치지직 등 외부 플랫폼에서 실시간 시청자 수를 가져오는 클라이언트의 공통 인터페이스
  */
 public interface ExternalViewerClient {
 

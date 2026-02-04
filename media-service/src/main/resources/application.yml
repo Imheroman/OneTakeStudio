@@ -57,11 +57,41 @@ core:
   service:
     url: http://localhost:8080
 
+# YouTube API
+youtube:
+  oauth:
+    client-id: 131937565238-ullgqej3bktgfkkj441r7p2elvunfecl.apps.googleusercontent.com
+    client-secret: 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
+    redirect-uri: ${YOUTUBE_REDIRECT_URI:https://i14c206.p.ssafy.io/api/oauth/youtube/callback}
+    scope: https://www.googleapis.com/auth/youtube.readonly
+
+# 치지직 OAuth
+chzzk:
+  oauth:
+    client-id: 0c2b66b0-f5ae-400b-9056-0bb9289954d1
+    client-secret: NOJIPyg5MK2KqVhLb-OEPsKGxMyfm-P0OdeHQ3eWDng
+    redirect-uri: ${CHZZK_REDIRECT_URI:https://i14c206.p.ssafy.io/api/oauth/chzzk/callback}
+
+# OAuth 공통 설정
+oauth:
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:https://i14c206.p.ssafy.io/oauth/callback}
+
 # Recording Storage
 recording:
   storage:
     base-path: ./recordings
     base-url: http://localhost:8082/api/media/record/files
+
+# External EC2 Upload (청크 업로드)
+external:
+  upload:
+    enabled: ${EXTERNAL_UPLOAD_ENABLED:false}
+    server-url: ${EXTERNAL_UPLOAD_URL:http://external-ec2:8080/api/upload}
+    api-key: ${EXTERNAL_UPLOAD_API_KEY:}
+    timeout: 300000  # 5분 (대용량 파일 고려)
+    chunk-size: 52428800  # 50MB
+    max-retries: 3
+    retry-delay: 1000
 
 # Logging
 logging:

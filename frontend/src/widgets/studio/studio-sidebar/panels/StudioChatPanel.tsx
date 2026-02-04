@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { List } from "react-window";
 import { MessageSquare, Send } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -9,6 +10,9 @@ import type { ChatMessage } from "@/entities/chat/model";
 import { cn } from "@/shared/lib/utils";
 import { useAuthStore } from "@/stores/useAuthStore";
 
+const CHAT_ROW_HEIGHT = 48;
+const VIRTUAL_THRESHOLD = 25;
+
 const PLATFORM_LABEL: Record<string, string> = {
   YOUTUBE: "유튜브",
   TWITCH: "트위치",
@@ -16,6 +20,34 @@ const PLATFORM_LABEL: Record<string, string> = {
   HOST: "방장",
   INTERNAL: "프라이빗",
 };
+
+function ChatMessageRow({
+  index,
+  style,
+  messages: list,
+}: {
+  index: number;
+  style: React.CSSProperties;
+  messages: ChatMessage[];
+}) {
+  const m = list[index];
+  return (
+    <div
+      style={style}
+      className={cn(
+        "text-sm rounded px-2 py-1 flex-shrink-0",
+        m.platform === "HOST" && "bg-indigo-900/30",
+        m.platform === "INTERNAL" && "bg-purple-900/30"
+      )}
+    >
+      <span className="text-gray-400 text-xs mr-2">
+        [{PLATFORM_LABEL[m.platform] ?? m.platform}]
+      </span>
+      <span className="font-medium text-gray-200">{m.senderName}:</span>{" "}
+      <span className="text-gray-300 break-words">{m.content}</span>
+    </div>
+  );
+}
 
 interface StudioChatPanelProps {
   studioId: number;
@@ -32,7 +64,20 @@ export function StudioChatPanel({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [listHeight, setListHeight] = useState(300);
   const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const { height } = entries[0]?.contentRect ?? { height: 300 };
+      setListHeight(height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -96,7 +141,7 @@ export function StudioChatPanel({
           </button>
         )}
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+      <div ref={listRef} className="flex-1 min-h-0 p-3">
         {loading ? (
           <div className="text-gray-400 text-sm">로딩 중...</div>
         ) : messages.length === 0 ? (
@@ -105,23 +150,34 @@ export function StudioChatPanel({
               ? "프라이빗 채팅 메시지가 없습니다."
               : "채팅 메시지가 없습니다."}
           </div>
+        ) : messages.length > VIRTUAL_THRESHOLD ? (
+          <List<{ messages: ChatMessage[] }>
+            rowCount={messages.length}
+            rowHeight={CHAT_ROW_HEIGHT}
+            rowComponent={ChatMessageRow}
+            rowProps={{ messages }}
+            style={{ height: listHeight, width: "100%" }}
+            overscanCount={5}
+          />
         ) : (
-          messages.map((m) => (
-            <div
-              key={m.messageId}
-              className={cn(
-                "text-sm rounded px-2 py-1",
-                m.platform === "HOST" && "bg-indigo-900/30",
-                m.platform === "INTERNAL" && "bg-purple-900/30",
-              )}
-            >
-              <span className="text-gray-400 text-xs mr-2">
-                [{PLATFORM_LABEL[m.platform] ?? m.platform}]
-              </span>
-              <span className="font-medium text-gray-200">{m.senderName}:</span>{" "}
-              <span className="text-gray-300">{m.content}</span>
-            </div>
-          ))
+          <div className="space-y-2">
+            {messages.map((m) => (
+              <div
+                key={m.messageId}
+                className={cn(
+                  "text-sm rounded px-2 py-1",
+                  m.platform === "HOST" && "bg-indigo-900/30",
+                  m.platform === "INTERNAL" && "bg-purple-900/30"
+                )}
+              >
+                <span className="text-gray-400 text-xs mr-2">
+                  [{PLATFORM_LABEL[m.platform] ?? m.platform}]
+                </span>
+                <span className="font-medium text-gray-200">{m.senderName}:</span>{" "}
+                <span className="text-gray-300">{m.content}</span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
       {/* 채팅 입력 (전체/프라이빗 모두 가능) */}

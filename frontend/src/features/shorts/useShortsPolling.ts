@@ -1,33 +1,58 @@
 import { useEffect, useRef } from "react";
 import { useShortsStore } from "@/stores/useShortsStore";
 import { apiClient } from "@/shared/api/client";
-import { ShortsStatusResponseSchema } from "@/entities/video/model";
+import { z } from "zod";
 
-/** 쇼츠 API는 백엔드 미구현 → MSW 모킹 시에만 폴링/API 호출 */
-const isShortsApiAvailable = () =>
-  process.env.NEXT_PUBLIC_API_MOCKING === "enabled";
+// AI 쇼츠 상태 응답 스키마
+const ShortsStatusResponseSchema = z.object({
+  jobId: z.string().optional(),
+  status: z.string(),
+  totalCount: z.number(),
+  completedCount: z.number(),
+  shorts: z.array(z.object({
+    videoId: z.string().optional(),
+    status: z.string(),
+    outputPath: z.string().nullable().optional(),
+    thumbnailPath: z.string().nullable().optional(),
+    processingTimeSec: z.number().nullable().optional(),
+    error: z.string().nullable().optional(),
+  })).optional(),
+});
 
 export const useShortsPolling = () => {
   const { setShortsStatus, addNotification } = useShortsStore();
-  const prevCountRef = useRef(0); // 이전 완료 개수 기억 (중복 알림 방지)
-  const hasLoggedErrorRef = useRef(false); // 동일 에러 반복 로그 방지
+  const prevCountRef = useRef(0);
+  const hasLoggedErrorRef = useRef(false);
+  const isPollingRef = useRef(false);
 
   useEffect(() => {
-    if (!isShortsApiAvailable()) return; // 쇼츠 API 미구현 시 폴링 비활성화 (오류 방지)
-
-    // 1초마다 서버 상태 체크 (MSW가 /api/v1/shorts/status 응답)
+    // 3초마다 서버 상태 체크
     const intervalId = setInterval(async () => {
+      // 이미 폴링 중이면 스킵
+      if (isPollingRef.current) return;
+      isPollingRef.current = true;
+
       try {
-        const data = await apiClient.get(
-          "/api/v1/shorts/status",
-          ShortsStatusResponseSchema,
+        const response = await apiClient.get(
+          "/api/ai/shorts/status",
+          z.object({
+            success: z.boolean(),
+            data: ShortsStatusResponseSchema,
+          }),
         );
 
-        hasLoggedErrorRef.current = false; // 성공 시 다음 에러부터 다시 로그 가능
+        const data = response.data;
+        hasLoggedErrorRef.current = false;
+
+        // idle 상태면 폴링 불필요
+        if (data.status === "idle") {
+          prevCountRef.current = 0;
+          isPollingRef.current = false;
+          return;
+        }
 
         // 생성 중이거나 완료되었을 때만 로직 수행
         if (data.status === "processing" || data.status === "completed") {
-          // 상태 업데이트
           setShortsStatus(data.completedCount);
 
           // 새로운 완료 건수가 있을 때만 알림 추가
@@ -39,17 +64,15 @@ export const useShortsPolling = () => {
           }
         }
       } catch (error) {
-        // CORS/네트워크 등 동일 에러가 1초마다 반복되므로 한 번만 로그
         if (!hasLoggedErrorRef.current) {
           hasLoggedErrorRef.current = true;
-          console.warn(
-            "[쇼츠 폴링] 쇼츠 상태 API를 사용할 수 없습니다. (백엔드 미구현 시 정상)",
-            error,
-          );
+          console.warn("[쇼츠 폴링] 상태 조회 실패:", error);
         }
+      } finally {
+        isPollingRef.current = false;
       }
-    }, 1000); // 1초 간격
+    }, 3000); // 3초 간격
 
-    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 중단
+    return () => clearInterval(intervalId);
   }, [setShortsStatus, addNotification]);
 };

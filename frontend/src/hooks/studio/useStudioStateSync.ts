@@ -25,6 +25,7 @@ export type StudioStateType =
   | "LOCK_RELEASED"
   | "LOCK_EXPIRED"
   | "SCENE_SELECTED"
+  | "SCENE_RECOMMENDED"
   | "SCENE_SAVED"
   | "EDIT_MODE_CHANGED"
   | "RESOLUTION_CHANGED"
@@ -51,7 +52,8 @@ export interface UseStudioStateSyncOptions {
   onPresenceChange?: (message: StudioStateMessage) => void;
 }
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8082/ws/media";
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8082/ws/media";
 
 export interface OnlineMember {
   odUserId: string;
@@ -60,7 +62,14 @@ export interface OnlineMember {
 }
 
 export function useStudioStateSync(options: UseStudioStateSyncOptions) {
-  const { studioId, userId, nickname, onStateChange, onLockChange, onPresenceChange } = options;
+  const {
+    studioId,
+    userId,
+    nickname,
+    onStateChange,
+    onLockChange,
+    onPresenceChange,
+  } = options;
 
   const clientRef = useRef<Client | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -92,74 +101,96 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
         setIsConnected(true);
 
         // 상태 변경 구독
-        client.subscribe(`/topic/studio/${studioId}/state`, (message: IMessage) => {
-          try {
-            const stateMessage: StudioStateMessage = JSON.parse(message.body);
-            console.log("[StudioStateSync] 수신된 메시지:", stateMessage.type, stateMessage.userId);
-            // 내가 보낸 메시지는 무시
-            if (stateMessage.userId !== userId) {
-              onStateChangeRef.current?.(stateMessage);
+        client.subscribe(
+          `/topic/studio/${studioId}/state`,
+          (message: IMessage) => {
+            try {
+              const stateMessage: StudioStateMessage = JSON.parse(message.body);
+              console.log(
+                "[StudioStateSync] 수신된 메시지:",
+                stateMessage.type,
+                stateMessage.userId
+              );
+              // 내가 보낸 메시지는 무시
+              if (stateMessage.userId !== userId) {
+                onStateChangeRef.current?.(stateMessage);
+              }
+            } catch (e) {
+              console.error("[StudioStateSync] 상태 메시지 파싱 실패:", e);
             }
-          } catch (e) {
-            console.error("[StudioStateSync] 상태 메시지 파싱 실패:", e);
           }
-        });
+        );
 
         // 락 상태 구독
-        client.subscribe(`/topic/studio/${studioId}/lock`, (message: IMessage) => {
-          try {
-            const lockMessage: StudioStateMessage = JSON.parse(message.body);
-            onLockChangeRef.current?.(lockMessage);
-          } catch (e) {
-            console.error("[StudioStateSync] 락 메시지 파싱 실패:", e);
+        client.subscribe(
+          `/topic/studio/${studioId}/lock`,
+          (message: IMessage) => {
+            try {
+              const lockMessage: StudioStateMessage = JSON.parse(message.body);
+              onLockChangeRef.current?.(lockMessage);
+            } catch (e) {
+              console.error("[StudioStateSync] 락 메시지 파싱 실패:", e);
+            }
           }
-        });
+        );
 
         // 프레즌스 구독
-        client.subscribe(`/topic/studio/${studioId}/presence`, (message: IMessage) => {
-          try {
-            const presenceMessage: StudioStateMessage = JSON.parse(message.body);
-
-            // 온라인 멤버 목록 업데이트
-            if (presenceMessage.type === "CURRENT_MEMBERS") {
-              // 서버에서 전송한 현재 접속자 목록으로 초기화
-              const members = (presenceMessage.payload?.members as Array<{
-                odUserId: string;
-                nickname: string;
-                joinedAt: string;
-              }>) ?? [];
-              setOnlineMembers(members.map((m) => ({
-                odUserId: m.odUserId,
-                nickname: m.nickname,
-                joinedAt: m.joinedAt,
-              })));
-              console.log("[StudioStateSync] 현재 접속자 목록 수신:", members.length, "명");
-            } else if (presenceMessage.type === "MEMBER_JOINED") {
-              setOnlineMembers((prev) => {
-                // 이미 있으면 무시
-                if (prev.some((m) => m.odUserId === presenceMessage.userId)) {
-                  return prev;
-                }
-                return [
-                  ...prev,
-                  {
-                    odUserId: presenceMessage.userId,
-                    nickname: presenceMessage.nickname,
-                    joinedAt: presenceMessage.timestamp,
-                  },
-                ];
-              });
-            } else if (presenceMessage.type === "MEMBER_LEFT") {
-              setOnlineMembers((prev) =>
-                prev.filter((m) => m.odUserId !== presenceMessage.userId)
+        client.subscribe(
+          `/topic/studio/${studioId}/presence`,
+          (message: IMessage) => {
+            try {
+              const presenceMessage: StudioStateMessage = JSON.parse(
+                message.body
               );
-            }
 
-            onPresenceChangeRef.current?.(presenceMessage);
-          } catch (e) {
-            console.error("[StudioStateSync] 프레즌스 메시지 파싱 실패:", e);
+              // 온라인 멤버 목록 업데이트
+              if (presenceMessage.type === "CURRENT_MEMBERS") {
+                // 서버에서 전송한 현재 접속자 목록으로 초기화
+                const members =
+                  (presenceMessage.payload?.members as Array<{
+                    odUserId: string;
+                    nickname: string;
+                    joinedAt: string;
+                  }>) ?? [];
+                setOnlineMembers(
+                  members.map((m) => ({
+                    odUserId: m.odUserId,
+                    nickname: m.nickname,
+                    joinedAt: m.joinedAt,
+                  }))
+                );
+                console.log(
+                  "[StudioStateSync] 현재 접속자 목록 수신:",
+                  members.length,
+                  "명"
+                );
+              } else if (presenceMessage.type === "MEMBER_JOINED") {
+                setOnlineMembers((prev) => {
+                  // 이미 있으면 무시
+                  if (prev.some((m) => m.odUserId === presenceMessage.userId)) {
+                    return prev;
+                  }
+                  return [
+                    ...prev,
+                    {
+                      odUserId: presenceMessage.userId,
+                      nickname: presenceMessage.nickname,
+                      joinedAt: presenceMessage.timestamp,
+                    },
+                  ];
+                });
+              } else if (presenceMessage.type === "MEMBER_LEFT") {
+                setOnlineMembers((prev) =>
+                  prev.filter((m) => m.odUserId !== presenceMessage.userId)
+                );
+              }
+
+              onPresenceChangeRef.current?.(presenceMessage);
+            } catch (e) {
+              console.error("[StudioStateSync] 프레즌스 메시지 파싱 실패:", e);
+            }
           }
-        });
+        );
 
         // 내 입장 알림 전송 (서버에서 접속자 목록 관리 + CURRENT_MEMBERS 응답)
         const joinMessage: StudioStateMessage = {
@@ -178,7 +209,10 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
         // (서버에서 CURRENT_MEMBERS가 오면 덮어쓰기됨)
         setOnlineMembers((prev) => {
           if (prev.some((m) => m.odUserId === userId)) return prev;
-          return [...prev, { odUserId: userId, nickname, joinedAt: new Date().toISOString() }];
+          return [
+            ...prev,
+            { odUserId: userId, nickname, joinedAt: new Date().toISOString() },
+          ];
         });
       },
       onDisconnect: () => {
@@ -186,7 +220,10 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
         setIsConnected(false);
       },
       onStompError: (frame: IFrame) => {
-        console.error("[StudioStateSync] STOMP 에러:", frame.headers["message"]);
+        console.error(
+          "[StudioStateSync] STOMP 에러:",
+          frame.headers["message"]
+        );
       },
     });
 
@@ -218,7 +255,9 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
   const broadcastState = useCallback(
     (type: StudioStateType, payload?: Record<string, unknown>) => {
       if (!clientRef.current?.connected) {
-        console.warn("[StudioStateSync] WebSocket 연결 안됨, 브로드캐스트 스킵");
+        console.warn(
+          "[StudioStateSync] WebSocket 연결 안됨, 브로드캐스트 스킵"
+        );
         return;
       }
 
@@ -249,7 +288,10 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
 
   const broadcastSourceTransform = useCallback(
     (sourceId: string, transform: object) => {
-      broadcastState("SOURCE_TRANSFORM", { sourceId, transform: transform as Record<string, unknown> });
+      broadcastState("SOURCE_TRANSFORM", {
+        sourceId,
+        transform: transform as Record<string, unknown>,
+      });
     },
     [broadcastState]
   );
@@ -282,6 +324,13 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
     [broadcastState]
   );
 
+  const broadcastSceneRecommended = useCallback(
+    (sceneId: string, sceneName: string) => {
+      broadcastState("SCENE_RECOMMENDED", { sceneId, sceneName });
+    },
+    [broadcastState]
+  );
+
   return {
     isConnected,
     onlineMembers,
@@ -292,5 +341,6 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
     broadcastAssetSelected,
     broadcastStyleChange,
     broadcastSceneSelected,
+    broadcastSceneRecommended,
   };
 }

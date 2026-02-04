@@ -16,7 +16,7 @@ const wrapperVariants = {
   rest: { scale: 1 },
   hover: {
     scale: 1.04,
-    transition: { type: "spring", stiffness: 400, damping: 17, staggerChildren: 0 },
+    transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] },
   },
 };
 

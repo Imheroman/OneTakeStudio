@@ -50,16 +50,39 @@ public class PublishService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public PublishResponse startPublish(Long userId, PublishStartRequest request) {
-        // 이미 송출 중인지 확인
-        if (publishSessionRepository.findByStudioIdAndStatus(request.getStudioId(), PublishStatus.PUBLISHING).isPresent()) {
-            throw new BusinessException(ErrorCode.PUBLISH_ALREADY_IN_PROGRESS);
+    public PublishResponse startPublish(Long userId, Long studioId, PublishStartRequest request) {
+        // 이미 송출 중인 세션이 있으면 정리 후 새로 시작 (이중 클릭·끊긴 세션 복구)
+        Optional<PublishSession> existingOpt = publishSessionRepository.findByStudioIdAndStatus(
+                studioId, PublishStatus.PUBLISHING);
+        if (existingOpt.isPresent()) {
+            PublishSession existing = existingOpt.get();
+            try {
+                if (existing.getEgressId() != null) {
+                    liveKitEgressService.stopEgress(existing.getEgressId());
+                }
+            } catch (Exception e) {
+                log.debug("기존 egress 중지 실패(무시): egressId={}", existing.getEgressId(), e);
+            }
+            List<PublishDestination> existingDests = publishDestinationRepository.findByPublishSessionId(existing.getId());
+            existingDests.forEach(PublishDestination::markDisconnected);
+            publishDestinationRepository.saveAll(existingDests);
+            existing.stopPublishing();
+            publishSessionRepository.save(existing);
+            log.info("기존 송출 세션 정리 후 재시작: studioId={}, publishSessionId={}",
+                    studioId, existing.getPublishSessionId());
         }
 
-        // 활성 스트림 세션 확인
+        // 스트림 세션 확인 (CONNECTING 또는 ACTIVE — 웹훅 지연 시 CONNECTING도 허용)
         StreamSession streamSession = streamSessionRepository
-                .findByStudioIdAndStatus(request.getStudioId(), SessionStatus.ACTIVE)
+                .findFirstByStudioIdAndStatusInOrderByCreatedAtDesc(
+                        studioId,
+                        List.of(SessionStatus.CONNECTING, SessionStatus.ACTIVE))
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
+
+        // 웹훅 전에 startPublish가 호출된 경우 CONNECTING → ACTIVE로 전환
+        if (streamSession.getStatus() == SessionStatus.CONNECTING) {
+            streamSession.activate();
+        }
 
         // LiveKit room 존재 및 참가자 확인
         String roomName = streamSession.getRoomName();
@@ -80,7 +103,7 @@ public class PublishService {
                 .toList());
 
         PublishSession publishSession = PublishSession.builder()
-                .studioId(request.getStudioId())
+                .studioId(studioId)
                 .userId(userId)
                 .streamSessionId(streamSession.getId())
                 .status(PublishStatus.PENDING)
@@ -106,7 +129,7 @@ public class PublishService {
         // 사용자 비디오 품질 설정 조회
         VideoQuality videoQuality = userMediaSettingsRepository.findByUserId(userId)
                 .map(UserMediaSettings::getVideoQuality)
-                .orElse(VideoQuality.HIGH);
+                .orElse(VideoQuality.MEDIUM);
 
         // LiveKit Egress를 통한 RTMP 송출 시작
         String egressId = liveKitEgressService.startRtmpStream(streamSession.getRoomName(), fullRtmpUrls, videoQuality);
@@ -118,10 +141,10 @@ public class PublishService {
         savePublishDestinations(publishSession, rtmpDestinations);
 
         log.info("Publishing started: studioId={}, publishSessionId={}, destinations={}",
-                request.getStudioId(), publishSession.getPublishSessionId(), request.getDestinationIds());
+                studioId, publishSession.getPublishSessionId(), request.getDestinationIds());
 
         // 송출 시작 이벤트 발행
-        eventPublisher.publishStarted(request.getStudioId(), publishSession.getPublishSessionId());
+        eventPublisher.publishStarted(studioId, publishSession.getPublishSessionId());
 
         return PublishResponse.from(publishSession);
     }

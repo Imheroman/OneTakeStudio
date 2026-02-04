@@ -33,7 +33,7 @@ public class WorkspaceService {
     public RecentStudioListResponse getRecentStudios(String userId) {
         User user = findUserByUserId(userId);
 
-        // 사용자가 멤버로 있는 모든 스튜디오 조회 (HOST, MANAGER, GUEST 모두 포함)
+        // 사용자가 멤버로 있는 모든 스튜디오 조회 (HOST, MANAGER 포함)
         List<StudioMember> memberships = studioMemberRepository.findByUserId(user.getId());
 
         List<RecentStudioResponse> studioList = memberships.stream()
