@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   VideoPlayer,
   VideoSidebar,
-  AnalysisChart,
-  TrimSection,
+  ChartWithTrim,
 } from "@/features/library/video-library";
 import { DownloadVideoModal } from "@/widgets/library/download-video-modal";
 import { ShortsPlaybackModal } from "@/widgets/library/shorts-playback-modal";
@@ -195,14 +194,13 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
               ✨ Generate Shorts
             </Button>
           </div>
-          <AnalysisChart recordingId={video.id} />
-          <TrimSection
+          <ChartWithTrim
+            recordingId={video.id}
             durationSec={parseDurationToSeconds(video.duration)}
             startSec={trimStart}
             endSec={trimEnd}
             onStartChange={setTrimStart}
             onEndChange={setTrimEnd}
-            compact
             videoUrl={video.videoUrl ?? undefined}
           />
         </section>
