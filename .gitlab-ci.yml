@@ -221,6 +221,7 @@ deploy-core:
       kubectl apply -f infra/k8s/apps/core/deployment.yaml
       kubectl apply -f infra/k8s/apps/core/service.yaml
       kubectl apply -f infra/k8s/apps/core/hpa.yaml
+      kubectl apply -f infra/k8s/apps/core/middleware.yaml
       kubectl apply -f infra/k8s/apps/core/ingress.yaml
       kubectl rollout status deployment/api-server -n core --timeout=300s
   needs:

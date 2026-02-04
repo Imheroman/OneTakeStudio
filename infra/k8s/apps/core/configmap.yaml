@@ -11,3 +11,7 @@ data:
   OAUTH_GOOGLE_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
   OAUTH_KAKAO_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
   OAUTH_NAVER_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
+  AI_SERVICE_URL: "http://localhost:8000"
+  AI_WEBHOOK_URL: "http://api-server.core.svc.cluster.local:8080/api/ai/webhook"
+  MEDIA_SERVICE_URL: "http://media-server.media.svc.cluster.local:8081"
+  STORAGE_BASE_PATH: "/data/storage"

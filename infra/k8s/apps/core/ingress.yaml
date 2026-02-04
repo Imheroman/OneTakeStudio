@@ -6,6 +6,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: core-cors-headers@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -97,6 +98,14 @@ spec:
                   number: 8080
           # Dashboard
           - path: /api/dashboard
+            pathType: Prefix
+            backend:
+              service:
+                name: api-server
+                port:
+                  number: 8080
+          # AI (쇼츠 생성/상태/스트림)
+          - path: /api/ai
             pathType: Prefix
             backend:
               service:

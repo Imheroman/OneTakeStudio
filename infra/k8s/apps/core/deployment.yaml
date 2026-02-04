@@ -133,6 +133,29 @@ spec:
                 secretKeyRef:
                   name: core-secret
                   key: OAUTH_NAVER_CLIENT_SECRET
+            # AI Service
+            - name: AI_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: AI_SERVICE_URL
+            - name: AI_WEBHOOK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: AI_WEBHOOK_URL
+            # Media Service
+            - name: MEDIA_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: MEDIA_SERVICE_URL
+            # Storage
+            - name: STORAGE_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: STORAGE_BASE_PATH
 
           resources:
             requests:

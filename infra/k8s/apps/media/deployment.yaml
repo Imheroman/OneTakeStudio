@@ -103,6 +103,44 @@ spec:
                 secretKeyRef:
                   name: media-secret
                   key: LIVEKIT_API_SECRET
+            # YouTube OAuth
+            - name: YOUTUBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: YOUTUBE_CLIENT_ID
+            - name: YOUTUBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: YOUTUBE_CLIENT_SECRET
+            - name: YOUTUBE_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: YOUTUBE_REDIRECT_URI
+            # Chzzk OAuth
+            - name: CHZZK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: CHZZK_CLIENT_ID
+            - name: CHZZK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: CHZZK_CLIENT_SECRET
+            - name: CHZZK_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: CHZZK_REDIRECT_URI
+            # OAuth 공통
+            - name: OAUTH_FRONTEND_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: OAUTH_FRONTEND_REDIRECT_URI
           volumeMounts:
             - name: recordings
               mountPath: /recordings

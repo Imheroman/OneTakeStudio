@@ -12,3 +12,6 @@ data:
   CORE_SERVICE_URL: "http://api-server.core.svc.cluster.local:8080"
   RECORDING_BASE_PATH: "/recordings"
   RECORDING_BASE_URL: "https://www.onetakestudio.duckdns.org/recordings"
+  YOUTUBE_REDIRECT_URI: "https://i14c206.p.ssafy.io/api/oauth/youtube/callback"
+  CHZZK_REDIRECT_URI: "https://i14c206.p.ssafy.io/api/oauth/chzzk/callback"
+  OAUTH_FRONTEND_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/channels/oauth/callback"

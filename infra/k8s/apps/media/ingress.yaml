@@ -1,4 +1,4 @@
-# /api/media/** - 변환 없음
+# /api/media/**, /api/shorts/**, /api/oauth/**, /api/callback/** - 변환 없음
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -7,6 +7,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: media-cors-headers@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -17,6 +18,27 @@ spec:
       http:
         paths:
           - path: /api/media
+            pathType: Prefix
+            backend:
+              service:
+                name: media-server
+                port:
+                  number: 8081
+          - path: /api/shorts
+            pathType: Prefix
+            backend:
+              service:
+                name: media-server
+                port:
+                  number: 8081
+          - path: /api/oauth
+            pathType: Prefix
+            backend:
+              service:
+                name: media-server
+                port:
+                  number: 8081
+          - path: /api/callback
             pathType: Prefix
             backend:
               service:
@@ -40,7 +62,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: media-rewrite-publish@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: media-cors-headers@kubernetescrd,media-rewrite-publish@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -67,7 +89,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: media-rewrite-v1-media@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: media-cors-headers@kubernetescrd,media-rewrite-v1-media@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -94,7 +116,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: media-rewrite-streams@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: media-cors-headers@kubernetescrd,media-rewrite-streams@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
@@ -121,7 +143,7 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: media-rewrite-recordings@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: media-cors-headers@kubernetescrd,media-rewrite-recordings@kubernetescrd
 spec:
   ingressClassName: traefik
   tls:
