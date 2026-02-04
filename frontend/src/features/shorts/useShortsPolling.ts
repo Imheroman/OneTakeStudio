@@ -66,7 +66,7 @@ export const useShortsPolling = () => {
               currentStep: s.currentStep ?? undefined,
               totalSteps: s.totalSteps ?? undefined,
               currentStepKey: s.currentStepKey ?? undefined,
-              jobId: data.jobId,
+              jobId: data.jobId ?? undefined,
               videoId: s.videoId ?? undefined,
               videoUrl:
                 s.status === "completed" && data.jobId && s.videoId
