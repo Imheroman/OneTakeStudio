@@ -62,7 +62,7 @@ export const useShortsStore = create<ShortsStore>((set) => ({
             videoId: server.videoId ?? item.videoId,
           };
         }
-        if (server.status === "processing" || server.status === "pending") {
+        if (server.status === "loading") {
           return {
             ...item,
             status: "loading" as ShortStatus,
