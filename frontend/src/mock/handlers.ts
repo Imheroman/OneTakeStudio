@@ -474,6 +474,92 @@ export const handlers = [
     }
   ),
 
+  // 시간대별 댓글 개수 분석 (A방식: on-the-fly 집계 시뮬레이션)
+  http.get(
+    `${BASE_URL}/api/library/recordings/:recordingId/comment-analysis`,
+    async ({ params }) => {
+      const recordingId = Array.isArray(params.recordingId)
+        ? params.recordingId[0]
+        : params.recordingId;
+      console.log("[MSW] 시간대별 댓글 분석 요청:", recordingId);
+
+      // 녹화별 durationSeconds에 맞춰 60초 단위 버킷 생성 (목업)
+      const durationByRecording: Record<string, number> = {
+        "rec-1": 2538,
+        "rec-2": 932,
+        "rec-3": 1694,
+        "rec-4": 532,
+        "rec-5": 323,
+      };
+      const durationSeconds = durationByRecording[recordingId ?? ""] ?? 600;
+
+      const bucketSize = 60;
+      const bucketCount = Math.ceil(durationSeconds / bucketSize);
+      const buckets = Array.from({ length: bucketCount }, (_, i) => {
+        const timeSec = i * bucketSize;
+        // 시드 기반으로 댓글 수 변동 (피크 구간 시뮬레이션)
+        const seed = (i * 7 + (recordingId?.length ?? 0)) % 10;
+        const base = 3 + (seed % 8);
+        const peak =
+          i === Math.floor(bucketCount * 0.3) ||
+          i === Math.floor(bucketCount * 0.65)
+            ? 1.8
+            : 1;
+        const count = Math.max(0, Math.round(base * peak + (i % 5)));
+        return { timeSec, count };
+      });
+
+      return HttpResponse.json({
+        success: true,
+        data: {
+          recordingId: recordingId ?? "",
+          durationSeconds,
+          buckets,
+        },
+      });
+    }
+  ),
+
+  // 녹화별 북마크(마커) 목록
+  http.get(
+    `${BASE_URL}/api/library/recordings/:recordingId/markers`,
+    async ({ params }) => {
+      const recordingId = Array.isArray(params.recordingId)
+        ? params.recordingId[0]
+        : params.recordingId;
+      console.log("[MSW] 북마크 목록 요청:", recordingId);
+
+      const markersByRecording: Record<
+        string,
+        Array<{ timestampSec: number; label: string | null }>
+      > = {
+        "rec-1": [
+          { timestampSec: 180, label: "인트로 하이라이트" },
+          { timestampSec: 720, label: "주요 토론 시작" },
+          { timestampSec: 1560, label: "결론 정리" },
+        ],
+        "rec-2": [
+          { timestampSec: 120, label: "오프닝" },
+          { timestampSec: 480, label: "핵심 내용" },
+        ],
+        "rec-3": [{ timestampSec: 300, label: "중요 포인트" }],
+      };
+
+      const items = markersByRecording[recordingId ?? ""] ?? [];
+      const markers = items.map((item, i) => ({
+        markerId: `m-${recordingId}-${i}`,
+        recordingId: recordingId ?? "",
+        timestampSec: item.timestampSec,
+        label: item.label,
+      }));
+
+      return HttpResponse.json({
+        success: true,
+        data: { markers },
+      });
+    }
+  ),
+
   // 라이브러리 스토리지 용량 조회
   http.get(`${BASE_URL}/api/library/storage`, async () => {
     console.log("[MSW] 라이브러리 스토리지 요청");

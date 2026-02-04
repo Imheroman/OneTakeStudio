@@ -46,7 +46,7 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
       if (!response.ok) throw new Error("Failed to start generation");
 
       alert(
-        "쇼츠 생성이 시작되었습니다!\n잠시 후 상단 알림을 통해 확인하실 수 있습니다.",
+        "쇼츠 생성이 시작되었습니다!\n잠시 후 상단 알림을 통해 확인하실 수 있습니다."
       );
       router.back();
     } catch (error) {
@@ -67,23 +67,22 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
 
         <div
           className={cn(
-            "relative w-[320px] h-[568px] rounded-2xl shadow-2xl overflow-hidden transition-colors duration-300 flex flex-col items-center justify-center",
-            bgColor === "black"
-              ? "bg-black"
-              : "bg-white border border-gray-200",
+            "relative w-[320px] h-[568px] rounded-2xl shadow-2xl overflow-hidden transition-colors duration-300 flex flex-col",
+            bgColor === "black" ? "bg-black" : "bg-white border border-gray-200"
           )}
         >
           {/* 가짜 콘텐츠 */}
           <div
             className={cn(
-              "text-center px-6 font-bold text-2xl mb-4",
-              bgColor === "black" ? "text-white" : "text-black",
+              "text-center px-6 font-bold text-2xl py-4 shrink-0",
+              bgColor === "black" ? "text-white" : "text-black"
             )}
           >
             AI가 생성한 타이틀입니다
           </div>
 
-          <div className="w-40 h-24 bg-gray-700/50 rounded flex items-center justify-center text-xs text-gray-400 mb-12">
+          {/* Video 영역: 가로 전체로 꽉 채움 (실제 쇼츠 비율) */}
+          <div className="w-full flex-1 min-h-0 bg-gray-700/50 flex items-center justify-center text-xs text-gray-400">
             Video Content
           </div>
 
@@ -91,7 +90,7 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
             <div
               className={cn(
                 "absolute bottom-20 w-full text-center px-4 font-medium",
-                bgColor === "black" ? "text-yellow-400" : "text-blue-600",
+                bgColor === "black" ? "text-yellow-400" : "text-blue-600"
               )}
             >
               AI가 생성한 자막이 여기에
@@ -114,7 +113,7 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
                 "flex-1 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all",
                 bgColor === "black"
                   ? "border-blue-500 bg-blue-50/50"
-                  : "border-gray-100 hover:border-gray-200",
+                  : "border-gray-100 hover:border-gray-200"
               )}
             >
               <div className="w-8 h-8 bg-black rounded shadow-sm border border-gray-600" />
@@ -126,7 +125,7 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
                 "flex-1 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all",
                 bgColor === "white"
                   ? "border-blue-500 bg-blue-50/50"
-                  : "border-gray-100 hover:border-gray-200",
+                  : "border-gray-100 hover:border-gray-200"
               )}
             >
               <div className="w-8 h-8 bg-white rounded shadow-sm border border-gray-200" />
@@ -144,9 +143,7 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
             <div
               className={cn(
                 "w-5 h-5 rounded border flex items-center justify-center transition-colors",
-                useSubtitles
-                  ? "bg-blue-600 border-blue-600"
-                  : "border-gray-300",
+                useSubtitles ? "bg-blue-600 border-blue-600" : "border-gray-300"
               )}
             >
               {useSubtitles && <span className="text-white text-xs">✔</span>}
@@ -178,7 +175,7 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
                       "flex items-center justify-center gap-2 py-3 rounded-lg border text-sm transition-all",
                       language === lang.id
                         ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
-                        : "border-gray-100 text-gray-600 hover:bg-gray-50",
+                        : "border-gray-100 text-gray-600 hover:bg-gray-50"
                     )}
                   >
                     <span>{lang.flag}</span>
@@ -199,8 +196,8 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
           {isSubmitting
             ? "요청 중..."
             : shortsApiAvailable
-              ? "쇼츠 생성 요청"
-              : "준비 중 (API 미구현)"}
+            ? "쇼츠 생성 요청"
+            : "준비 중 (API 미구현)"}
         </Button>
         {!shortsApiAvailable && (
           <p className="text-xs text-gray-500 text-center">

@@ -95,10 +95,28 @@ function MembersContent() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="team" className="mt-6">
-              <FavoriteManagement />
+              <section
+                className={cn(
+                  "rounded-xl p-5",
+                  isDark
+                    ? "bg-white/5 border border-white/10"
+                    : "bg-white/50 border border-gray-200/60"
+                )}
+              >
+                <FavoriteManagement isDark={isDark} />
+              </section>
             </TabsContent>
             <TabsContent value="invites" className="mt-6">
-              <ReceivedInvitesPanel />
+              <section
+                className={cn(
+                  "rounded-xl p-5",
+                  isDark
+                    ? "bg-white/5 border border-white/10"
+                    : "bg-white/50 border border-gray-200/60"
+                )}
+              >
+                <ReceivedInvitesPanel />
+              </section>
             </TabsContent>
           </Tabs>
         </div>

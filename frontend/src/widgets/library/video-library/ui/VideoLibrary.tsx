@@ -28,12 +28,14 @@ function VideoLibraryRow({
   videos: allVideos,
   columnCount,
   onMoreClick,
+  isDark,
 }: {
   index: number;
   style: React.CSSProperties;
   videos: Video[];
   columnCount: number;
   onMoreClick?: (video: Video) => void;
+  isDark?: boolean;
 }) {
   const start = index * columnCount;
   const rowVideos = allVideos.slice(start, start + columnCount);
@@ -48,7 +50,12 @@ function VideoLibraryRow({
       }}
     >
       {rowVideos.map((video) => (
-        <VideoCard key={video.id} video={video} onMoreClick={onMoreClick} />
+        <VideoCard
+          key={video.id}
+          video={video}
+          onMoreClick={onMoreClick}
+          isDark={isDark}
+        />
       ))}
     </div>
   );
@@ -154,6 +161,7 @@ export function VideoLibrary({ studioId }: VideoLibraryProps = {}) {
               videos: Video[];
               columnCount: number;
               onMoreClick?: (video: Video) => void;
+              isDark?: boolean;
             }>
               rowCount={rowCount}
               rowHeight={CARD_ROW_HEIGHT}
@@ -162,6 +170,7 @@ export function VideoLibrary({ studioId }: VideoLibraryProps = {}) {
                 videos,
                 columnCount,
                 onMoreClick: handleMoreClick,
+                isDark,
               }}
               style={{ height: listHeight, width: "100%" }}
               overscanCount={2}
@@ -173,6 +182,7 @@ export function VideoLibrary({ studioId }: VideoLibraryProps = {}) {
                   key={video.id}
                   video={video}
                   onMoreClick={handleMoreClick}
+                  isDark={isDark}
                 />
               ))}
             </div>

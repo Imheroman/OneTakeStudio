@@ -48,7 +48,7 @@ export const VideoSidebar = ({ video, onClipClick }: VideoSidebarProps) => {
             </div>
             <p className="text-sm text-gray-500">아직 생성된 쇼츠가 없어요.</p>
             <p className="text-xs text-gray-400 mt-1">
-              Generate Shorts 또는 Save(트림) 버튼을 눌러보세요!
+              Generate Shorts 버튼을 눌러보세요!
             </p>
           </div>
         ) : (

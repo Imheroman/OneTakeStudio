@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui/table";
+import { cn } from "@/shared/lib/utils";
 import type { Favorite } from "@/entities/favorite/model";
 
 const ROW_HEIGHT = 56;
@@ -21,22 +22,36 @@ interface FavoriteTableProps {
   favorites: Favorite[];
   onDelete: (id: string) => void;
   isLoading?: boolean;
+  isDark?: boolean;
 }
 
 export function FavoriteTable({
   favorites,
   onDelete,
   isLoading = false,
+  isDark = false,
 }: FavoriteTableProps) {
   if (isLoading) {
     return (
-      <div className="text-center text-gray-500 py-8">로딩 중...</div>
+      <div
+        className={cn(
+          "text-center py-8",
+          isDark ? "text-gray-400" : "text-gray-500"
+        )}
+      >
+        로딩 중...
+      </div>
     );
   }
 
   if (favorites.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-8">
+      <div
+        className={cn(
+          "text-center py-8",
+          isDark ? "text-gray-400" : "text-gray-500"
+        )}
+      >
         등록된 즐겨찾기가 없습니다.
       </div>
     );
@@ -49,9 +64,15 @@ export function FavoriteTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>이메일</TableHead>
-            <TableHead>닉네임</TableHead>
-            <TableHead className="text-right">동작</TableHead>
+            <TableHead className={cn(isDark && "text-gray-300")}>
+              이메일
+            </TableHead>
+            <TableHead className={cn(isDark && "text-gray-300")}>
+              닉네임
+            </TableHead>
+            <TableHead className={cn("text-right", isDark && "text-gray-300")}>
+              동작
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -60,8 +81,14 @@ export function FavoriteTable({
               favorite.id ?? favorite.userId ?? favorite.favoriteId ?? "";
             return (
               <TableRow key={deleteId || favorite.nickname}>
-                <TableCell className="font-medium">{favorite.email ?? "-"}</TableCell>
-                <TableCell>{favorite.nickname}</TableCell>
+                <TableCell
+                  className={cn("font-medium", isDark && "text-gray-200")}
+                >
+                  {favorite.email ?? "-"}
+                </TableCell>
+                <TableCell className={cn(isDark && "text-gray-300")}>
+                  {favorite.nickname}
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
@@ -89,11 +116,13 @@ export function FavoriteTable({
     style,
     favorites: favs,
     onDelete: onDel,
+    isDark: dark,
   }: {
     index: number;
     style: React.CSSProperties;
     favorites: Favorite[];
     onDelete: (id: string) => void;
+    isDark?: boolean;
   }) {
     const favorite = favs[index];
     const deleteId =
@@ -101,12 +130,28 @@ export function FavoriteTable({
     return (
       <div
         style={style}
-        className={`grid ${GRID_COLS} items-center w-full border-b px-2 text-sm hover:bg-muted/50 transition-colors`}
+        className={cn(
+          "grid",
+          GRID_COLS,
+          "items-center w-full border-b px-2 text-sm transition-colors",
+          dark
+            ? "border-white/10 hover:bg-white/5"
+            : "border-gray-200 hover:bg-muted/50"
+        )}
       >
-        <span className="min-w-0 py-2 px-2 font-medium truncate">
+        <span
+          className={cn(
+            "min-w-0 py-2 px-2 font-medium truncate",
+            dark && "text-gray-200"
+          )}
+        >
           {favorite.email ?? "-"}
         </span>
-        <span className="min-w-0 py-2 px-2 truncate">{favorite.nickname}</span>
+        <span
+          className={cn("min-w-0 py-2 px-2 truncate", dark && "text-gray-300")}
+        >
+          {favorite.nickname}
+        </span>
         <div className="shrink-0 py-2 px-2 text-right">
           <Button
             variant="ghost"
@@ -124,19 +169,35 @@ export function FavoriteTable({
   }
 
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div
+      className={cn(
+        "border rounded-md overflow-hidden",
+        isDark && "border-white/10"
+      )}
+    >
       <div
-        className={`grid ${GRID_COLS} w-full border-b bg-muted/30 text-left text-sm font-medium h-10 px-2 align-middle`}
+        className={cn(
+          "grid",
+          GRID_COLS,
+          "w-full border-b text-left text-sm font-medium h-10 px-2 align-middle",
+          isDark
+            ? "border-white/10 bg-white/5 text-gray-300"
+            : "border-gray-200 bg-muted/30"
+        )}
       >
         <span className="px-2">이메일</span>
         <span className="px-2">닉네임</span>
         <span className="px-2 text-right">동작</span>
       </div>
-      <List<{ favorites: Favorite[]; onDelete: (id: string) => void }>
+      <List<{
+        favorites: Favorite[];
+        onDelete: (id: string) => void;
+        isDark?: boolean;
+      }>
         rowCount={favorites.length}
         rowHeight={ROW_HEIGHT}
         rowComponent={FavoriteRow}
-        rowProps={{ favorites, onDelete }}
+        rowProps={{ favorites, onDelete, isDark }}
         style={{ height: listHeight, width: "100%" }}
         overscanCount={5}
       />

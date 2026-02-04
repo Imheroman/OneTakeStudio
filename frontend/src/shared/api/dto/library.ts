@@ -137,3 +137,52 @@ export type StorageDataFromApiDto = {
   videoUsage?: number;
   assetUsage?: number;
 };
+
+// --- 시간대별 댓글 분석 ---
+
+export const CommentAnalysisBucketSchema = z.object({
+  timeSec: z.number(),
+  count: z.number(),
+});
+
+export const CommentAnalysisResponseSchema = z.object({
+  recordingId: z.string(),
+  durationSeconds: z.number(),
+  buckets: z.array(CommentAnalysisBucketSchema),
+});
+
+export const ApiResponseCommentAnalysisSchema = z.object({
+  resultCode: z.string().optional(),
+  success: z.boolean(),
+  message: z.string().optional(),
+  data: CommentAnalysisResponseSchema,
+});
+
+export type CommentAnalysisBucketDto = z.infer<
+  typeof CommentAnalysisBucketSchema
+>;
+export type CommentAnalysisResponseDto = z.infer<
+  typeof CommentAnalysisResponseSchema
+>;
+
+// --- 북마크(마커) ---
+
+export const MarkerSchema = z.object({
+  markerId: z.string(),
+  recordingId: z.string(),
+  timestampSec: z.number(),
+  label: z.string().nullable().optional(),
+});
+
+export const MarkerListResponseSchema = z.object({
+  markers: z.array(MarkerSchema),
+});
+
+export const ApiResponseMarkersSchema = z.object({
+  resultCode: z.string().optional(),
+  success: z.boolean(),
+  message: z.string().optional(),
+  data: MarkerListResponseSchema,
+});
+
+export type MarkerDto = z.infer<typeof MarkerSchema>;

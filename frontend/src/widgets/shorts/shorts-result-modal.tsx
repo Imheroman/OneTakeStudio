@@ -13,9 +13,9 @@ export function ShortsResultModal() {
     // 배경 어둡게 (Overlay)
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       {/* 모달 컨테이너 */}
-      <div className="bg-white rounded-2xl w-[90%] max-w-5xl h-[80vh] flex flex-col shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl w-[90%] max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 duration-200">
         {/* 헤더 */}
-        <div className="p-6 border-b flex justify-between items-center">
+        <div className="p-6 border-b shrink-0 flex justify-between items-center">
           <div>
             <h2 className="text-xl font-bold text-gray-900">쇼츠 선택 창</h2>
             <p className="text-sm text-gray-500">
@@ -31,8 +31,8 @@ export function ShortsResultModal() {
           </button>
         </div>
 
-        {/* 본문: 3개의 슬롯 */}
-        <div className="flex-1 p-8 bg-gray-50 flex justify-center items-center gap-8">
+        {/* 본문: 3개의 슬롯 (스크롤 가능) */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-8 bg-gray-50 flex justify-center items-start gap-8">
           {shorts.map((short) => (
             <div key={short.id} className="flex flex-col gap-4 w-[280px]">
               {/* 카드 본체 (폰 화면 비율) */}
@@ -41,7 +41,7 @@ export function ShortsResultModal() {
                   "aspect-[9/16] rounded-2xl overflow-hidden shadow-sm border transition-all transition-smooth relative group bg-white gpu-layer gpu-layer-hover",
                   short.status === "loading"
                     ? "border-gray-200 flex flex-col items-center justify-center"
-                    : "border-purple-500 shadow-purple-100 ring-2 ring-purple-100",
+                    : "border-purple-500 shadow-purple-100 ring-2 ring-purple-100"
                 )}
               >
                 {/* 1. 로딩 중일 때 */}
@@ -84,7 +84,7 @@ export function ShortsResultModal() {
                   "w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all",
                   short.status === "completed"
                     ? "bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-200"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed",
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 )}
               >
                 {short.status === "completed" ? (
