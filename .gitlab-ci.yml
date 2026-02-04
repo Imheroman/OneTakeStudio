@@ -84,6 +84,10 @@ setup-secrets:
         --from-literal=JWT_SECRET="$JWT_SECRET" \
         --from-literal=LIVEKIT_API_KEY="devkey" \
         --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
+        --from-literal=YOUTUBE_CLIENT_ID="$YOUTUBE_CLIENT_ID" \
+        --from-literal=YOUTUBE_CLIENT_SECRET="$YOUTUBE_CLIENT_SECRET" \
+        --from-literal=CHZZK_CLIENT_ID="$CHZZK_CLIENT_ID" \
+        --from-literal=CHZZK_CLIENT_SECRET="$CHZZK_CLIENT_SECRET" \
         --dry-run=client -o yaml | kubectl apply -f -
 
     # 6. LiveKit namespace 및 Secret
