@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
   ReferenceLine,
+  ReferenceArea,
 } from "recharts";
 import { getCommentAnalysis, getMarkers } from "@/shared/api/library";
 import type { CommentAnalysisBucketDto } from "@/shared/api/dto/library";
@@ -25,9 +25,31 @@ function formatTime(seconds: number): string {
 
 interface AnalysisChartProps {
   recordingId: string;
+  /** 통합 타임라인 안에 넣을 때: 여백 제거, Y축 숨김, 호버/구간 표시 */
+  embedded?: boolean;
+  /** 시간축 도메인 강제 (통합 시 상위 duration과 맞출 때) */
+  durationOverride?: number;
+  /** 호버 시 표시할 초 (통합 시 상위에서 전달) */
+  hoverSec?: number | null;
+  /** 선택 구간 시작/종료 초 (통합 시) */
+  startSec?: number;
+  endSec?: number;
+  /** 좌우(시간) 배율 0~1 (0=전체, 1=확대) */
+  zoomX?: number;
+  /** 상하(값) 배율 0~1 (0=전체, 1=확대) */
+  zoomY?: number;
 }
 
-export function AnalysisChart({ recordingId }: AnalysisChartProps) {
+export function AnalysisChart({
+  recordingId,
+  embedded = false,
+  durationOverride,
+  hoverSec: hoverSecProp,
+  startSec: startSecProp,
+  endSec: endSecProp,
+  zoomX = 0,
+  zoomY = 0,
+}: AnalysisChartProps) {
   const [data, setData] = useState<CommentAnalysisBucketDto[]>([]);
   const [markers, setMarkers] = useState<MarkerDto[]>([]);
   const [durationSeconds, setDurationSeconds] = useState(0);
@@ -102,41 +124,82 @@ export function AnalysisChart({ recordingId }: AnalysisChartProps) {
 
   const maxCount = Math.max(...data.map((b) => b.count), 1);
   const chartDuration =
-    durationSeconds > 0
+    durationOverride ??
+    (durationSeconds > 0
       ? durationSeconds
       : data.length > 0
       ? (data[data.length - 1]?.timeSec ?? 0) + 60
-      : 0;
+      : 0);
+
+  // 유튜브 스타일 타임라인용 색상 (다크/라이트)
+  const gridStroke = isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0";
+  const axisStroke = isDark ? "rgba(255,255,255,0.15)" : "#e2e8f0";
+  const tickFill = isDark ? "rgba(255,255,255,0.5)" : "#64748b";
+  const areaStroke = isDark ? "#818cf8" : "#6366f1";
+  const areaGradientId = "analysis-area-gradient";
+  const chartMargin = embedded
+    ? { top: 4, right: 0, left: 0, bottom: 0 }
+    : { top: 8, right: 50, left: 16, bottom: 0 };
+
+  // 배율: 0=전체, 1=확대. 시간축은 보이는 구간 비율, Y축은 max 스케일
+  const visibleTimeRatio = Math.max(0.2, 1 - 0.8 * zoomX);
+  const timeDomain: [number, number] = [0, chartDuration * visibleTimeRatio];
+  const yMaxRatio = Math.max(0.3, 1 - 0.7 * zoomY);
+  const yDomain: [number, number] = [0, maxCount * 1.1 * yMaxRatio];
 
   return (
     <div className="relative w-full h-[200px]">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart
+        <AreaChart
           data={chartData}
-          margin={{ top: 8, right: 50, left: 16, bottom: 0 }}
+          margin={chartMargin}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+          <defs>
+            <linearGradient
+              id={areaGradientId}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop
+                offset="0%"
+                stopColor={areaStroke}
+                stopOpacity={isDark ? 0.45 : 0.5}
+              />
+              <stop
+                offset="100%"
+                stopColor={areaStroke}
+                stopOpacity={0.05}
+              />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
           <XAxis
             dataKey="timeSec"
             type="number"
-            domain={[0, chartDuration]}
+            domain={embedded ? timeDomain : [0, chartDuration]}
             tickFormatter={formatTime}
-            tick={{ fontSize: 11, fill: "#64748b" }}
+            tick={{ fontSize: 11, fill: tickFill }}
             tickLine={false}
-            axisLine={{ stroke: "#e2e8f0" }}
+            axisLine={embedded ? false : { stroke: axisStroke }}
             interval="preserveStartEnd"
             padding={{ left: 0, right: 0 }}
+            hide={embedded}
           />
-          <YAxis
-            width={40}
-            tick={{ fontSize: 11, fill: "#64748b" }}
-            tickLine={false}
-            axisLine={false}
-            allowDecimals={false}
-            domain={[0, maxCount * 1.1]}
-          />
+          {!embedded && (
+            <YAxis
+              width={40}
+              tick={{ fontSize: 11, fill: tickFill }}
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+              domain={[0, maxCount * 1.1]}
+            />
+          )}
+          {embedded && <YAxis width={0} domain={yDomain} hide />}
           <Tooltip
-            cursor={false}
+            cursor={{ stroke: axisStroke, strokeWidth: 1, strokeDasharray: "4 2" }}
             content={({ active, payload }) => {
               if (!active || !payload?.[0]) return null;
               const d = payload[0].payload;
@@ -198,20 +261,16 @@ export function AnalysisChart({ recordingId }: AnalysisChartProps) {
               );
             }}
           />
-          <Bar
+          <Area
+            type="monotone"
             dataKey="count"
-            radius={[2, 2, 0, 0]}
-            maxBarSize={24}
-            activeBar={false}
-          >
-            {chartData.map((_, index) => (
-              <Cell
-                key={index}
-                fill="#6366f1"
-                fillOpacity={0.7 + (chartData[index].count / maxCount) * 0.3}
-              />
-            ))}
-          </Bar>
+            stroke={areaStroke}
+            strokeWidth={1.5}
+            fill={`url(#${areaGradientId})`}
+            isAnimationActive={true}
+            animationDuration={400}
+            animationEasing="ease-out"
+          />
           {markers.map((marker) => (
             <ReferenceLine
               key={marker.markerId}
@@ -220,7 +279,24 @@ export function AnalysisChart({ recordingId }: AnalysisChartProps) {
               strokeWidth={2}
             />
           ))}
-        </BarChart>
+          {embedded && startSecProp != null && endSecProp != null && (
+            <ReferenceArea
+              x1={startSecProp}
+              x2={endSecProp}
+              fill={isDark ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.15)"}
+              stroke="#3b82f6"
+              strokeOpacity={0.9}
+              strokeWidth={2}
+            />
+          )}
+          {embedded && hoverSecProp != null && (
+            <ReferenceLine
+              x={hoverSecProp}
+              stroke={isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.4)"}
+              strokeWidth={1}
+            />
+          )}
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

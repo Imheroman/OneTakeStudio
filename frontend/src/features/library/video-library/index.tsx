@@ -3,5 +3,6 @@ export { useVideoLibrary, type FilterType } from "./model/useVideoLibrary";
 export { VideoPlayer } from "./ui/video-player";
 export { VideoSidebar } from "./ui/video-sidebar";
 export { AnalysisChart } from "./ui/analysis-chart";
+export { ChartWithTrim } from "./ui/chart-with-trim";
 export { VideoInfoSection } from "./ui/video-info-section";
 export { TrimSection } from "./ui/trim-section";
