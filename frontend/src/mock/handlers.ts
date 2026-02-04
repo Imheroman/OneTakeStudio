@@ -194,55 +194,90 @@ export const handlers = [
     });
   }),
 
-  // 스토리지 정보 조회
+  // 스토리지 정보 조회 — GET /api/storage (StorageController 형식)
   http.get(`${BASE_URL}/api/storage`, async () => {
     console.log("[MSW] 스토리지 정보 요청");
     return HttpResponse.json({
-      used: 40.09,
       total: 50.0,
+      used: 40.09,
+      available: 9.91,
       videoUsage: 40.2,
       assetUsage: 4.89,
+      usedBytes: 43048912896,
+      limitBytes: 53687091200,
+      usedPercentage: 80.18,
+      usedFormatted: "40.09 GB",
+      limitFormatted: "50.00 GB",
     });
   }),
 
-  // 스토리지 파일 목록 조회
-  http.get(`${BASE_URL}/api/storage/files`, async () => {
-    console.log("[MSW] 스토리지 파일 목록 요청");
+  // 스토리지 파일 목록 조회 — GET /api/storage/files (StorageController 형식)
+  http.get(`${BASE_URL}/api/storage/files`, async ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") ?? 0);
+    const size = Number(url.searchParams.get("size") ?? 50);
+    console.log("[MSW] 스토리지 파일 목록 요청", `page=${page} size=${size}`);
+
+    const allFiles = [
+      {
+        id: "rec-1",
+        title: "Weekly Podcast Episode #45",
+        name: "Weekly Podcast Episode #45",
+        date: "2026-01-15 15:16",
+        uploadedAt: "2026-01-15T15:16:00.000Z",
+        size: "4.20 GB",
+        sizeBytes: 4509715660,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+      {
+        id: "rec-2",
+        title: "Product Demo - Q1 Launch",
+        name: "Product Demo - Q1 Launch",
+        date: "2026-01-14 10:30",
+        uploadedAt: "2026-01-14T10:30:00.000Z",
+        size: "1.20 GB",
+        sizeBytes: 1288490188,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+      {
+        id: "rec-3",
+        title: "Tutorial: Getting Started",
+        name: "Tutorial: Getting Started",
+        date: "2026-01-12 09:15",
+        uploadedAt: "2026-01-12T09:15:00.000Z",
+        size: "2.80 GB",
+        sizeBytes: 3006477107,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+      {
+        id: "rec-4",
+        title: "Live Stream Highlight Reel",
+        name: "Live Stream Highlight Reel",
+        date: "2026-01-10 16:00",
+        uploadedAt: "2026-01-10T16:00:00.000Z",
+        size: "800.00 MB",
+        sizeBytes: 858993459,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+    ];
+
+    const start = page * size;
+    const paginatedFiles = allFiles.slice(start, start + size);
+    const totalElements = allFiles.length;
+
     return HttpResponse.json({
-      files: [
-        {
-          id: 1,
-          title: "Weekly Podcast Episode #4",
-          date: "Jan 4, 2026",
-          size: "4.2 GB",
-          type: "Video",
-          status: "Uploaded",
-        },
-        {
-          id: 2,
-          title: "Product Demo - Q1 Launch",
-          date: "Jan 12, 2026",
-          size: "1.2 GB",
-          type: "Video",
-          status: "Processing",
-        },
-        {
-          id: 3,
-          title: "Team Meeting Recording",
-          date: "Jan 8, 2026",
-          size: "800 MB",
-          type: "Shorts",
-          status: "Saved",
-        },
-        {
-          id: 4,
-          title: "Gaming Stream Highlight",
-          date: "Jan 2, 2026",
-          size: "2.5 GB",
-          type: "Video",
-          status: "Uploaded",
-        },
-      ],
+      files: paginatedFiles,
+      totalPages: Math.ceil(totalElements / size) || 1,
+      totalElements,
+      currentPage: page,
     });
   }),
 
@@ -567,11 +602,113 @@ export const handlers = [
     return HttpResponse.json({
       success: true,
       data: {
-        usedBytes: 40.5 * gb,
+        usedBytes: 42 * gb,
         limitBytes: 50 * gb,
-        usedPercentage: 81,
-        usedFormatted: "40.5 GB",
+        usedPercentage: 84,
+        usedFormatted: "42 GB",
         limitFormatted: "50 GB",
+        videoCount: 8,
+        videoLimit: 50,
+      },
+    });
+  }),
+
+  // 라이브러리 스토리지 파일 목록 조회
+  http.get(`${BASE_URL}/api/library/storage/files`, async () => {
+    console.log("[MSW] 라이브러리 스토리지 파일 목록 요청");
+    return HttpResponse.json({
+      success: true,
+      data: {
+        files: [
+          {
+            id: "rec-1",
+            title: "Weekly Podcast Episode #45",
+            date: "Jan 15, 2026",
+            createdAt: "2026-01-15T10:00:00Z",
+            size: "4.2 GB",
+            sizeBytes: 4509715660,
+            type: "Video",
+            status: "Uploaded",
+            daysUntilDeletion: 30,
+          },
+          {
+            id: "rec-2",
+            title: "Product Demo - Q1 Launch",
+            date: "Jan 14, 2026",
+            createdAt: "2026-01-14T14:30:00Z",
+            size: "1.2 GB",
+            sizeBytes: 1288490188,
+            type: "Video",
+            status: "Processing",
+            daysUntilDeletion: 29,
+          },
+          {
+            id: "rec-3",
+            title: "Tutorial: Getting Started",
+            date: "Jan 12, 2026",
+            createdAt: "2026-01-12T09:15:00Z",
+            size: "2.8 GB",
+            sizeBytes: 3006477107,
+            type: "Video",
+            status: "Saved",
+            daysUntilDeletion: 27,
+          },
+          {
+            id: "clip-4",
+            title: "Live Stream Highlight Reel",
+            date: "Jan 10, 2026",
+            createdAt: "2026-01-10T16:00:00Z",
+            size: "800 MB",
+            sizeBytes: 858993459,
+            type: "Shorts",
+            status: "Uploaded",
+            daysUntilDeletion: 25,
+          },
+          {
+            id: "clip-5",
+            title: "Summer Vlog Highlights",
+            date: "Jan 8, 2026",
+            createdAt: "2026-01-08T11:20:00Z",
+            size: "520 MB",
+            sizeBytes: 545259520,
+            type: "Shorts",
+            status: "Saved",
+            daysUntilDeletion: 23,
+          },
+          {
+            id: "rec-6",
+            title: "Team Meeting Recording",
+            date: "Jan 5, 2026",
+            createdAt: "2026-01-05T08:45:00Z",
+            size: "3.1 GB",
+            sizeBytes: 3328599654,
+            type: "Video",
+            status: "Uploaded",
+            daysUntilDeletion: 20,
+          },
+          {
+            id: "rec-7",
+            title: "Morning Briefing Ep.12",
+            date: "Dec 28, 2025",
+            createdAt: "2025-12-28T07:00:00Z",
+            size: "1.5 GB",
+            sizeBytes: 1610612736,
+            type: "Video",
+            status: "Uploaded",
+            daysUntilDeletion: 5,
+          },
+          {
+            id: "clip-8",
+            title: "Year End Special Cut",
+            date: "Dec 25, 2025",
+            createdAt: "2025-12-25T20:00:00Z",
+            size: "650 MB",
+            sizeBytes: 681574400,
+            type: "Shorts",
+            status: "Uploaded",
+            daysUntilDeletion: 2,
+          },
+        ],
       },
     });
   }),

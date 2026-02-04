@@ -64,7 +64,7 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
     return (
       <div
         className={`flex h-[calc(100vh-64px)] items-center justify-center ${
-          isDark ? "bg-[#0B1020]" : "bg-[#F8FAFC]"
+          isDark ? "bg-[#0c0c0f]" : "bg-[#f4f4f8]"
         }`}
       >
         <p className={isDark ? "text-white/70" : "text-gray-500"}>로딩 중...</p>
@@ -75,7 +75,7 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
     return (
       <div
         className={`flex h-[calc(100vh-64px)] flex-col items-center justify-center gap-4 ${
-          isDark ? "bg-[#0B1020]" : "bg-[#F8FAFC]"
+          isDark ? "bg-[#0c0c0f]" : "bg-[#f4f4f8]"
         }`}
       >
         <p className={isDark ? "text-white/70" : "text-gray-600"}>
@@ -97,12 +97,12 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
 
   return (
     <div
-      className={`flex w-full gap-6 p-6 box-border relative items-start ${
-        isDark ? "bg-[#0B1020]" : "bg-[#F8FAFC]"
+      className={`flex w-full gap-4 p-6 box-border relative items-start ${
+        isDark ? "bg-[#0c0c0f]" : "bg-[#f4f4f8]"
       }`}
     >
       {/* 메인 영역은 페이지(전체) 스크롤을 따름 */}
-      <div className="flex flex-col flex-1 gap-6 min-w-0">
+      <div className="flex flex-col flex-1 gap-4 min-w-0">
         <div className="shrink-0">
           <Link
             href="/library"
@@ -115,65 +115,70 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
             <span>←</span> Back
           </Link>
         </div>
-        {/* 플레이어 영역 (분리) */}
-        <section className="w-full bg-black rounded-xl overflow-hidden shadow-sm aspect-video shrink-0">
-          <VideoPlayer videoUrl={video.videoUrl ?? undefined} />
-        </section>
-
-        {/* 영상 정보 영역 (분리) */}
+        {/* 플레이어 + 영상 정보 (통합) */}
         <section
-          className={`w-full rounded-xl p-6 shadow-sm border ${
-            isDark ? "bg-white/5 border-white/10" : "bg-white border-gray-100"
+          className={`w-full rounded-xl overflow-hidden shadow-sm border shrink-0 backdrop-blur-sm ${
+            isDark
+              ? "bg-white/5 border-white/10"
+              : "bg-white/70 border-gray-200/80"
           }`}
         >
-          <div className="flex justify-between items-start gap-4 flex-wrap">
-            <div className="min-w-0 flex-1">
-              <h1
-                className={`text-2xl font-bold ${
-                  isDark ? "text-white/90" : "text-gray-900"
-                }`}
-              >
-                {video.title}
-              </h1>
-              <p
-                className={`text-xs font-medium mt-1 ${
-                  isDark ? "text-white/60" : "text-gray-500"
-                }`}
-              >
-                {video.date}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setDownloadModalOpen(true)}
-              className={`shrink-0 flex items-center gap-2 ${
-                isDark
-                  ? "bg-white/5 border-white/10 hover:bg-white/10 text-white/80"
-                  : ""
-              }`}
-            >
-              📥 Download
-            </Button>
+          <div className="w-full bg-black aspect-video">
+            <VideoPlayer videoUrl={video.videoUrl ?? undefined} />
           </div>
-          {video.description && (
-            <p
-              className={`mt-4 text-sm leading-relaxed ${
-                isDark ? "text-white/70" : "text-gray-600"
-              }`}
-            >
-              {video.description}
-            </p>
-          )}
+          <div className="p-5 flex flex-col gap-3">
+            <div className="flex justify-between items-start gap-4 flex-wrap">
+              <div className="min-w-0 flex-1">
+                <h1
+                  className={`text-xl font-bold ${
+                    isDark ? "text-white/90" : "text-gray-900"
+                  }`}
+                >
+                  {video.title}
+                </h1>
+                <p
+                  className={`text-xs font-medium mt-0.5 ${
+                    isDark ? "text-white/60" : "text-gray-500"
+                  }`}
+                >
+                  {video.date}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setDownloadModalOpen(true)}
+                className={`shrink-0 flex items-center gap-2 ${
+                  isDark
+                    ? "bg-white/5 border-white/10 hover:bg-white/10 text-white/80"
+                    : ""
+                }`}
+              >
+                📥 Download
+              </Button>
+            </div>
+            {video.description && (
+              <p
+                className={`text-sm leading-relaxed ${
+                  isDark ? "text-white/70" : "text-gray-600"
+                }`}
+              >
+                {video.description}
+              </p>
+            )}
+          </div>
         </section>
 
+        {/* 쇼츠 생성 구간 설정 (간격 최소화) */}
         <section
-          className={`w-full rounded-xl p-6 shadow-sm border mb-6 ${
-            isDark ? "bg-white/5 border-white/10" : "bg-white border-gray-100"
+          className={`w-full rounded-xl p-5 shadow-sm border mb-6 backdrop-blur-sm ${
+            isDark
+              ? "bg-white/5 border-white/10"
+              : "bg-white/70 border-gray-200/80"
           }`}
         >
-          <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+          <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
             <h3
               className={`text-sm font-bold ${
                 isDark ? "text-white/90" : "text-gray-800"
@@ -184,7 +189,7 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
             <Button
               type="button"
               onClick={handleGenerateShorts}
-              className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
               size="sm"
             >
               ✨ Generate Shorts
@@ -198,13 +203,16 @@ export const VideoDetailViewer = ({ videoId }: VideoDetailViewerProps) => {
             onStartChange={setTrimStart}
             onEndChange={setTrimEnd}
             compact
+            videoUrl={video.videoUrl ?? undefined}
           />
         </section>
       </div>
 
       <aside
-        className={`w-[360px] shrink-0 rounded-xl shadow-sm border flex flex-col overflow-hidden sticky top-6 max-h-[calc(100vh-64px-48px)] ${
-          isDark ? "bg-white/5 border-white/10" : "bg-white border-gray-100"
+        className={`w-[360px] shrink-0 rounded-xl shadow-sm border flex flex-col overflow-hidden sticky top-6 max-h-[calc(100vh-64px-48px)] backdrop-blur-sm ${
+          isDark
+            ? "bg-white/5 border-white/10"
+            : "bg-white/70 border-gray-200/80"
         }`}
       >
         <div

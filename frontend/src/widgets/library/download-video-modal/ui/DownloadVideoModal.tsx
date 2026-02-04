@@ -104,11 +104,14 @@ export function DownloadVideoModal({
     : "bg-gray-50 border-gray-200";
   const textClass = isDark ? "text-white/90" : "text-gray-900";
   const subTextClass = isDark ? "text-white/60" : "text-gray-500";
+  const labelHoverClass = isDark ? "hover:bg-white/5" : "hover:bg-gray-100";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className={`sm:max-w-md ${isDark ? "border-white/10" : ""}`}
+        className={`sm:max-w-md ${
+          isDark ? "bg-[#0c0c0f] border-white/10 text-white" : ""
+        }`}
       >
         <DialogHeader>
           <DialogTitle className={textClass}>Download Video</DialogTitle>
@@ -119,7 +122,7 @@ export function DownloadVideoModal({
         <div className={`rounded-lg border p-4 space-y-3 ${containerClass}`}>
           {/* 원본 */}
           <label
-            className={`flex items-center gap-3 cursor-pointer rounded-md p-2 hover:bg-white/5 transition-colors`}
+            className={`flex items-center gap-3 cursor-pointer rounded-md p-2 transition-colors ${labelHoverClass}`}
           >
             <Checkbox
               checked={selected.has("original")}
@@ -136,7 +139,7 @@ export function DownloadVideoModal({
           {/* 쇼츠 1 */}
           {clip1 && (
             <label
-              className={`flex items-center gap-3 cursor-pointer rounded-md p-2 hover:bg-white/5 transition-colors`}
+              className={`flex items-center gap-3 cursor-pointer rounded-md p-2 transition-colors ${labelHoverClass}`}
             >
               <Checkbox
                 checked={selected.has("clip1")}
@@ -156,7 +159,7 @@ export function DownloadVideoModal({
           {/* 쇼츠 2 */}
           {clip2 && (
             <label
-              className={`flex items-center gap-3 cursor-pointer rounded-md p-2 hover:bg-white/5 transition-colors`}
+              className={`flex items-center gap-3 cursor-pointer rounded-md p-2 transition-colors ${labelHoverClass}`}
             >
               <Checkbox
                 checked={selected.has("clip2")}
@@ -176,7 +179,7 @@ export function DownloadVideoModal({
           {/* 쇼츠 3 */}
           {clip3 && (
             <label
-              className={`flex items-center gap-3 cursor-pointer rounded-md p-2 hover:bg-white/5 transition-colors`}
+              className={`flex items-center gap-3 cursor-pointer rounded-md p-2 transition-colors ${labelHoverClass}`}
             >
               <Checkbox
                 checked={selected.has("clip3")}
@@ -200,7 +203,16 @@ export function DownloadVideoModal({
           )}
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            className={
+              isDark
+                ? "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+                : undefined
+            }
+          >
             Cancel
           </Button>
           <Button

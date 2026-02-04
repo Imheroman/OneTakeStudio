@@ -41,13 +41,13 @@ export function ShortsResultModal() {
                   "aspect-[9/16] rounded-2xl overflow-hidden shadow-sm border transition-all transition-smooth relative group bg-white gpu-layer gpu-layer-hover",
                   short.status === "loading"
                     ? "border-gray-200 flex flex-col items-center justify-center"
-                    : "border-purple-500 shadow-purple-100 ring-2 ring-purple-100"
+                    : "border-blue-500 shadow-blue-100 ring-2 ring-blue-100"
                 )}
               >
                 {/* 1. 로딩 중일 때 */}
                 {short.status === "loading" && (
                   <div className="text-center space-y-3">
-                    <Loader2 className="w-10 h-10 text-purple-600 animate-spin mx-auto" />
+                    <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto" />
                     <p className="text-sm text-gray-500 font-medium">
                       AI 생성 중...
                     </p>
@@ -83,7 +83,7 @@ export function ShortsResultModal() {
                 className={cn(
                   "w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all",
                   short.status === "completed"
-                    ? "bg-purple-600 text-white hover:bg-purple-700 shadow-lg shadow-purple-200"
+                    ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 )}
               >

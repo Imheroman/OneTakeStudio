@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import { useRouter } from "next/navigation";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 
 /** 쇼츠 API는 백엔드 미구현 → MSW 모킹 시에만 생성 요청 가능 */
 const isShortsApiAvailable = () =>
@@ -19,6 +20,7 @@ type Language = "ko" | "en" | "ja" | "zh";
 export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
   const router = useRouter();
   const shortsApiAvailable = isShortsApiAvailable();
+  const isDark = useResolvedTheme() === "dark";
 
   const [bgColor, setBgColor] = useState<BgColor>("black");
   const [useSubtitles, setUseSubtitles] = useState(true);
@@ -58,20 +60,16 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 max-w-6xl mx-auto h-full">
-      {/* [왼쪽] 미리보기 영역 */}
-      <section className="flex-1 flex flex-col items-center bg-white rounded-2xl p-8 shadow-sm border border-gray-100 min-h-[600px] justify-center">
-        <h2 className="text-lg font-semibold text-gray-700 mb-6 self-start w-full">
-          미리보기
-        </h2>
-
+    <div className="flex flex-col lg:flex-row gap-6 w-full items-start justify-center">
+      {/* [왼쪽] 미리보기 카드 */}
+      <div className="flex flex-col items-center lg:items-start">
         <div
           className={cn(
-            "relative w-[320px] h-[568px] rounded-2xl shadow-2xl overflow-hidden transition-colors duration-300 flex flex-col",
+            "relative w-[320px] h-[568px] shrink-0 rounded-2xl overflow-hidden transition-colors duration-300 flex flex-col",
             bgColor === "black" ? "bg-black" : "bg-white border border-gray-200"
           )}
         >
-          {/* 가짜 콘텐츠 */}
+          {/* 상단 여백 + 타이틀 */}
           <div
             className={cn(
               "text-center px-6 font-bold text-2xl py-4 shrink-0",
@@ -81,15 +79,20 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
             AI가 생성한 타이틀입니다
           </div>
 
-          {/* Video 영역: 가로 전체로 꽉 채움 (실제 쇼츠 비율) */}
-          <div className="w-full flex-1 min-h-0 bg-gray-700/50 flex items-center justify-center text-xs text-gray-400">
-            Video Content
+          {/* Video 영역: 상·하단 동일 여백(py-6)으로 중앙 배치 */}
+          <div className="flex-1 min-h-0 flex items-center justify-center py-6 px-0">
+            <div className="w-full h-full max-h-full aspect-9/16 bg-gray-700/50 flex items-center justify-center text-xs text-gray-400 rounded overflow-hidden">
+              Video Content
+            </div>
           </div>
+
+          {/* 하단 여백 (자막 영역) */}
+          <div className="shrink-0 h-16" />
 
           {useSubtitles && (
             <div
               className={cn(
-                "absolute bottom-20 w-full text-center px-4 font-medium",
+                "absolute bottom-4 left-0 right-0 w-full text-center px-4 font-medium",
                 bgColor === "black" ? "text-yellow-400" : "text-blue-600"
               )}
             >
@@ -99,47 +102,97 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
             </div>
           )}
         </div>
-      </section>
+      </div>
 
-      {/* [오른쪽] 설정 패널 */}
-      <section className="w-full lg:w-[400px] flex flex-col gap-6">
-        {/* 1. 배경색 설정 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-900 mb-4">배경색</h3>
+      {/* [오른쪽] 설정 카드들 */}
+      <div className="w-full lg:w-[400px] flex flex-col gap-4 shrink-0">
+        {/* 1. 배경색 */}
+        <div
+          className={cn(
+            "p-5 rounded-xl border backdrop-blur-sm",
+            isDark
+              ? "bg-white/5 border-white/10"
+              : "bg-white/70 border-gray-200/80"
+          )}
+        >
+          <h3
+            className={cn(
+              "font-semibold mb-3",
+              isDark ? "text-white/90" : "text-gray-900"
+            )}
+          >
+            배경색
+          </h3>
           <div className="flex gap-4">
             <button
               onClick={() => setBgColor("black")}
               className={cn(
                 "flex-1 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all",
                 bgColor === "black"
-                  ? "border-blue-500 bg-blue-50/50"
+                  ? isDark
+                    ? "border-blue-500 bg-blue-500/20"
+                    : "border-blue-500 bg-blue-50/50"
+                  : isDark
+                  ? "border-white/20 hover:border-white/30"
                   : "border-gray-100 hover:border-gray-200"
               )}
             >
               <div className="w-8 h-8 bg-black rounded shadow-sm border border-gray-600" />
-              <span className="text-xs text-gray-600">검은색</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  isDark ? "text-white/70" : "text-gray-600"
+                )}
+              >
+                검은색
+              </span>
             </button>
             <button
               onClick={() => setBgColor("white")}
               className={cn(
                 "flex-1 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-2 transition-all",
                 bgColor === "white"
-                  ? "border-blue-500 bg-blue-50/50"
+                  ? isDark
+                    ? "border-blue-500 bg-blue-500/20"
+                    : "border-blue-500 bg-blue-50/50"
+                  : isDark
+                  ? "border-white/20 hover:border-white/30"
                   : "border-gray-100 hover:border-gray-200"
               )}
             >
               <div className="w-8 h-8 bg-white rounded shadow-sm border border-gray-200" />
-              <span className="text-xs text-gray-600">흰색</span>
+              <span
+                className={cn(
+                  "text-xs",
+                  isDark ? "text-white/70" : "text-gray-600"
+                )}
+              >
+                흰색
+              </span>
             </button>
           </div>
         </div>
 
         {/* 2. 자막 설정 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-900 mb-4">자막 설정</h3>
+        <div
+          className={cn(
+            "p-5 rounded-xl border backdrop-blur-sm",
+            isDark
+              ? "bg-white/5 border-white/10"
+              : "bg-white/70 border-gray-200/80"
+          )}
+        >
+          <h3
+            className={cn(
+              "font-semibold mb-3",
+              isDark ? "text-white/90" : "text-gray-900"
+            )}
+          >
+            자막 설정
+          </h3>
 
           {/* 체크박스 */}
-          <label className="flex items-center gap-3 cursor-pointer mb-6 select-none">
+          <label className="flex items-center gap-3 cursor-pointer mb-4 select-none">
             <div
               className={cn(
                 "w-5 h-5 rounded border flex items-center justify-center transition-colors",
@@ -154,13 +207,27 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
               checked={useSubtitles}
               onChange={(e) => setUseSubtitles(e.target.checked)}
             />
-            <span className="text-sm text-gray-700">자막 생성</span>
+            <span
+              className={cn(
+                "text-sm",
+                isDark ? "text-white/80" : "text-gray-700"
+              )}
+            >
+              자막 생성
+            </span>
           </label>
 
           {/* 언어 선택 */}
           {useSubtitles && (
             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-              <p className="text-xs text-gray-500 mb-2">언어 선택</p>
+              <p
+                className={cn(
+                  "text-xs mb-2",
+                  isDark ? "text-white/50" : "text-gray-500"
+                )}
+              >
+                언어 선택
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { id: "ko", label: "한국어", flag: "🇰🇷" },
@@ -174,7 +241,11 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
                     className={cn(
                       "flex items-center justify-center gap-2 py-3 rounded-lg border text-sm transition-all",
                       language === lang.id
-                        ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
+                        ? isDark
+                          ? "border-blue-500 bg-blue-500/20 text-blue-300 font-medium"
+                          : "border-blue-500 bg-blue-50 text-blue-700 font-medium"
+                        : isDark
+                        ? "border-white/20 text-white/70 hover:bg-white/5"
                         : "border-gray-100 text-gray-600 hover:bg-gray-50"
                     )}
                   >
@@ -187,9 +258,9 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
           )}
         </div>
 
-        {/* 3. 생성 요청 버튼 (백엔드 API 미구현 시 MSW 모킹으로만 동작) */}
+        {/* 3. 생성 요청 버튼 */}
         <Button
-          className="w-full py-6 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-200 transition-transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+          className="w-full py-6 text-lg bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           onClick={handleCreate}
           disabled={isSubmitting || !shortsApiAvailable}
         >
@@ -200,11 +271,16 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
             : "준비 중 (API 미구현)"}
         </Button>
         {!shortsApiAvailable && (
-          <p className="text-xs text-gray-500 text-center">
+          <p
+            className={cn(
+              "text-xs text-center",
+              isDark ? "text-white/50" : "text-gray-500"
+            )}
+          >
             쇼츠 API는 백엔드 미구현입니다. MSW 활성화 시 체험 가능.
           </p>
         )}
-      </section>
+      </div>
     </div>
   );
 }

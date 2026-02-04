@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/shared/lib/utils";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 
 function formatSec(sec: number): string {
@@ -17,6 +18,8 @@ interface TrimSectionProps {
   onEndChange: (v: number) => void;
   /** 차트 하단에 붙여서 하나의 그래프처럼 보이게 할 때 true */
   compact?: boolean;
+  /** 드래그 시 포인트 위 미리보기 팝업에 사용할 영상 URL */
+  videoUrl?: string;
 }
 
 export function TrimSection({
@@ -26,6 +29,7 @@ export function TrimSection({
   onStartChange,
   onEndChange,
   compact = false,
+  videoUrl,
 }: TrimSectionProps) {
   const isDark = useResolvedTheme() === "dark";
   const safeDuration = Math.max(1, durationSec);
@@ -35,7 +39,9 @@ export function TrimSection({
   const endPct = (end / safeDuration) * 100;
 
   const railRef = useRef<HTMLDivElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
   const [dragging, setDragging] = useState<"start" | "end" | null>(null);
+  const [previewTimeSec, setPreviewTimeSec] = useState<number>(0);
 
   const clamp = useMemo(() => {
     return (v: number) => Math.min(Math.max(v, 0), safeDuration);
@@ -54,13 +60,19 @@ export function TrimSection({
       const v = clamp(raw);
 
       if (dragging === "start") {
-        onStartChange(Math.min(v, end - 1));
+        const newStart = Math.min(v, end - 1);
+        onStartChange(newStart);
+        setPreviewTimeSec(newStart);
       } else {
-        onEndChange(Math.max(v, start + 1));
+        const newEnd = Math.max(v, start + 1);
+        onEndChange(newEnd);
+        setPreviewTimeSec(newEnd);
       }
     };
 
-    const handleUp = () => setDragging(null);
+    const handleUp = () => {
+      setDragging(null);
+    };
 
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp, { once: true });
@@ -69,6 +81,24 @@ export function TrimSection({
       window.removeEventListener("pointerup", handleUp);
     };
   }, [dragging, clamp, safeDuration, start, end, onStartChange, onEndChange]);
+
+  const previewPct =
+    dragging === "start" ? startPct : dragging === "end" ? endPct : 0;
+  // 가장자리에서 잘리지 않도록 transform 조정 (오른쪽 끝: -100%, 왼쪽 끝: 0%, 중간: -50%)
+  const previewTransform =
+    previewPct >= 90
+      ? "translate(-100%, 0)"
+      : previewPct <= 10
+      ? "translate(0, 0)"
+      : "translate(-50%, 0)";
+
+  useEffect(() => {
+    const el = previewVideoRef.current;
+    if (el && dragging && videoUrl && el.readyState >= 1) {
+      el.pause();
+      el.currentTime = previewTimeSec;
+    }
+  }, [previewTimeSec, dragging, videoUrl]);
 
   return (
     <div className={compact ? "pt-1" : "space-y-4"}>
@@ -92,6 +122,48 @@ export function TrimSection({
           </div>
           {/* 단일 레일 + 양쪽(시작/종료) 핸들 */}
           <div className="relative w-full h-10 select-none">
+            {/* 드래그 시 포인트 위 미리보기 팝업 */}
+            {dragging && videoUrl && (
+              <div
+                className="absolute bottom-full left-0 z-50 mb-2 pointer-events-none shrink-0"
+                style={{
+                  left: `${previewPct}%`,
+                  transform: previewTransform,
+                }}
+              >
+                <div
+                  className={cn(
+                    "rounded-lg overflow-hidden border-2 shadow-xl w-40",
+                    isDark
+                      ? "border-white/20 bg-black"
+                      : "border-gray-200 bg-gray-900"
+                  )}
+                >
+                  <video
+                    ref={previewVideoRef}
+                    src={videoUrl}
+                    className="w-40 h-[90px] object-cover block"
+                    muted
+                    playsInline
+                    preload="auto"
+                    onLoadedData={(e) => {
+                      const el = e.currentTarget;
+                      el.pause();
+                      el.currentTime = previewTimeSec;
+                    }}
+                  />
+                  <p
+                    className={cn(
+                      "text-[10px] text-center py-1 font-medium",
+                      isDark ? "text-white/80" : "text-white/90"
+                    )}
+                  >
+                    {formatSec(previewTimeSec)}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* 레일 */}
             <div
               ref={railRef}
@@ -107,7 +179,7 @@ export function TrimSection({
             {/* 선택 구간 */}
             <div
               className={`absolute top-0 bottom-0 rounded-lg ${
-                isDark ? "bg-indigo-400/60" : "bg-blue-500/70"
+                isDark ? "bg-blue-500/60" : "bg-blue-500/70"
               }`}
               style={{
                 left: `${startPct}%`,
@@ -123,7 +195,7 @@ export function TrimSection({
               type="button"
               className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full shadow-sm cursor-ew-resize ${
                 isDark
-                  ? "bg-slate-950 border border-indigo-300"
+                  ? "bg-slate-950 border border-blue-400"
                   : "bg-white border border-blue-600"
               }`}
               style={{
@@ -139,6 +211,7 @@ export function TrimSection({
                   e.pointerId
                 );
                 setDragging("start");
+                setPreviewTimeSec(start);
               }}
             />
 
@@ -147,7 +220,7 @@ export function TrimSection({
               type="button"
               className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full shadow-sm cursor-ew-resize ${
                 isDark
-                  ? "bg-slate-950 border border-indigo-300"
+                  ? "bg-slate-950 border border-blue-400"
                   : "bg-white border border-blue-600"
               }`}
               style={{
@@ -163,6 +236,7 @@ export function TrimSection({
                   e.pointerId
                 );
                 setDragging("end");
+                setPreviewTimeSec(end);
               }}
             />
           </div>

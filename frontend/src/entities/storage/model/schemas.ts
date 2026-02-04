@@ -9,12 +9,14 @@ export const StorageFileSchema = z.object({
   title: z.string().nullable().optional(),
   name: z.string().nullable().optional(),
   date: z.string().nullable().optional(),
+  createdAt: z.string().nullable().optional(),
   uploadedAt: z.string().nullable().optional(),
   size: z.union([z.string(), z.number()]).nullable().optional(),
   sizeBytes: z.number().nullable().optional(),
   type: z.string().nullable().optional(),
   status: z.string().nullable().optional(),
   thumbnailUrl: z.string().nullable().optional(),
+  daysUntilDeletion: z.number().nullable().optional(),
 });
 
 // 스토리지 데이터 스키마 (백엔드 응답 호환)
@@ -25,6 +27,8 @@ export const StorageDataSchema = z.object({
   available: z.number().optional(),
   videoUsage: z.number().optional(),
   assetUsage: z.number().optional(),
+  videoCount: z.number().optional(),
+  videoLimit: z.number().optional(),
   // bytes 단위 (상세 정보)
   usedBytes: z.number().optional(),
   limitBytes: z.number().optional(),

@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useDebounce } from "use-debounce";
 import { Search, UserPlus } from "lucide-react";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 import {
   Dialog,
@@ -41,8 +43,11 @@ export function InviteMemberDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
-  
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
+    null
+  );
+  const isDark = useResolvedTheme() === "dark";
+
   // use-debounce로 300ms debounce 적용
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
 
@@ -70,11 +75,11 @@ export function InviteMemberDialog({
         setIsSearching(true);
         const response = await apiClient.get(
           `/api/favorites/search?q=${encodeURIComponent(debouncedSearchQuery)}`,
-          UserSearchResponseSchema,
+          UserSearchResponseSchema
         );
         // 이미 등록된 사용자 제외
         const filtered = response.users.filter(
-          (user) => !existingFavoriteIds.includes(user.id),
+          (user) => !existingFavoriteIds.includes(user.id)
         );
         setSearchResults(filtered);
       } catch (error) {
@@ -98,11 +103,11 @@ export function InviteMemberDialog({
       setIsSearching(true);
       const response = await apiClient.get(
         `/api/favorites/search?q=${encodeURIComponent(searchQuery)}`,
-        UserSearchResponseSchema,
+        UserSearchResponseSchema
       );
       // 이미 등록된 사용자 제외
       const filtered = response.users.filter(
-        (user) => !existingFavoriteIds.includes(user.id),
+        (user) => !existingFavoriteIds.includes(user.id)
       );
       setSearchResults(filtered);
     } catch (error) {
@@ -122,16 +127,29 @@ export function InviteMemberDialog({
   };
 
   const isMaxReached = currentCount >= maxCount;
+  const selectedCardClass = isDark
+    ? "border-indigo-500 bg-indigo-500/20"
+    : "border-indigo-500 bg-indigo-50";
+  const unselectedCardClass = isDark
+    ? "border-white/20 hover:border-white/30 hover:bg-white/5"
+    : "border-gray-200 hover:border-gray-300";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent
+        className={cn(
+          "sm:max-w-[500px]",
+          isDark && "bg-[#0c0c0f] border-white/10 text-white"
+        )}
+      >
         <DialogHeader>
-          <DialogTitle>멤버 초대</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className={cn(isDark && "text-white/90")}>
+            멤버 초대
+          </DialogTitle>
+          <DialogDescription className={cn(isDark && "text-white/70")}>
             이메일 또는 닉네임으로 파트너를 검색하여 추가하세요.
             {isMaxReached && (
-              <span className="block mt-2 text-red-500 font-medium">
+              <span className="block mt-2 text-red-400 font-medium">
                 최대 {maxCount}명까지 등록 가능합니다.
               </span>
             )}
@@ -140,7 +158,9 @@ export function InviteMemberDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="search">이메일 또는 닉네임</Label>
+            <Label htmlFor="search" className={cn(isDark && "text-white/90")}>
+              이메일 또는 닉네임
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="search"
@@ -153,11 +173,20 @@ export function InviteMemberDialog({
                   }
                 }}
                 disabled={isMaxReached}
+                className={cn(
+                  isDark &&
+                    "bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:ring-white/20"
+                )}
               />
               <Button
                 type="button"
+                variant="outline"
                 onClick={handleSearch}
                 disabled={isSearching || isMaxReached}
+                className={cn(
+                  isDark &&
+                    "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+                )}
               >
                 <Search className="h-4 w-4" />
               </Button>
@@ -167,27 +196,39 @@ export function InviteMemberDialog({
           {/* 검색 결과 */}
           {searchResults.length > 0 && (
             <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              <Label>검색 결과</Label>
+              <Label className={cn(isDark && "text-white/90")}>검색 결과</Label>
               {searchResults.map((user) => (
                 <div
                   key={user.id}
-                  className={`
-                    p-3 border rounded-lg cursor-pointer transition-colors
-                    ${
-                      selectedUser?.id === user.id
-                        ? "border-indigo-500 bg-indigo-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }
-                  `}
+                  className={cn(
+                    "p-3 border rounded-lg cursor-pointer transition-colors",
+                    selectedUser?.id === user.id
+                      ? selectedCardClass
+                      : unselectedCardClass
+                  )}
                   onClick={() => setSelectedUser(user)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{user.nickname}</p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <p
+                        className={cn(
+                          "font-medium",
+                          isDark ? "text-white/90" : "text-gray-900"
+                        )}
+                      >
+                        {user.nickname}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-sm",
+                          isDark ? "text-white/60" : "text-gray-500"
+                        )}
+                      >
+                        {user.email}
+                      </p>
                     </div>
                     {selectedUser?.id === user.id && (
-                      <UserPlus className="h-5 w-5 text-indigo-600" />
+                      <UserPlus className="h-5 w-5 text-indigo-500" />
                     )}
                   </div>
                 </div>
@@ -196,23 +237,43 @@ export function InviteMemberDialog({
           )}
 
           {isSearching && (
-            <div className="text-center text-gray-500 py-4">검색 중...</div>
+            <div
+              className={cn(
+                "text-center py-4",
+                isDark ? "text-white/60" : "text-gray-500"
+              )}
+            >
+              검색 중...
+            </div>
           )}
 
           {searchQuery && !isSearching && searchResults.length === 0 && (
-            <div className="text-center text-gray-500 py-4">
+            <div
+              className={cn(
+                "text-center py-4",
+                isDark ? "text-white/60" : "text-gray-500"
+              )}
+            >
               검색 결과가 없습니다.
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className={cn(
+              isDark &&
+                "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+            )}
+          >
             취소
           </Button>
           <Button
             onClick={handleInvite}
             disabled={!selectedUser || isMaxReached}
+            className="bg-indigo-600 hover:bg-indigo-700"
           >
             초대
           </Button>

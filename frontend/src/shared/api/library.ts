@@ -7,7 +7,8 @@ import {
   ApiResponseDataSchema,
   ApiResponseRecordingSchema,
   ApiResponseDownloadUrlSchema,
-  ApiResponseStorageSchema,
+  StorageResponseDirectSchema,
+  StorageFilesResponseDirectSchema,
   ApiResponseCommentAnalysisSchema,
   ApiResponseMarkersSchema,
   type RecordingDto,
@@ -17,6 +18,7 @@ import {
   type LibraryVideoStatusDto,
   type VideoDetailFromApiDto,
   type StorageDataFromApiDto,
+  type StorageFileItemDto,
   type CommentAnalysisResponseDto,
   type MarkerDto,
 } from "./dto/library";
@@ -225,19 +227,56 @@ export async function getMarkers(recordingId: string): Promise<MarkerDto[]> {
 }
 
 /**
- * 스토리지 용량 조회 — GET /api/library/storage
+ * 스토리지 용량 조회 — GET /api/storage (StorageController)
+ * 백엔드는 ApiResponse 래퍼 없이 직접 반환
  */
 export async function getStorage(): Promise<StorageDataFromApi> {
   const response = await apiClient.get(
-    "/api/library/storage",
-    ApiResponseStorageSchema
+    "/api/storage",
+    StorageResponseDirectSchema
   );
-  const d = response.data;
-  const gb = 1024 ** 3;
   return {
-    used: d.usedBytes / gb,
-    total: d.limitBytes / gb,
-    videoUsage: 0,
-    assetUsage: 0,
+    used: response.used,
+    total: response.total,
+    available: response.available,
+    videoUsage: response.videoUsage ?? 0,
+    assetUsage: response.assetUsage ?? 0,
+  };
+}
+
+export type GetStorageFilesParams = {
+  page?: number;
+  size?: number;
+};
+
+export type GetStorageFilesResult = {
+  files: StorageFileItemDto[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+};
+
+/**
+ * 스토리지 파일 목록 조회 — GET /api/storage/files (StorageController)
+ * 백엔드는 ApiResponse 래퍼 없이 직접 반환
+ * videoCount는 totalElements로, videoLimit은 50 고정
+ */
+export async function getStorageFiles(
+  params?: GetStorageFilesParams
+): Promise<GetStorageFilesResult> {
+  const { page = 0, size = 50 } = params ?? {};
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  const response = await apiClient.get(
+    `/api/storage/files?${searchParams.toString()}`,
+    StorageFilesResponseDirectSchema
+  );
+  return {
+    files: response.files,
+    totalElements: response.totalElements,
+    totalPages: response.totalPages,
+    currentPage: response.currentPage,
   };
 }
