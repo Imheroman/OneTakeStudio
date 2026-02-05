@@ -59,6 +59,13 @@ spec:
                 name: media-server
                 port:
                   number: 8081
+          - path: /livekit
+            pathType: Prefix
+            backend:
+              service:
+                name: livekit-proxy
+                port:
+                  number: 7880
 ---
 # /api/publish/** -> /api/media/publish/**
 apiVersion: networking.k8s.io/v1

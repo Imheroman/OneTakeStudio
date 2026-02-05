@@ -11,3 +11,16 @@ spec:
       port: 8081
       targetPort: 8081
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-proxy
+  namespace: media
+spec:
+  type: ExternalName
+  externalName: livekit-server.livekit.svc.cluster.local
+  ports:
+    - name: livekit
+      port: 7880
+      targetPort: 7880
