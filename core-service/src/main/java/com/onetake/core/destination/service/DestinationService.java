@@ -141,7 +141,10 @@ public class DestinationService {
     public DestinationInternalResponse getDestinationByIdInternal(Long destinationId) {
         ConnectedDestination destination = destinationRepository.findById(destinationId)
                 .orElseThrow(() -> new DestinationNotFoundException(String.valueOf(destinationId)));
-        return DestinationInternalResponse.from(destination);
+        String odUserId = userRepository.findById(destination.getUserId())
+                .map(User::getUserId)
+                .orElse(null);
+        return DestinationInternalResponse.from(destination, odUserId);
     }
 
     private ConnectedDestination findDestinationByIdAndUserId(String destinationId, Long internalUserId) {

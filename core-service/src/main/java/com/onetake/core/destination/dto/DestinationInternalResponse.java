@@ -16,6 +16,7 @@ public class DestinationInternalResponse {
 
     private Long id;
     private Long userId;
+    private String odUserId;
     private String platform;
     private String channelId;
     private String channelName;
@@ -23,10 +24,11 @@ public class DestinationInternalResponse {
     private String refreshToken;
     private Boolean isActive;
 
-    public static DestinationInternalResponse from(ConnectedDestination entity) {
+    public static DestinationInternalResponse from(ConnectedDestination entity, String odUserId) {
         return DestinationInternalResponse.builder()
                 .id(entity.getId())
                 .userId(entity.getUserId())
+                .odUserId(odUserId)
                 .platform(entity.getPlatform())
                 .channelId(entity.getChannelId())
                 .channelName(entity.getChannelName())
