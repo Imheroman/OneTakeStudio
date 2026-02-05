@@ -71,7 +71,7 @@ public class StorageController {
 
         libraryService.deleteRecording(userDetails.getUserId(), recordingId);
 
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.ok(ApiResponse.success("파일이 삭제되었습니다"));
     }
 
     /**
