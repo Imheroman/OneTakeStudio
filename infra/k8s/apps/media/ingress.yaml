@@ -60,33 +60,6 @@ spec:
                 port:
                   number: 8081
 ---
-# /livekit/** -> LiveKit 서버 (prefix 제거)
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: media-livekit-ingress
-  namespace: media
-  annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: media-cors-headers@kubernetescrd,media-strip-livekit-prefix@kubernetescrd
-spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - i14c206.p.ssafy.io
-  rules:
-    - host: i14c206.p.ssafy.io
-      http:
-        paths:
-          - path: /livekit
-            pathType: Prefix
-            backend:
-              service:
-                name: livekit-proxy
-                port:
-                  number: 7880
----
 # /api/publish/** -> /api/media/publish/**
 apiVersion: networking.k8s.io/v1
 kind: Ingress
