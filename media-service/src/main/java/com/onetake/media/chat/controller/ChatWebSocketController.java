@@ -25,7 +25,7 @@ public class ChatWebSocketController {
             SimpMessageHeaderAccessor headerAccessor) {
 
         // WebSocket 세션에서 사용자 ID 추출 (헤더 또는 세션 속성)
-        Long userId = extractUserId(headerAccessor);
+        String odUserId = extractOdUserId(headerAccessor);
 
         // studioId 설정
         ChatMessageRequest messageRequest = ChatMessageRequest.builder()
@@ -37,7 +37,7 @@ public class ChatWebSocketController {
                 .content(request.getContent())
                 .build();
 
-        chatService.sendMessage(userId, studioId, messageRequest);
+        chatService.sendMessage(odUserId, studioId, messageRequest);
 
         log.debug("WebSocket message received: studioId={}, sender={}",
                 studioId, request.getSenderName());
@@ -53,17 +53,17 @@ public class ChatWebSocketController {
         log.debug("Typing notification: studioId={}, user={}", studioId, notification.getSenderName());
     }
 
-    private Long extractUserId(SimpMessageHeaderAccessor headerAccessor) {
-        // 세션 속성에서 userId 추출 시도
-        Object userId = headerAccessor.getSessionAttributes().get("userId");
-        if (userId != null) {
-            return Long.valueOf(userId.toString());
+    private String extractOdUserId(SimpMessageHeaderAccessor headerAccessor) {
+        // 세션 속성에서 odUserId 추출 시도
+        Object odUserId = headerAccessor.getSessionAttributes().get("odUserId");
+        if (odUserId != null) {
+            return odUserId.toString();
         }
 
         // 헤더에서 추출 시도
-        String userIdHeader = headerAccessor.getFirstNativeHeader("X-User-Id");
-        if (userIdHeader != null) {
-            return Long.valueOf(userIdHeader);
+        String odUserIdHeader = headerAccessor.getFirstNativeHeader("X-Od-User-Id");
+        if (odUserIdHeader != null) {
+            return odUserIdHeader;
         }
 
         return null;

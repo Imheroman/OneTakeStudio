@@ -18,10 +18,10 @@ public class ScreenShareController {
 
     @PostMapping("/start")
     public ResponseEntity<ApiResponse<ScreenShareResponse>> startScreenShare(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @Valid @RequestBody ScreenShareStartRequest request) {
         String studioId = request.getStudioId();
-        ScreenShareResponse response = screenShareService.startScreenShare(userId, studioId, request);
+        ScreenShareResponse response = screenShareService.startScreenShare(odUserId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

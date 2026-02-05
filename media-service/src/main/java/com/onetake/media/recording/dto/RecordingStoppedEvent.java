@@ -11,7 +11,7 @@ public class RecordingStoppedEvent {
 
     private Long recordingId;
     private String studioId;
-    private Long userId;
+    private String odUserId;
     private String filePath;
     private String fileUrl;
     private Long fileSize;

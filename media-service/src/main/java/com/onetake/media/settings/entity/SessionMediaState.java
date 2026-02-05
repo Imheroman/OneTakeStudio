@@ -8,7 +8,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "session_media_states",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"studio_id", "user_id", "is_active"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"studio_id", "od_user_id", "is_active"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -25,8 +25,8 @@ public class SessionMediaState extends BaseTimeEntity {
     @Column(name = "stream_session_id")
     private Long streamSessionId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "od_user_id", nullable = false, length = 36)
+    private String odUserId;
 
     @Column(name = "studio_id", nullable = false)
     private String studioId;

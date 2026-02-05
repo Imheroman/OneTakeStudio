@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "platform_tokens",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "platform"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"od_user_id", "platform"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,8 +19,8 @@ public class PlatformToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "od_user_id", nullable = false, length = 36)
+    private String odUserId;
 
     @Column(name = "studio_id")
     private String studioId;

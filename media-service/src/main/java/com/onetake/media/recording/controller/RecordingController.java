@@ -25,10 +25,10 @@ public class RecordingController {
 
     @PostMapping("/start")
     public ResponseEntity<ApiResponse<RecordingResponse>> startRecording(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @Valid @RequestBody RecordingStartRequest request) {
         String studioId = request.getStudioId();
-        RecordingResponse response = recordingService.startRecording(userId, studioId, request);
+        RecordingResponse response = recordingService.startRecording(odUserId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

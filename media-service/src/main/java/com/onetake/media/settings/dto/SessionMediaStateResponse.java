@@ -16,7 +16,7 @@ public class SessionMediaStateResponse {
 
     private String stateId;
     private Long streamSessionId;
-    private Long userId;
+    private String odUserId;
     private String studioId;
     private Boolean videoEnabled;
     private Boolean audioEnabled;
@@ -33,7 +33,7 @@ public class SessionMediaStateResponse {
         return SessionMediaStateResponse.builder()
                 .stateId(state.getStateId())
                 .streamSessionId(state.getStreamSessionId())
-                .userId(state.getUserId())
+                .odUserId(state.getOdUserId())
                 .studioId(state.getStudioId())
                 .videoEnabled(state.getVideoEnabled())
                 .audioEnabled(state.getAudioEnabled())

@@ -24,10 +24,10 @@ public class LiveKitService {
     private final LiveKitConfig liveKitConfig;
     private final RoomServiceClient roomServiceClient;
 
-    public StreamTokenResponse generateToken(Long userId, String studioId, StreamTokenRequest request) {
+    public StreamTokenResponse generateToken(String odUserId, String studioId, StreamTokenRequest request) {
         try {
             String roomName = generateRoomName(studioId);
-            String participantIdentity = generateParticipantIdentity(userId, request.getParticipantName());
+            String participantIdentity = generateParticipantIdentity(odUserId, request.getParticipantName());
 
             AccessToken accessToken = liveKitConfig.createAccessToken();
             accessToken.setIdentity(participantIdentity);
@@ -119,7 +119,7 @@ public class LiveKitService {
         return "studio-" + studioId;
     }
 
-    private String generateParticipantIdentity(Long userId, String participantName) {
-        return "user-" + userId + "-" + participantName.replaceAll("\\s+", "-").toLowerCase();
+    private String generateParticipantIdentity(String odUserId, String participantName) {
+        return "user-" + odUserId + "-" + participantName.replaceAll("\\s+", "-").toLowerCase();
     }
 }

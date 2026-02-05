@@ -9,9 +9,9 @@ import java.util.Optional;
 @Repository
 public interface UserMediaSettingsRepository extends JpaRepository<UserMediaSettings, Long> {
 
-    Optional<UserMediaSettings> findByUserId(Long userId);
+    Optional<UserMediaSettings> findByOdUserId(String odUserId);
 
     Optional<UserMediaSettings> findBySettingsId(String settingsId);
 
-    boolean existsByUserId(Long userId);
+    boolean existsByOdUserId(String odUserId);
 }

@@ -143,17 +143,17 @@ public class ChatIntegrationAutoController {
                 Object data = body.get("data");
                 if (data instanceof Map) {
                     Map<String, Object> dest = (Map<String, Object>) data;
-                    Long userId = getLongValue(dest, "userId");
+                    String odUserId = getStringValue(dest, "odUserId");
                     String platform = getStringValue(dest, "platform");
                     String channelId = getStringValue(dest, "channelId");
                     String channelName = getStringValue(dest, "channelName");
                     String accessToken = getStringValue(dest, "accessToken");
                     String refreshToken = getStringValue(dest, "refreshToken");
 
-                    log.debug("Fetched destination: platform={}, channelId={}, userId={}, hasAccessToken={}",
-                            platform, channelId, userId, accessToken != null);
+                    log.debug("Fetched destination: platform={}, channelId={}, odUserId={}, hasAccessToken={}",
+                            platform, channelId, odUserId, accessToken != null);
 
-                    return new DestinationInfo(userId, platform, channelId, channelName, accessToken, refreshToken);
+                    return new DestinationInfo(odUserId, platform, channelId, channelName, accessToken, refreshToken);
                 }
             }
         } catch (Exception e) {
@@ -195,15 +195,15 @@ public class ChatIntegrationAutoController {
 
                 // Core Service destination에 토큰이 없으면 Media Service PlatformToken에서 fallback 조회
                 if (accessToken == null || accessToken.isBlank()) {
-                    log.info("YouTube accessToken not in destination, trying PlatformToken fallback for userId={}", dest.userId());
-                    if (dest.userId() != null) {
+                    log.info("YouTube accessToken not in destination, trying PlatformToken fallback for odUserId={}", dest.odUserId());
+                    if (dest.odUserId() != null) {
                         try {
-                            PlatformToken platformToken = oAuthService.getValidToken(dest.userId(), ChatPlatform.YOUTUBE);
+                            PlatformToken platformToken = oAuthService.getValidToken(dest.odUserId(), ChatPlatform.YOUTUBE);
                             accessToken = platformToken.getAccessToken();
                             refreshToken = platformToken.getRefreshToken();
-                            log.info("YouTube token found via PlatformToken fallback for userId={}", dest.userId());
+                            log.info("YouTube token found via PlatformToken fallback for odUserId={}", dest.odUserId());
                         } catch (Exception e) {
-                            log.warn("PlatformToken fallback failed for userId={}: {}", dest.userId(), e.getMessage());
+                            log.warn("PlatformToken fallback failed for odUserId={}: {}", dest.odUserId(), e.getMessage());
                         }
                     }
                 }
@@ -259,7 +259,7 @@ public class ChatIntegrationAutoController {
 
     // DTOs
     private record DestinationInfo(
-            Long userId,
+            String odUserId,
             String platform,
             String channelId,
             String channelName,

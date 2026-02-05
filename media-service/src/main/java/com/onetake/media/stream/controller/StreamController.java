@@ -22,18 +22,18 @@ public class StreamController {
 
     @PostMapping("/stream/join")
     public ResponseEntity<ApiResponse<StreamTokenResponse>> joinStream(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @Valid @RequestBody StreamTokenRequest request) {
         String studioId = request.getStudioId();
-        StreamTokenResponse response = streamService.joinStream(userId, studioId, request);
+        StreamTokenResponse response = streamService.joinStream(odUserId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/stream/{studioId}/leave")
     public ResponseEntity<ApiResponse<Void>> leaveStream(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @PathVariable String studioId) {
-        streamService.leaveStream(studioId, userId);
+        streamService.leaveStream(studioId, odUserId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 

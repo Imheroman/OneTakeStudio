@@ -25,8 +25,8 @@ public class StreamSession extends BaseTimeEntity {
     @Column(name = "studio_id", nullable = false)
     private String studioId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "od_user_id", nullable = false, length = 36)
+    private String odUserId;
 
     @Column(name = "room_name", nullable = false, unique = true)
     private String roomName;
@@ -71,8 +71,8 @@ public class StreamSession extends BaseTimeEntity {
      * 같은 room_name 에 이미 행이 있을 때 재사용 (유니크 제약 회피).
      * CONNECTING/ACTIVE/DISCONNECTED/CLOSED/FAILED 모두 새 참가자로 갱신 후 CONNECTING 으로 설정.
      */
-    public void reuseForNewParticipant(Long userId, String participantIdentity, String metadata) {
-        this.userId = userId;
+    public void reuseForNewParticipant(String odUserId, String participantIdentity, String metadata) {
+        this.odUserId = odUserId;
         this.participantIdentity = participantIdentity;
         this.metadata = metadata;
         this.status = SessionStatus.CONNECTING;

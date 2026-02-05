@@ -32,8 +32,8 @@ public class Marker extends BaseTimeEntity {
     @Column(name = "recording_id", length = 36)
     private String recordingId;
 
-    @Column(name = "user_id")
-    private Long userId;
+    @Column(name = "od_user_id", length = 36)
+    private String odUserId;
 
     /**
      * 마커 시간 (녹화 시작 기준, 초 단위)

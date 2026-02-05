@@ -29,7 +29,7 @@ public interface ShortsJobRepository extends JpaRepository<ShortsJob, Long> {
     /**
      * 사용자별 조회 (최신순)
      */
-    List<ShortsJob> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<ShortsJob> findByOdUserIdOrderByCreatedAtDesc(String odUserId);
 
     /**
      * 상태별 조회

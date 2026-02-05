@@ -24,16 +24,16 @@ public class MediaSettingsController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<UserMediaSettingsResponse>> getUserSettings(
-            @RequestHeader("X-User-Id") Long userId) {
-        UserMediaSettingsResponse response = mediaSettingsService.getUserSettings(userId);
+            @RequestHeader("X-User-Id") String odUserId) {
+        UserMediaSettingsResponse response = mediaSettingsService.getUserSettings(odUserId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping
     public ResponseEntity<ApiResponse<UserMediaSettingsResponse>> saveUserSettings(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @Valid @RequestBody UserMediaSettingsRequest request) {
-        UserMediaSettingsResponse response = mediaSettingsService.saveUserSettings(userId, request);
+        UserMediaSettingsResponse response = mediaSettingsService.saveUserSettings(odUserId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -41,50 +41,50 @@ public class MediaSettingsController {
 
     @PostMapping("/session/{studioId}/init")
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> initializeSessionState(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @PathVariable String studioId,
             @RequestParam(required = false) Long streamSessionId) {
-        SessionMediaStateResponse response = mediaSettingsService.initializeSessionState(userId, studioId, streamSessionId);
+        SessionMediaStateResponse response = mediaSettingsService.initializeSessionState(odUserId, studioId, streamSessionId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/session/{studioId}")
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> getSessionState(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @PathVariable String studioId) {
-        SessionMediaStateResponse response = mediaSettingsService.getSessionState(studioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.getSessionState(studioId, odUserId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping("/session")
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> updateSessionState(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @Valid @RequestBody MediaStateUpdateRequest request) {
-        SessionMediaStateResponse response = mediaSettingsService.updateSessionState(userId, request);
+        SessionMediaStateResponse response = mediaSettingsService.updateSessionState(odUserId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/session/{studioId}/video/toggle")
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> toggleVideo(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @PathVariable String studioId) {
-        SessionMediaStateResponse response = mediaSettingsService.toggleVideo(studioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.toggleVideo(studioId, odUserId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/session/{studioId}/audio/toggle")
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> toggleAudio(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @PathVariable String studioId) {
-        SessionMediaStateResponse response = mediaSettingsService.toggleAudio(studioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.toggleAudio(studioId, odUserId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/session/{studioId}/mute/toggle")
     public ResponseEntity<ApiResponse<SessionMediaStateResponse>> toggleMute(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @PathVariable String studioId) {
-        SessionMediaStateResponse response = mediaSettingsService.toggleMute(studioId, userId);
+        SessionMediaStateResponse response = mediaSettingsService.toggleMute(studioId, odUserId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -97,9 +97,9 @@ public class MediaSettingsController {
 
     @DeleteMapping("/session/{studioId}")
     public ResponseEntity<ApiResponse<Void>> terminateSessionState(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @PathVariable String studioId) {
-        mediaSettingsService.terminateSessionState(studioId, userId);
+        mediaSettingsService.terminateSessionState(studioId, odUserId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }

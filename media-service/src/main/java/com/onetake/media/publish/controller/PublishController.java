@@ -19,10 +19,10 @@ public class PublishController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<PublishResponse>> startPublish(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @Valid @RequestBody PublishStartRequest request) {
         String studioId = request.getStudioId();
-        PublishResponse response = publishService.startPublish(userId, studioId, request);
+        PublishResponse response = publishService.startPublish(odUserId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

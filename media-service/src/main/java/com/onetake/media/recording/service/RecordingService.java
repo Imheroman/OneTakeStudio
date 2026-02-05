@@ -40,7 +40,7 @@ public class RecordingService {
     private final ChunkedUploadService chunkedUploadService;
 
     @Transactional
-    public RecordingResponse startRecording(Long userId, String studioId, RecordingStartRequest request) {
+    public RecordingResponse startRecording(String odUserId, String studioId, RecordingStartRequest request) {
         // 이미 녹화 중인지 확인
         if (recordingSessionRepository.existsByStudioIdAndStatus(studioId, RecordingStatus.RECORDING)) {
             throw new BusinessException(ErrorCode.RECORDING_ALREADY_IN_PROGRESS);
@@ -56,7 +56,7 @@ public class RecordingService {
 
         RecordingSession recordingSession = RecordingSession.builder()
                 .studioId(studioId)
-                .userId(userId)
+                .odUserId(odUserId)
                 .streamSessionId(streamSession.getId())
                 .status(RecordingStatus.PENDING)
                 .fileName(fileName)
@@ -148,7 +148,7 @@ public class RecordingService {
         RecordingStoppedEvent event = RecordingStoppedEvent.builder()
                 .recordingId(recordingId)
                 .studioId(recordingSession.getStudioId())
-                .userId(recordingSession.getUserId())
+                .odUserId(recordingSession.getOdUserId())
                 .filePath(filePath)
                 .fileUrl(fileUrl)
                 .fileSize(fileSize)
@@ -187,7 +187,7 @@ public class RecordingService {
         message.put("type", "RECORDING_STOPPED");
         message.put("recordingId", String.valueOf(event.getRecordingId()));
         message.put("studioId", String.valueOf(event.getStudioId()));
-        message.put("userId", String.valueOf(event.getUserId()));
+        message.put("odUserId", String.valueOf(event.getOdUserId()));
         message.put("filePath", event.getFilePath());
         message.put("fileUrl", event.getFileUrl());
         message.put("fileSize", String.valueOf(event.getFileSize()));

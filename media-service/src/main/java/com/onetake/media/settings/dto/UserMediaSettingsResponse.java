@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class UserMediaSettingsResponse {
 
     private String settingsId;
-    private Long userId;
+    private String odUserId;
     private String defaultVideoDeviceId;
     private VideoQuality videoQuality;
     private String defaultAudioInputDeviceId;
@@ -32,7 +32,7 @@ public class UserMediaSettingsResponse {
     public static UserMediaSettingsResponse from(UserMediaSettings settings) {
         return UserMediaSettingsResponse.builder()
                 .settingsId(settings.getSettingsId())
-                .userId(settings.getUserId())
+                .odUserId(settings.getOdUserId())
                 .defaultVideoDeviceId(settings.getDefaultVideoDeviceId())
                 .videoQuality(settings.getVideoQuality())
                 .defaultAudioInputDeviceId(settings.getDefaultAudioInputDeviceId())

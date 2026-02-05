@@ -68,9 +68,9 @@ public class ChatIntegrationService {
     /**
      * 플랫폼 채팅 연동 시작 (DB 토큰 사용)
      */
-    public void startIntegrationWithStoredToken(Long userId, String studioId, ChatPlatform platform) {
+    public void startIntegrationWithStoredToken(String odUserId, String studioId, ChatPlatform platform) {
         // DB에서 유효한 토큰 조회 (만료 임박 시 자동 갱신)
-        PlatformToken token = oAuthService.getValidToken(userId, platform);
+        PlatformToken token = oAuthService.getValidToken(odUserId, platform);
 
         PlatformCredentials credentials = buildCredentialsFromToken(token, studioId);
         startIntegration(studioId, credentials);
@@ -101,8 +101,8 @@ public class ChatIntegrationService {
     /**
      * 토큰 연동 여부 확인
      */
-    public boolean hasValidToken(Long userId, ChatPlatform platform) {
-        Optional<PlatformToken> token = oAuthService.getToken(userId, platform);
+    public boolean hasValidToken(String odUserId, ChatPlatform platform) {
+        Optional<PlatformToken> token = oAuthService.getToken(odUserId, platform);
         return token.isPresent() && !token.get().isExpired();
     }
 

@@ -28,11 +28,11 @@ public class OAuthController {
     @GetMapping("/{platform}/authorize")
     public ResponseEntity<ApiResponse<AuthorizeResponse>> getAuthorizationUrl(
             @PathVariable String platform,
-            @RequestParam Long userId,
+            @RequestParam String odUserId,
             @RequestParam(required = false) String studioId) {
 
         ChatPlatform chatPlatform = parsePlatform(platform);
-        String authUrl = oAuthService.getAuthorizationUrl(chatPlatform, userId, studioId);
+        String authUrl = oAuthService.getAuthorizationUrl(chatPlatform, odUserId, studioId);
 
         return ResponseEntity.ok(ApiResponse.success(new AuthorizeResponse(authUrl)));
     }
@@ -54,7 +54,7 @@ public class OAuthController {
 
         try {
             PlatformToken token = oAuthService.exchangeCodeForToken(ChatPlatform.YOUTUBE, code, state);
-            log.info("[YouTube] OAuth completed for userId: {}", token.getUserId());
+            log.info("[YouTube] OAuth completed for userId: {}", token.getOdUserId());
             return redirectToFrontend("success", "youtube");
         } catch (Exception e) {
             log.error("[YouTube] OAuth callback failed: {}", e.getMessage());
@@ -79,7 +79,7 @@ public class OAuthController {
 
         try {
             PlatformToken token = oAuthService.exchangeCodeForToken(ChatPlatform.CHZZK, code, state);
-            log.info("[Chzzk] OAuth completed for userId: {}", token.getUserId());
+            log.info("[Chzzk] OAuth completed for userId: {}", token.getOdUserId());
             return redirectToFrontend("success", "chzzk");
         } catch (Exception e) {
             log.error("[Chzzk] OAuth callback failed: {}", e.getMessage());
@@ -94,15 +94,15 @@ public class OAuthController {
     @PostMapping("/{platform}/refresh")
     public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(
             @PathVariable String platform,
-            @RequestParam Long userId) {
+            @RequestParam String odUserId) {
 
         ChatPlatform chatPlatform = parsePlatform(platform);
 
         try {
-            PlatformToken token = oAuthService.refreshToken(chatPlatform, userId);
+            PlatformToken token = oAuthService.refreshToken(chatPlatform, odUserId);
             return ResponseEntity.ok(ApiResponse.success(TokenResponse.from(token)));
         } catch (Exception e) {
-            log.error("[{}] Token refresh failed for userId {}: {}", platform, userId, e.getMessage());
+            log.error("[{}] Token refresh failed for odUserId {}: {}", platform, odUserId, e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("Token refresh failed: " + e.getMessage()));
         }
@@ -115,10 +115,10 @@ public class OAuthController {
     @DeleteMapping("/{platform}/revoke")
     public ResponseEntity<ApiResponse<Void>> revokeToken(
             @PathVariable String platform,
-            @RequestParam Long userId) {
+            @RequestParam String odUserId) {
 
         ChatPlatform chatPlatform = parsePlatform(platform);
-        oAuthService.revokeToken(chatPlatform, userId);
+        oAuthService.revokeToken(chatPlatform, odUserId);
 
         return ResponseEntity.ok(ApiResponse.success());
     }
@@ -130,11 +130,11 @@ public class OAuthController {
     @GetMapping("/{platform}/token")
     public ResponseEntity<ApiResponse<TokenResponse>> getToken(
             @PathVariable String platform,
-            @RequestParam Long userId) {
+            @RequestParam String odUserId) {
 
         ChatPlatform chatPlatform = parsePlatform(platform);
 
-        return oAuthService.getToken(userId, chatPlatform)
+        return oAuthService.getToken(odUserId, chatPlatform)
                 .map(token -> ResponseEntity.ok(ApiResponse.success(TokenResponse.from(token))))
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("Token not found")));
@@ -146,9 +146,9 @@ public class OAuthController {
      */
     @GetMapping("/status")
     public ResponseEntity<ApiResponse<List<TokenStatusResponse>>> getTokenStatus(
-            @RequestParam Long userId) {
+            @RequestParam String odUserId) {
 
-        List<PlatformToken> tokens = oAuthService.getTokensByUserId(userId);
+        List<PlatformToken> tokens = oAuthService.getTokensByOdUserId(odUserId);
         List<TokenStatusResponse> statuses = tokens.stream()
                 .map(TokenStatusResponse::from)
                 .toList();
@@ -162,11 +162,11 @@ public class OAuthController {
      */
     @PutMapping("/youtube/live-chat")
     public ResponseEntity<ApiResponse<TokenResponse>> updateLiveChatId(
-            @RequestParam Long userId,
+            @RequestParam String odUserId,
             @RequestBody LiveChatRequest request) {
 
         PlatformToken token = oAuthService.updateLiveChatId(
-                userId, ChatPlatform.YOUTUBE, request.liveChatId(), request.broadcastId());
+                odUserId, ChatPlatform.YOUTUBE, request.liveChatId(), request.broadcastId());
 
         return ResponseEntity.ok(ApiResponse.success(TokenResponse.from(token)));
     }
@@ -177,11 +177,11 @@ public class OAuthController {
      */
     @PutMapping("/chzzk/channel")
     public ResponseEntity<ApiResponse<TokenResponse>> updateChannelId(
-            @RequestParam Long userId,
+            @RequestParam String odUserId,
             @RequestBody ChannelRequest request) {
 
         PlatformToken token = oAuthService.updateChannelId(
-                userId, ChatPlatform.CHZZK, request.channelId());
+                odUserId, ChatPlatform.CHZZK, request.channelId());
 
         return ResponseEntity.ok(ApiResponse.success(TokenResponse.from(token)));
     }
@@ -208,7 +208,7 @@ public class OAuthController {
     public record AuthorizeResponse(String authUrl) {}
 
     public record TokenResponse(
-            Long userId,
+            String odUserId,
             ChatPlatform platform,
             String liveChatId,
             String broadcastId,
@@ -218,7 +218,7 @@ public class OAuthController {
     ) {
         public static TokenResponse from(PlatformToken token) {
             return new TokenResponse(
-                    token.getUserId(),
+                    token.getOdUserId(),
                     token.getPlatform(),
                     token.getLiveChatId(),
                     token.getBroadcastId(),

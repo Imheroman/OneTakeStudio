@@ -56,7 +56,7 @@ public class ShortsService {
      * 숏츠 생성 요청
      */
     @Transactional
-    public ShortsResponse createShorts(Long userId, ShortsCreateRequest request) {
+    public ShortsResponse createShorts(String odUserId, ShortsCreateRequest request) {
         // 녹화 정보 조회
         RecordingSession recording = recordingSessionRepository.findById(request.getRecordingId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
@@ -76,7 +76,7 @@ public class ShortsService {
                 .jobId(jobId)
                 .recordingId(request.getRecordingId())
                 .studioId(recording.getStudioId())
-                .userId(userId)
+                .odUserId(odUserId)
                 .status(ShortsStatus.PENDING)
                 .videoPath(recording.getFilePath())
                 .needSubtitles(request.getNeedSubtitles())
@@ -172,8 +172,8 @@ public class ShortsService {
     /**
      * 사용자별 작업 목록 조회
      */
-    public List<ShortsResponse> getJobsByUser(Long userId) {
-        return shortsJobRepository.findByUserIdOrderByCreatedAtDesc(userId)
+    public List<ShortsResponse> getJobsByUser(String odUserId) {
+        return shortsJobRepository.findByOdUserIdOrderByCreatedAtDesc(odUserId)
                 .stream()
                 .map(ShortsResponse::from)
                 .toList();

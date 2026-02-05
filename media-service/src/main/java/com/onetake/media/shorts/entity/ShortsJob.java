@@ -44,8 +44,8 @@ public class ShortsJob {
     /**
      * 요청한 사용자 ID
      */
-    @Column(nullable = false)
-    private Long userId;
+    @Column(nullable = false, length = 36)
+    private String odUserId;
 
     /**
      * 작업 상태

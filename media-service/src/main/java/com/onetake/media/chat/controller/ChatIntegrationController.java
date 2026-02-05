@@ -37,14 +37,14 @@ public class ChatIntegrationController {
     @PostMapping("/{studioId}/youtube/start")
     public ResponseEntity<ApiResponse<Void>> startYouTubeIntegration(
             @PathVariable String studioId,
-            @RequestParam Long userId) {
+            @RequestParam String odUserId) {
 
-        if (!chatIntegrationService.hasValidToken(userId, ChatPlatform.YOUTUBE)) {
+        if (!chatIntegrationService.hasValidToken(odUserId, ChatPlatform.YOUTUBE)) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("YouTube OAuth 인증이 필요합니다. /api/oauth/youtube/authorize 를 먼저 호출하세요."));
         }
 
-        chatIntegrationService.startIntegrationWithStoredToken(userId, studioId, ChatPlatform.YOUTUBE);
+        chatIntegrationService.startIntegrationWithStoredToken(odUserId, studioId, ChatPlatform.YOUTUBE);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -55,14 +55,14 @@ public class ChatIntegrationController {
     @PostMapping("/{studioId}/chzzk/start")
     public ResponseEntity<ApiResponse<Void>> startChzzkIntegration(
             @PathVariable String studioId,
-            @RequestParam Long userId) {
+            @RequestParam String odUserId) {
 
-        if (!chatIntegrationService.hasValidToken(userId, ChatPlatform.CHZZK)) {
+        if (!chatIntegrationService.hasValidToken(odUserId, ChatPlatform.CHZZK)) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("치지직 OAuth 인증이 필요합니다. /api/oauth/chzzk/authorize 를 먼저 호출하세요."));
         }
 
-        chatIntegrationService.startIntegrationWithStoredToken(userId, studioId, ChatPlatform.CHZZK);
+        chatIntegrationService.startIntegrationWithStoredToken(odUserId, studioId, ChatPlatform.CHZZK);
         return ResponseEntity.ok(ApiResponse.success());
     }
 

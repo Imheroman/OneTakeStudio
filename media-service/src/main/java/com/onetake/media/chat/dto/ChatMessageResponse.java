@@ -20,7 +20,7 @@ public class ChatMessageResponse {
     private String studioId;
     private ChatPlatform platform;
     private MessageType messageType;
-    private Long userId;
+    private String odUserId;
     private String senderName;
     private String senderProfileUrl;
     private String content;
@@ -35,7 +35,7 @@ public class ChatMessageResponse {
                 .studioId(message.getStudioId())
                 .platform(message.getPlatform())
                 .messageType(message.getMessageType())
-                .userId(message.getUserId())
+                .odUserId(message.getOdUserId())
                 .senderName(message.getSenderName())
                 .senderProfileUrl(message.getSenderProfileUrl())
                 .content(message.getContent())

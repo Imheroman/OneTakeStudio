@@ -14,7 +14,7 @@ public class ScreenShareResponse {
     private Long id;
     private String shareId;
     private String studioId;
-    private Long userId;
+    private String odUserId;
     private ScreenShareStatus status;
     private String sourceType;
     private String trackId;
@@ -26,7 +26,7 @@ public class ScreenShareResponse {
                 .id(session.getId())
                 .shareId(session.getShareId())
                 .studioId(session.getStudioId())
-                .userId(session.getUserId())
+                .odUserId(session.getOdUserId())
                 .status(session.getStatus())
                 .sourceType(session.getSourceType())
                 .trackId(session.getTrackId())

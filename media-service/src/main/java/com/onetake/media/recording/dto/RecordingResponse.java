@@ -14,7 +14,7 @@ public class RecordingResponse {
 
     private String recordingId;
     private String studioId;
-    private Long userId;
+    private String odUserId;
     private RecordingStatus status;
     private String fileName;
     private String filePath;
@@ -35,7 +35,7 @@ public class RecordingResponse {
         return RecordingResponse.builder()
                 .recordingId(session.getRecordingId())
                 .studioId(session.getStudioId())
-                .userId(session.getUserId())
+                .odUserId(session.getOdUserId())
                 .status(session.getStatus())
                 .fileName(session.getFileName())
                 .filePath(session.getFilePath())

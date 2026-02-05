@@ -13,7 +13,7 @@ public class StreamSessionResponse {
 
     private Long id;
     private String studioId;
-    private Long userId;
+    private String odUserId;
     private String roomName;
     private String participantIdentity;
     private SessionStatus status;
@@ -25,7 +25,7 @@ public class StreamSessionResponse {
         return StreamSessionResponse.builder()
                 .id(session.getId())
                 .studioId(session.getStudioId())
-                .userId(session.getUserId())
+                .odUserId(session.getOdUserId())
                 .roomName(session.getRoomName())
                 .participantIdentity(session.getParticipantIdentity())
                 .status(session.getStatus())

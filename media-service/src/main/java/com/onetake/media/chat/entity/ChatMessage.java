@@ -36,8 +36,8 @@ public class ChatMessage extends BaseTimeEntity {
     @Builder.Default
     private MessageType messageType = MessageType.CHAT;
 
-    @Column(name = "user_id")
-    private Long userId;
+    @Column(name = "od_user_id", length = 36)
+    private String odUserId;
 
     @Column(name = "sender_name", nullable = false, length = 100)
     private String senderName;

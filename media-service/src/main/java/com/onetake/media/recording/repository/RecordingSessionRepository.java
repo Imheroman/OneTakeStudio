@@ -19,7 +19,7 @@ public interface RecordingSessionRepository extends JpaRepository<RecordingSessi
 
     List<RecordingSession> findByStudioIdOrderByCreatedAtDesc(String studioId);
 
-    List<RecordingSession> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<RecordingSession> findByOdUserIdOrderByCreatedAtDesc(String odUserId);
 
     boolean existsByStudioIdAndStatus(String studioId, RecordingStatus status);
 

@@ -50,7 +50,7 @@ public class PublishService {
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public PublishResponse startPublish(Long userId, String studioId, PublishStartRequest request) {
+    public PublishResponse startPublish(String odUserId, String studioId, PublishStartRequest request) {
         // 이미 송출 중인 세션이 있으면 정리 후 새로 시작 (이중 클릭·끊긴 세션 복구)
         Optional<PublishSession> existingOpt = publishSessionRepository.findByStudioIdAndStatus(
                 studioId, PublishStatus.PUBLISHING);
@@ -104,7 +104,7 @@ public class PublishService {
 
         PublishSession publishSession = PublishSession.builder()
                 .studioId(studioId)
-                .userId(userId)
+                .odUserId(odUserId)
                 .streamSessionId(streamSession.getId())
                 .status(PublishStatus.PENDING)
                 .destinationIds(destinationIdsJson)
@@ -127,7 +127,7 @@ public class PublishService {
         }
 
         // 사용자 비디오 품질 설정 조회
-        VideoQuality videoQuality = userMediaSettingsRepository.findByUserId(userId)
+        VideoQuality videoQuality = userMediaSettingsRepository.findByOdUserId(odUserId)
                 .map(UserMediaSettings::getVideoQuality)
                 .orElse(VideoQuality.MEDIUM);
 

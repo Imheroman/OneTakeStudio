@@ -34,7 +34,7 @@ public class ChatService {
     private static final String CHAT_TOPIC = "/topic/chat/";
 
     @Transactional
-    public ChatMessageResponse sendMessage(Long userId, String studioId, ChatMessageRequest request) {
+    public ChatMessageResponse sendMessage(String odUserId, String studioId, ChatMessageRequest request) {
         // 외부 메시지 중복 체크
         if (request.getExternalMessageId() != null &&
                 chatMessageRepository.existsByExternalMessageId(request.getExternalMessageId())) {
@@ -46,7 +46,7 @@ public class ChatService {
                 .studioId(studioId)
                 .platform(request.getPlatform())
                 .messageType(request.getMessageType())
-                .userId(userId)
+                .odUserId(odUserId)
                 .senderName(request.getSenderName())
                 .senderProfileUrl(request.getSenderProfileUrl())
                 .content(request.getContent())

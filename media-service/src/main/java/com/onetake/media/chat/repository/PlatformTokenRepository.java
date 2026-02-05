@@ -11,13 +11,13 @@ import java.util.Optional;
 @Repository
 public interface PlatformTokenRepository extends JpaRepository<PlatformToken, Long> {
 
-    Optional<PlatformToken> findByUserIdAndPlatform(Long userId, ChatPlatform platform);
+    Optional<PlatformToken> findByOdUserIdAndPlatform(String odUserId, ChatPlatform platform);
 
-    List<PlatformToken> findByUserId(Long userId);
+    List<PlatformToken> findByOdUserId(String odUserId);
 
     List<PlatformToken> findByStudioIdAndPlatform(String studioId, ChatPlatform platform);
 
-    void deleteByUserIdAndPlatform(Long userId, ChatPlatform platform);
+    void deleteByOdUserIdAndPlatform(String odUserId, ChatPlatform platform);
 
-    boolean existsByUserIdAndPlatform(Long userId, ChatPlatform platform);
+    boolean existsByOdUserIdAndPlatform(String odUserId, ChatPlatform platform);
 }

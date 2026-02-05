@@ -22,10 +22,10 @@ public class ChatController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<ChatMessageResponse>> sendMessage(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @Valid @RequestBody ChatMessageRequest request) {
         String studioId = request.getStudioId();
-        ChatMessageResponse response = chatService.sendMessage(userId, studioId, request);
+        ChatMessageResponse response = chatService.sendMessage(odUserId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

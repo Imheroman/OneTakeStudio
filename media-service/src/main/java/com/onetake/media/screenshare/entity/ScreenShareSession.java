@@ -25,8 +25,8 @@ public class ScreenShareSession extends BaseTimeEntity {
     @Column(name = "studio_id", nullable = false)
     private String studioId;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "od_user_id", nullable = false, length = 36)
+    private String odUserId;
 
     @Column(name = "stream_session_id")
     private Long streamSessionId;

@@ -26,11 +26,11 @@ public class LiveStreamEventPublisher {
     /**
      * 라이브 시작 이벤트 발행
      */
-    public void publishLiveStarted(String studioId, Long userId, String roomName) {
+    public void publishLiveStarted(String studioId, String odUserId, String roomName) {
         Map<String, String> event = new HashMap<>();
         event.put("eventType", "LIVE_STARTED");
         event.put("studioId", String.valueOf(studioId));
-        event.put("userId", String.valueOf(userId));
+        event.put("odUserId", odUserId);
         event.put("roomName", roomName);
         event.put("timestamp", Instant.now().toString());
 
@@ -40,8 +40,8 @@ public class LiveStreamEventPublisher {
                     .withStreamKey(STREAM_KEY);
 
             redisTemplate.opsForStream().add(record);
-            log.info("Published LIVE_STARTED event: studioId={}, userId={}, roomName={}",
-                    studioId, userId, roomName);
+            log.info("Published LIVE_STARTED event: studioId={}, odUserId={}, roomName={}",
+                    studioId, odUserId, roomName);
         } catch (Exception e) {
             log.warn("Failed to publish LIVE_STARTED event to Redis Streams: {}", e.getMessage());
             // Redis 실패해도 송출은 계속 진행
@@ -51,11 +51,11 @@ public class LiveStreamEventPublisher {
     /**
      * 라이브 종료 이벤트 발행
      */
-    public void publishLiveEnded(String studioId, Long userId, String roomName) {
+    public void publishLiveEnded(String studioId, String odUserId, String roomName) {
         Map<String, String> event = new HashMap<>();
         event.put("eventType", "LIVE_ENDED");
         event.put("studioId", String.valueOf(studioId));
-        event.put("userId", String.valueOf(userId));
+        event.put("odUserId", odUserId);
         event.put("roomName", roomName);
         event.put("timestamp", Instant.now().toString());
 
@@ -65,8 +65,8 @@ public class LiveStreamEventPublisher {
                     .withStreamKey(STREAM_KEY);
 
             redisTemplate.opsForStream().add(record);
-            log.info("Published LIVE_ENDED event: studioId={}, userId={}, roomName={}",
-                    studioId, userId, roomName);
+            log.info("Published LIVE_ENDED event: studioId={}, odUserId={}, roomName={}",
+                    studioId, odUserId, roomName);
         } catch (Exception e) {
             log.warn("Failed to publish LIVE_ENDED event to Redis Streams: {}", e.getMessage());
         }

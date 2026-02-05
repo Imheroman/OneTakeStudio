@@ -21,8 +21,8 @@ public class UserMediaSettings extends BaseTimeEntity {
     @Column(name = "settings_id", unique = true, nullable = false, updatable = false, length = 36)
     private String settingsId;
 
-    @Column(name = "user_id", unique = true, nullable = false)
-    private Long userId;
+    @Column(name = "od_user_id", unique = true, nullable = false, length = 36)
+    private String odUserId;
 
     @Column(name = "default_video_device_id")
     private String defaultVideoDeviceId;

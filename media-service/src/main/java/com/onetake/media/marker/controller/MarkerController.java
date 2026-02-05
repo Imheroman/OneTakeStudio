@@ -26,12 +26,12 @@ public class MarkerController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<MarkerResponse>> createMarker(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestHeader(value = "X-User-Id", required = false) String odUserId,
             @Valid @RequestBody CreateMarkerRequest request) {
 
         String studioId = request.getStudioId();
         log.info("마커 생성 요청: studioId={}, timestamp={}", studioId, request.getTimestampSec());
-        MarkerResponse response = markerService.createManualMarker(userId, studioId, request);
+        MarkerResponse response = markerService.createManualMarker(odUserId, studioId, request);
         return ResponseEntity.ok(ApiResponse.success("마커가 생성되었습니다", response));
     }
 

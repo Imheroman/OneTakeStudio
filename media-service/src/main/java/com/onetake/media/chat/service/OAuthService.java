@@ -34,8 +34,8 @@ public class OAuthService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    public String getAuthorizationUrl(ChatPlatform platform, Long userId, String studioId) {
-        String state = encodeState(userId, studioId);
+    public String getAuthorizationUrl(ChatPlatform platform, String odUserId, String studioId) {
+        String state = encodeState(odUserId, studioId);
 
         return switch (platform) {
             case YOUTUBE -> buildYouTubeAuthUrl(state);
@@ -105,7 +105,7 @@ public class OAuthService {
                 int expiresIn = root.has("expires_in") ? root.get("expires_in").asInt() : 3600;
 
                 return saveToken(
-                        stateInfo.userId(),
+                        stateInfo.odUserId(),
                         stateInfo.studioId(),
                         ChatPlatform.YOUTUBE,
                         accessToken,
@@ -153,7 +153,7 @@ public class OAuthService {
                 int expiresIn = root.has("expires_in") ? root.get("expires_in").asInt() : 3600;
 
                 return saveToken(
-                        stateInfo.userId(),
+                        stateInfo.odUserId(),
                         stateInfo.studioId(),
                         ChatPlatform.CHZZK,
                         accessToken,
@@ -170,9 +170,9 @@ public class OAuthService {
     }
 
     @Transactional
-    public PlatformToken refreshToken(ChatPlatform platform, Long userId) {
-        PlatformToken token = platformTokenRepository.findByUserIdAndPlatform(userId, platform)
-                .orElseThrow(() -> new RuntimeException("Token not found for user: " + userId));
+    public PlatformToken refreshToken(ChatPlatform platform, String odUserId) {
+        PlatformToken token = platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform)
+                .orElseThrow(() -> new RuntimeException("Token not found for user: " + odUserId));
 
         if (token.getRefreshToken() == null) {
             throw new RuntimeException("No refresh token available");
@@ -212,7 +212,7 @@ public class OAuthService {
                 token.setAccessToken(newAccessToken);
                 token.setExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
 
-                log.info("[YouTube] Token refreshed for userId: {}", token.getUserId());
+                log.info("[YouTube] Token refreshed for userId: {}", token.getOdUserId());
                 return platformTokenRepository.save(token);
             }
         } catch (Exception e) {
@@ -250,7 +250,7 @@ public class OAuthService {
                 token.setAccessToken(newAccessToken);
                 token.setExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
 
-                log.info("[Chzzk] Token refreshed for userId: {}", token.getUserId());
+                log.info("[Chzzk] Token refreshed for userId: {}", token.getOdUserId());
                 return platformTokenRepository.save(token);
             }
         } catch (Exception e) {
@@ -262,11 +262,11 @@ public class OAuthService {
     }
 
     @Transactional
-    public PlatformToken saveToken(Long userId, String studioId, ChatPlatform platform,
+    public PlatformToken saveToken(String odUserId, String studioId, ChatPlatform platform,
                                    String accessToken, String refreshToken, LocalDateTime expiresAt) {
-        PlatformToken token = platformTokenRepository.findByUserIdAndPlatform(userId, platform)
+        PlatformToken token = platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform)
                 .orElse(PlatformToken.builder()
-                        .userId(userId)
+                        .odUserId(odUserId)
                         .platform(platform)
                         .build());
 
@@ -275,35 +275,35 @@ public class OAuthService {
         token.setRefreshToken(refreshToken);
         token.setExpiresAt(expiresAt);
 
-        log.info("Token saved: userId={}, platform={}", userId, platform);
+        log.info("Token saved: odUserId={}, platform={}", odUserId, platform);
         return platformTokenRepository.save(token);
     }
 
     @Transactional(readOnly = true)
-    public Optional<PlatformToken> getToken(Long userId, ChatPlatform platform) {
-        return platformTokenRepository.findByUserIdAndPlatform(userId, platform);
+    public Optional<PlatformToken> getToken(String odUserId, ChatPlatform platform) {
+        return platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform);
     }
 
     @Transactional(readOnly = true)
-    public List<PlatformToken> getTokensByUserId(Long userId) {
-        return platformTokenRepository.findByUserId(userId);
+    public List<PlatformToken> getTokensByOdUserId(String odUserId) {
+        return platformTokenRepository.findByOdUserId(odUserId);
     }
 
     @Transactional
-    public PlatformToken getValidToken(Long userId, ChatPlatform platform) {
-        PlatformToken token = platformTokenRepository.findByUserIdAndPlatform(userId, platform)
+    public PlatformToken getValidToken(String odUserId, ChatPlatform platform) {
+        PlatformToken token = platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform)
                 .orElseThrow(() -> new RuntimeException("Token not found"));
 
         if (token.isExpiringSoon() && token.getRefreshToken() != null) {
-            return refreshToken(platform, userId);
+            return refreshToken(platform, odUserId);
         }
 
         return token;
     }
 
     @Transactional
-    public void revokeToken(ChatPlatform platform, Long userId) {
-        Optional<PlatformToken> tokenOpt = platformTokenRepository.findByUserIdAndPlatform(userId, platform);
+    public void revokeToken(ChatPlatform platform, String odUserId) {
+        Optional<PlatformToken> tokenOpt = platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform);
 
         if (tokenOpt.isPresent()) {
             PlatformToken token = tokenOpt.get();
@@ -313,20 +313,20 @@ public class OAuthService {
                 try {
                     String revokeUrl = YouTubeOAuthProperties.REVOKE_URL + "?token=" + token.getAccessToken();
                     restTemplate.postForEntity(revokeUrl, null, String.class);
-                    log.info("[YouTube] Token revoked for userId: {}", userId);
+                    log.info("[YouTube] Token revoked for odUserId: {}", odUserId);
                 } catch (Exception e) {
                     log.warn("[YouTube] Failed to revoke token: {}", e.getMessage());
                 }
             }
 
-            platformTokenRepository.deleteByUserIdAndPlatform(userId, platform);
-            log.info("Token deleted: userId={}, platform={}", userId, platform);
+            platformTokenRepository.deleteByOdUserIdAndPlatform(odUserId, platform);
+            log.info("Token deleted: odUserId={}, platform={}", odUserId, platform);
         }
     }
 
     @Transactional
-    public PlatformToken updateLiveChatId(Long userId, ChatPlatform platform, String liveChatId, String broadcastId) {
-        PlatformToken token = platformTokenRepository.findByUserIdAndPlatform(userId, platform)
+    public PlatformToken updateLiveChatId(String odUserId, ChatPlatform platform, String liveChatId, String broadcastId) {
+        PlatformToken token = platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform)
                 .orElseThrow(() -> new RuntimeException("Token not found"));
 
         token.setLiveChatId(liveChatId);
@@ -336,8 +336,8 @@ public class OAuthService {
     }
 
     @Transactional
-    public PlatformToken updateChannelId(Long userId, ChatPlatform platform, String channelId) {
-        PlatformToken token = platformTokenRepository.findByUserIdAndPlatform(userId, platform)
+    public PlatformToken updateChannelId(String odUserId, ChatPlatform platform, String channelId) {
+        PlatformToken token = platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform)
                 .orElseThrow(() -> new RuntimeException("Token not found"));
 
         token.setChannelId(channelId);
@@ -349,9 +349,9 @@ public class OAuthService {
         return oAuthConfig.getOauth().getFrontendRedirectUri();
     }
 
-    // State 인코딩/디코딩 (userId:studioId:uuid)
-    private String encodeState(Long userId, String studioId) {
-        return userId + ":" + (studioId != null ? studioId : "0") + ":" + UUID.randomUUID();
+    // State 인코딩/디코딩 (odUserId:studioId:uuid)
+    private String encodeState(String odUserId, String studioId) {
+        return odUserId + ":" + (studioId != null ? studioId : "0") + ":" + UUID.randomUUID();
     }
 
     private StateInfo decodeState(String state) {
@@ -359,14 +359,14 @@ public class OAuthService {
         if (parts.length < 2) {
             throw new IllegalArgumentException("Invalid state format");
         }
-        Long userId = Long.parseLong(parts[0]);
+        String odUserId = parts[0];
         String studioId = "0".equals(parts[1]) ? null : parts[1];
-        return new StateInfo(userId, studioId);
+        return new StateInfo(odUserId, studioId);
     }
 
     private String encode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
-    private record StateInfo(Long userId, String studioId) {}
+    private record StateInfo(String odUserId, String studioId) {}
 }

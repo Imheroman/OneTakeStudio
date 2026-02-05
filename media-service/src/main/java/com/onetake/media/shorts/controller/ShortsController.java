@@ -28,12 +28,12 @@ public class ShortsController {
      */
     @PostMapping
     public ResponseEntity<ShortsResponse> createShorts(
-            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Id") String odUserId,
             @RequestBody ShortsCreateRequest request) {
 
-        log.info("Creating shorts: userId={}, recordingId={}", userId, request.getRecordingId());
+        log.info("Creating shorts: odUserId={}, recordingId={}", odUserId, request.getRecordingId());
 
-        ShortsResponse response = shortsService.createShorts(userId, request);
+        ShortsResponse response = shortsService.createShorts(odUserId, request);
         return ResponseEntity.accepted().body(response);
     }
 
@@ -81,9 +81,9 @@ public class ShortsController {
      */
     @GetMapping("/my")
     public ResponseEntity<List<ShortsResponse>> getMyJobs(
-            @RequestHeader("X-User-Id") Long userId) {
+            @RequestHeader("X-User-Id") String odUserId) {
 
-        List<ShortsResponse> responses = shortsService.getJobsByUser(userId);
+        List<ShortsResponse> responses = shortsService.getJobsByUser(odUserId);
         return ResponseEntity.ok(responses);
     }
 }
