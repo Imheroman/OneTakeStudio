@@ -8,11 +8,14 @@ import { AuthResponseSchema } from "@/entities/user/model";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/shared/ui/button";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import { cn } from "@/shared/lib/utils";
 
 function OAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const login = useAuthStore((state) => state.login);
+  const isDark = useResolvedTheme() === "dark";
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading"
   );
@@ -120,32 +123,77 @@ function OAuthCallbackContent() {
   }, [searchParams, login, router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
-      <Card className="w-full max-w-md">
+    <div
+      className={cn(
+        "flex items-center justify-center min-h-screen p-4",
+        isDark ? "bg-[#0c0c0f]" : "bg-gray-50"
+      )}
+    >
+      <Card
+        className={cn(
+          "w-full max-w-md",
+          isDark && "bg-gray-800/80 border-gray-700"
+        )}
+      >
         <CardHeader>
-          <CardTitle className="text-center">OAuth 로그인</CardTitle>
+          <CardTitle className={cn("text-center", isDark && "text-white")}>
+            OAuth 로그인
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {status === "loading" && (
             <div className="flex flex-col items-center justify-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mb-4" />
-              <p className="text-gray-600">로그인 처리 중...</p>
+              <Loader2
+                className={cn(
+                  "h-12 w-12 animate-spin mb-4",
+                  isDark ? "text-indigo-400" : "text-indigo-600"
+                )}
+              />
+              <p className={cn(isDark ? "text-gray-400" : "text-gray-600")}>
+                로그인 처리 중...
+              </p>
             </div>
           )}
 
           {status === "success" && (
             <div className="flex flex-col items-center justify-center py-8">
               <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
-              <p className="text-gray-900 font-medium mb-2">로그인 성공!</p>
-              <p className="text-sm text-gray-600 text-center">{message}</p>
+              <p
+                className={cn(
+                  "font-medium mb-2",
+                  isDark ? "text-white" : "text-gray-900"
+                )}
+              >
+                로그인 성공!
+              </p>
+              <p
+                className={cn(
+                  "text-sm text-center",
+                  isDark ? "text-gray-400" : "text-gray-600"
+                )}
+              >
+                {message}
+              </p>
             </div>
           )}
 
           {status === "error" && (
             <div className="flex flex-col items-center justify-center py-8">
               <XCircle className="h-12 w-12 text-red-500 mb-4" />
-              <p className="text-gray-900 font-medium mb-2">로그인 실패</p>
-              <p className="text-sm text-gray-600 text-center mb-4">
+              <p
+                className={cn(
+                  "font-medium mb-2",
+                  isDark ? "text-white" : "text-gray-900"
+                )}
+              >
+                로그인 실패
+              </p>
+              <p
+                className={cn(
+                  "text-sm text-center mb-4",
+                  isDark ? "text-gray-400" : "text-gray-600"
+                )}
+              >
                 {message}
               </p>
               <Button
@@ -164,21 +212,42 @@ function OAuthCallbackContent() {
 
 export default function OAuthLoginCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen p-4 bg-gray-50">
-          <Card className="w-full max-w-md">
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mb-4" />
-                <p className="text-gray-600">로그인 처리 중...</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      }
-    >
+    <Suspense fallback={<OAuthCallbackLoadingFallback />}>
       <OAuthCallbackContent />
     </Suspense>
+  );
+}
+
+function OAuthCallbackLoadingFallback() {
+  const isDark = useResolvedTheme() === "dark";
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center min-h-screen p-4",
+        isDark ? "bg-[#0c0c0f]" : "bg-gray-50"
+      )}
+    >
+      <Card
+        className={cn(
+          "w-full max-w-md",
+          isDark && "bg-gray-800/80 border-gray-700"
+        )}
+      >
+        <CardContent className="py-12">
+          <div className="flex flex-col items-center justify-center">
+            <Loader2
+              className={cn(
+                "h-12 w-12 animate-spin mb-4",
+                isDark ? "text-indigo-400" : "text-indigo-600"
+              )}
+            />
+            <p className={isDark ? "text-gray-400" : "text-gray-600"}>
+              로그인 처리 중...
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

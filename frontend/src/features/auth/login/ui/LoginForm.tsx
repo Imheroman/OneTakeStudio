@@ -175,33 +175,24 @@ export function LoginForm({
     <Card
       className={cn(
         "w-full max-w-md border-0 shadow-xl rounded-2xl",
-        isLanding && "bg-transparent shadow-none"
+        isLanding && "bg-transparent shadow-none",
+        !isLanding && isDark && "bg-gray-800/80 border-gray-700"
       )}
     >
       <div className="flex justify-center pt-1 pb-1">
-        <Logo href="/" size="lg" dark={isLanding && isDark} />
+        <Logo href="/" size="lg" dark={isDark} />
       </div>
       <CardHeader className="space-y-1 text-center pb-6">
         <CardTitle
           className={cn(
             "text-xl font-bold",
-            isLanding && isDark
-              ? "text-white"
-              : isLanding
-              ? "text-gray-900"
-              : "text-gray-900"
+            isDark ? "text-white" : "text-gray-900"
           )}
         >
           로그인
         </CardTitle>
         <CardDescription
-          className={cn(
-            isLanding && isDark
-              ? "text-gray-400"
-              : isLanding
-              ? "text-gray-500"
-              : "text-gray-500"
-          )}
+          className={cn(isDark ? "text-gray-400" : "text-gray-500")}
         >
           서비스 이용을 위해 이메일과 비밀번호를 입력해주세요.
         </CardDescription>
@@ -218,7 +209,7 @@ export function LoginForm({
                   <FormLabel
                     className={cn(
                       "font-medium",
-                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                      isDark ? "text-gray-300" : "text-gray-700"
                     )}
                   >
                     이메일
@@ -229,7 +220,7 @@ export function LoginForm({
                       placeholder="이메일을 입력하세요"
                       className={cn(
                         "h-11 transition-all",
-                        isLanding && isDark
+                        isDark
                           ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
                           : isLanding
                           ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
@@ -250,7 +241,7 @@ export function LoginForm({
                   <FormLabel
                     className={cn(
                       "font-medium",
-                      isLanding && isDark ? "text-gray-300" : "text-gray-700"
+                      isDark ? "text-gray-300" : "text-gray-700"
                     )}
                   >
                     비밀번호
@@ -261,7 +252,7 @@ export function LoginForm({
                       placeholder="********"
                       className={cn(
                         "h-11 transition-all",
-                        isLanding && isDark
+                        isDark
                           ? "bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:bg-white/15 focus:border-violet-400"
                           : isLanding
                           ? "bg-white/60 border-gray-200 text-gray-900 focus:bg-white"
@@ -279,7 +270,7 @@ export function LoginForm({
               <div
                 className={cn(
                   "text-sm p-3 rounded-lg text-center font-medium animate-in fade-in slide-in-from-top-1",
-                  isLanding && isDark
+                  isDark
                     ? "bg-red-500/20 text-red-300"
                     : "bg-red-50 text-red-600"
                 )}
@@ -312,7 +303,7 @@ export function LoginForm({
             <span
               className={cn(
                 "w-full border-t",
-                isLanding && isDark ? "border-white/20" : "border-gray-200"
+                isDark ? "border-white/20" : "border-gray-200"
               )}
             />
           </div>
@@ -320,8 +311,8 @@ export function LoginForm({
             <span
               className={cn(
                 "px-2 font-medium",
-                isLanding && isDark
-                  ? "bg-[#1a1a1f] text-gray-400"
+                isDark
+                  ? "bg-gray-800/80 text-gray-400"
                   : isLanding
                   ? "bg-[#F5F5F8] text-gray-500"
                   : "bg-white text-gray-400"
@@ -339,8 +330,8 @@ export function LoginForm({
             onClick={() => handleOAuthLogin("google")}
             className={cn(
               "google-oauth-hover h-11 font-medium transition-colors",
-              isLanding && isDark
-                ? "border-white/20 text-black hover:bg-white hover:!bg-white"
+              isDark
+                ? "border-white/20 text-black hover:bg-white hover:text-black hover:!bg-white"
                 : "text-gray-600 border-gray-200"
             )}
           >
@@ -368,7 +359,7 @@ export function LoginForm({
       <CardFooter
         className={cn(
           "flex justify-center text-sm pb-8",
-          isLanding && isDark ? "text-gray-400" : "text-gray-500"
+          isDark ? "text-gray-400" : "text-gray-500"
         )}
       >
         계정이 없으신가요?&nbsp;
@@ -383,7 +374,12 @@ export function LoginForm({
         ) : (
           <Link
             href="/?auth=signup"
-            className="text-indigo-600 hover:text-indigo-700 font-bold hover:underline transition-colors"
+            className={cn(
+              "font-bold hover:underline transition-colors",
+              isDark
+                ? "text-indigo-400 hover:text-indigo-300"
+                : "text-indigo-600 hover:text-indigo-700"
+            )}
           >
             회원가입
           </Link>

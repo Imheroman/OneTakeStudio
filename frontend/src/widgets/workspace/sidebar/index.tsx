@@ -16,7 +16,6 @@ import {
   ListChecks,
   PanelLeftClose,
   PanelLeft,
-  Search,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
@@ -83,7 +82,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
 function SidebarInner() {
   const pathname = usePathname();
   const { user } = useAuthStore();
-  const { open, onOpenChange, shouldShowText } = useCollapsible(false);
+  const { open, onOpenChange, shouldShowText } = useCollapsible(true);
   const isExpanded = open;
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
@@ -119,7 +118,7 @@ function SidebarInner() {
         animate={{ width: isExpanded ? 256 : 80 }}
         transition={sidebarTransition}
       >
-        <div className="flex items-center gap-2 px-3 pt-5 pb-3 shrink-0">
+        <div className="flex items-center px-3 pt-5 pb-3 shrink-0">
           <Collapsible.Trigger asChild>
             <button
               type="button"
@@ -148,26 +147,6 @@ function SidebarInner() {
               )}
             </button>
           </Collapsible.Trigger>
-          <div
-            className={cn(
-              "flex flex-1 items-center gap-2 rounded-full border px-3 py-2 text-sm min-w-0 overflow-hidden origin-left transition-[opacity,max-width,margin] duration-200",
-              shouldShowText
-                ? "ease-out opacity-100 max-w-[200px] ml-4"
-                : "ease-in opacity-0 max-w-0 ml-0",
-              isDark
-                ? "bg-gray-800/60 border-gray-700 text-gray-300 placeholder:text-gray-500"
-                : "bg-gray-100/80 border-gray-200 text-gray-700 placeholder:text-gray-400"
-            )}
-          >
-            <Search className="w-4 h-4 shrink-0 opacity-60" />
-            <input
-              type="text"
-              placeholder="Ctrl + K"
-              className="flex-1 min-w-0 bg-transparent border-none outline-none"
-              readOnly
-              aria-label="검색 (Ctrl + K)"
-            />
-          </div>
         </div>
 
         <Collapsible.Content forceMount asChild>

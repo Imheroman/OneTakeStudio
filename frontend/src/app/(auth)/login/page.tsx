@@ -1,9 +1,5 @@
-import { LoginForm } from "@/features/auth/login/ui/LoginForm";
+import { LoginPageClient } from "./LoginPageClient";
 
 export default function LoginPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50/50 p-4">
-      <LoginForm />
-    </div>
-  );
+  return <LoginPageClient />;
 }
