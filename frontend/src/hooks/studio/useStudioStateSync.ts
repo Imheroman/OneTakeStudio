@@ -54,8 +54,20 @@ export interface UseStudioStateSyncOptions {
   onChatMessage?: (message: unknown) => void;
 }
 
-const WS_URL =
-  process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8082/ws/media";
+function getWebSocketUrl(): string {
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL;
+  }
+  // 브라우저 환경에서 현재 프로토콜에 맞게 자동 설정
+  if (typeof window !== "undefined") {
+    const isSecure = window.location.protocol === "https:";
+    const host = window.location.host;
+    return isSecure
+      ? `https://${host}/ws/media`
+      : "http://localhost:8082/ws/media";
+  }
+  return "http://localhost:8082/ws/media";
+}
 
 export interface OnlineMember {
   odUserId: string;
@@ -96,8 +108,11 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
       return;
     }
 
+    const wsUrl = getWebSocketUrl();
+    console.log("[StudioStateSync] WebSocket URL:", wsUrl);
+
     const client = new Client({
-      webSocketFactory: () => new SockJS(WS_URL),
+      webSocketFactory: () => new SockJS(wsUrl),
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
