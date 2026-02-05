@@ -25,7 +25,9 @@ export default function WorkspacePage({ params }: WorkspacePageProps) {
   useEffect(() => {
     if (!hasHydrated) return;
     if (!isLoggedIn || !accessToken) {
-      router.replace("/login");
+      router.replace(
+        `/?auth=login&redirect=${encodeURIComponent(`/workspace/${userId}`)}`
+      );
       return;
     }
     if (!idInvalid) return;

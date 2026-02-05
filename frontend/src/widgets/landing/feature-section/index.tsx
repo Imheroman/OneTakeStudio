@@ -1,6 +1,17 @@
-import { Radio, Video, Users, BarChart3, ShieldCheck, Globe } from "lucide-react";
+"use client";
+
+import {
+  Radio,
+  Video,
+  Users,
+  BarChart3,
+  ShieldCheck,
+  Globe,
+} from "lucide-react";
 import { FeatureCard } from "./ui/FeatureCard";
 import { Section, SectionHeader } from "@/shared/common";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import { cn } from "@/shared/lib/utils";
 
 const FEATURES = [
   {
@@ -36,15 +47,28 @@ const FEATURES = [
 ];
 
 export function FeatureSection() {
+  const isDark = useResolvedTheme() === "dark";
   return (
-    <Section id="features" className="bg-white" padding="md" containerSize="md">
+    <Section
+      id="features"
+      className={cn(isDark ? "bg-white/5" : "bg-white")}
+      padding="md"
+      containerSize="md"
+    >
       <div className="space-y-10">
         <SectionHeader
           title="원테이크가 특별한 이유"
           description="전문 스트리머부터 입문자까지, 모두를 위한 완벽한 솔루션"
           align="center"
           badge={
-            <div className="inline-flex items-center rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1">
+            <div
+              className={cn(
+                "inline-flex items-center rounded-full text-xs font-semibold px-3 py-1",
+                isDark
+                  ? "bg-indigo-900/50 text-indigo-300"
+                  : "bg-indigo-50 text-indigo-700"
+              )}
+            >
               핵심 기능
             </div>
           }
@@ -57,6 +81,7 @@ export function FeatureSection() {
               icon={f.icon}
               title={f.title}
               description={f.description}
+              isDark={isDark}
             />
           ))}
         </div>

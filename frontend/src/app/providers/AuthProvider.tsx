@@ -27,7 +27,8 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { accessToken, isLoggedIn, checkAuth, hasHydrated, logout } = useAuthStore();
+  const { accessToken, isLoggedIn, checkAuth, hasHydrated, logout } =
+    useAuthStore();
 
   // 주기적 토큰 만료 체크
   useEffect(() => {
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
 
     if (isProtectedPath && !isValid) {
-      router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+      router.push(`/?auth=login&redirect=${encodeURIComponent(pathname)}`);
       return;
     }
 
@@ -55,14 +56,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.log("[Auth] 토큰이 만료되었습니다.");
           logout();
           if (isProtectedPath) {
-            router.push("/login");
+            router.push("/?auth=login");
           }
         }, remainingTime);
 
         return () => clearTimeout(timer);
       }
     }
-  }, [hasHydrated, accessToken, isLoggedIn, pathname, checkAuth, logout, router]);
+  }, [
+    hasHydrated,
+    accessToken,
+    isLoggedIn,
+    pathname,
+    checkAuth,
+    logout,
+    router,
+  ]);
 
   // 쿠키 동기화 (토큰 만료 시 쿠키도 제거)
   useEffect(() => {

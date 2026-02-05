@@ -29,8 +29,6 @@ import {
 } from "@/hooks/studio";
 import { apiClient } from "@/shared/api/client";
 import { ApiResponseDestinationListSchema } from "@/entities/channel/model";
-import { useChatMessageStore } from "@/stores/useChatMessageStore";
-import type { ChatOverlayMessage } from "@/widgets/studio/preview-area/ui/PreviewArea";
 import type { GetPreviewStreamRef } from "@/features/studio/studio-main";
 import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBannerPanel";
 import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
@@ -39,10 +37,7 @@ import type { ConnectedDestinationItem } from "@/widgets/studio/studio-sidebar/u
 
 const DEFAULT_STYLE: StudioStyleState = {
   brandColor: "#5d4cc7",
-  theme: "bubble",
-  showDisplayNames: true,
-  showHeadlines: false,
-  font: "",
+  theme: "circle",
 };
 
 interface StudioMainProps {
@@ -51,6 +46,7 @@ interface StudioMainProps {
 
 export function StudioMain({ studioId }: StudioMainProps) {
   const getPreviewStreamRef = useRef<(() => MediaStream | null) | null>(null);
+  const requestCaptureDrawRef = useRef<(() => Promise<void>) | null>(null);
   const [toolbarExpanded, setToolbarExpanded] = useState(true);
   const [activeBanner, setActiveBanner] = useState<BannerItem | null>(null);
   const [bannerRemainingSeconds, setBannerRemainingSeconds] = useState<
@@ -63,7 +59,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   );
   const [showUnsavedConfirmModal, setShowUnsavedConfirmModal] = useState(false);
   const [showLockedByOtherModal, setShowLockedByOtherModal] = useState(false);
-  const [isChatOverlayEnabled, setIsChatOverlayEnabled] = useState(false);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
 
   // 배너 타이머: timerSeconds가 있으면 카운트다운, 0이 되면 자동 중단
   useEffect(() => {
@@ -111,31 +107,6 @@ export function StudioMain({ studioId }: StudioMainProps) {
     };
     fetchDestinations();
   }, []);
-
-  // 스튜디오 퇴장 시 채팅 스토어 정리 (재입장 시 히스토리 새로 로드)
-  const clearChat = useChatMessageStore((s) => s.clear);
-  useEffect(() => {
-    return () => clearChat(studioId);
-  }, [studioId, clearChat]);
-
-  // 채팅 오버레이용: 공개 CHAT 메시지 최근 6개
-  const EMPTY_CHAT: never[] = [];
-  const allChatMessages = useChatMessageStore(
-    (s) => s.messagesByStudio[studioId] ?? EMPTY_CHAT,
-  );
-  const chatOverlayMessages: ChatOverlayMessage[] = useMemo(
-    () =>
-      allChatMessages
-        .filter((m) => m.platform !== "INTERNAL" && m.messageType === "CHAT")
-        .slice(-6)
-        .map((m) => ({
-          messageId: m.messageId,
-          platform: m.platform,
-          senderName: m.senderName,
-          content: m.content,
-        })),
-    [allChatMessages],
-  );
 
   const {
     studio,
@@ -215,7 +186,10 @@ export function StudioMain({ studioId }: StudioMainProps) {
     remoteSources,
     publishedTracks,
     localPublishedStreamsRef,
-  } = useStudioMain(studioId, { getPreviewStreamRef });
+  } = useStudioMain(studioId, {
+    getPreviewStreamRef,
+    requestCaptureDrawRef,
+  });
 
   // 편집 모드 진입 시 락 획득 시도
   const handleEditModeToggle = async () => {
@@ -299,6 +273,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const {
     getStream: getSourceStream,
     streamIds: availableStreamIds,
+    streamIdsKey,
     streamsMap,
   } = useSourceStreams(sources, {
     isVideoEnabled,
@@ -404,6 +379,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
             onLockedClick={() => setShowLockedByOtherModal(true)}
             onForceReleaseLock={handleForceReleaseLock}
             isStateSyncConnected={isStateSyncConnected}
+            bookmarkCount={bookmarkCount}
+            onBookmarkClick={() => setBookmarkCount((c) => c + 1)}
           />
 
           {/* 콘텐츠: 전체 높이 사용. 하단 pb로 접힌 토글 네브에 퀵 레이아웃 바가 가리지 않도록 여백 */}
@@ -414,20 +391,21 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 layout={currentLayout}
                 sources={displaySources}
                 availableStreamIds={availableStreamIds}
+                streamIdsKey={streamIdsKey}
+                isStreaming={isPublishing}
                 isVideoEnabled={isVideoEnabled}
                 isAudioEnabled={isAudioEnabled}
                 isEditMode={canEdit}
                 resolution={previewResolution}
                 getSourceStream={getSourceStream}
                 getPreviewStreamRef={getPreviewStreamRef}
+                requestCaptureDrawRef={requestCaptureDrawRef}
                 sourceTransforms={sourceTransforms}
                 setSourceTransform={setSourceTransform}
                 onBringSourceToFront={handleBringSourceToFront}
                 activeBanner={activeBanner}
                 activeAsset={activeAsset}
                 styleState={styleState}
-                isChatOverlayEnabled={isChatOverlayEnabled}
-                chatMessages={chatOverlayMessages}
               />
             </div>
 
@@ -451,7 +429,6 @@ export function StudioMain({ studioId }: StudioMainProps) {
               <LayoutControls
                 currentLayout={currentLayout}
                 onLayoutChange={setCurrentLayout}
-                savedLayoutsCount={3}
               />
             </div>
           </div>
@@ -627,15 +604,13 @@ export function StudioMain({ studioId }: StudioMainProps) {
           styleState={styleState}
           onStyleChange={setStyleState}
           getPreviewStream={() => getPreviewStreamRef.current?.() ?? null}
-          recordingStorage={
-            (studio?.recordingStorage as "LOCAL" | "CLOUD") ?? "LOCAL"
-          }
           isRecordingLocal={isRecordingLocal}
+          isRecordingCloud={isRecordingCloud}
           onStartLocalRecording={handleStartLocalRecording}
           onStopLocalRecording={handleStopLocalRecording}
+          onStartCloudRecording={handleStartCloudRecording}
+          onStopCloudRecording={handleStopCloudRecording}
           onlineMembers={onlineMembers}
-          isChatOverlayEnabled={isChatOverlayEnabled}
-          onChatOverlayToggle={() => setIsChatOverlayEnabled((v) => !v)}
         />
       </div>
     </LayoutGroup>

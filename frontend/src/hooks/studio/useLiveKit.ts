@@ -166,7 +166,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       }
 
       // 서버에 퇴장 알림
-      await leaveStream(studioId).catch(console.error);
+      await leaveStream(Number(studioId)).catch(console.error);
 
       setConnectionState(ConnectionState.Disconnected);
       console.log("Disconnected from LiveKit");

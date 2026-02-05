@@ -25,7 +25,7 @@ export async function startPublish(
 }
 
 export async function stopPublish(
-  studioId: string | number,
+  studioId: number,
 ): Promise<PublishResponseDto> {
   const res = await apiClient.post(
     `${PUBLISH_BASE}/stop?studioId=${studioId}`,
@@ -35,7 +35,7 @@ export async function stopPublish(
 }
 
 export async function getPublishStatus(
-  studioId: string | number,
+  studioId: number,
 ): Promise<PublishStatusResponseDto> {
   const res = await apiClient.get(
     `${PUBLISH_BASE}/status?studioId=${studioId}`,

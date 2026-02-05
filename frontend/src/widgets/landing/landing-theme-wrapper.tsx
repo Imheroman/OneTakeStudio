@@ -1,11 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { Navbar } from "@/widgets/landing/navbar";
 import { LandingFooter } from "@/widgets/landing/footer";
 import { ThemeToggle } from "@/widgets/landing/theme-toggle";
-import { ShineButton } from "@/shared/ui/shine-button";
-import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
+import { AuthModalProvider } from "@/widgets/landing/auth-modal-context";
+import { AuthModal } from "@/widgets/landing/auth-modal";
+import { AuthButtons } from "@/widgets/landing/auth-buttons";
+import {
+  useWorkspaceThemeStore,
+  useResolvedTheme,
+} from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 
 const menuItems = [
@@ -30,42 +34,32 @@ export function LandingThemeWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const theme = useLandingThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   return (
-    <div
-      className={cn(
-        "min-h-screen flex flex-col transition-colors duration-300",
-        isDark ? "bg-[#121212] text-white" : "bg-[#F9F9F9] text-gray-900"
-      )}
-      data-theme={theme}
-    >
-      <Navbar
-        variant={isDark ? "dark" : "solid"}
-        menuItems={menuItems}
-        rightElement={
-          <div className="flex items-center gap-2">
-            <ThemeToggle darkNav={isDark} />
-            <Link
-              href="/login"
-              className={cn(
-                "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                isDark
-                  ? "text-white/80 border border-white/20 hover:bg-white/10"
-                  : "text-gray-700 border border-gray-300 hover:bg-gray-100"
-              )}
-            >
-              로그인
-            </Link>
-            <ShineButton href="/signup" variant="primary">
-              시작하기
-            </ShineButton>
-          </div>
-        }
-      />
-      <div className="flex-1">{children}</div>
-      <LandingFooter />
-    </div>
+    <AuthModalProvider>
+      <div
+        className={cn(
+          "min-h-screen flex flex-col transition-colors duration-300",
+          isDark ? "dark bg-[#121212] text-white" : "bg-[#F9F9F9] text-gray-900"
+        )}
+        data-theme={resolved}
+      >
+        <Navbar
+          variant={isDark ? "dark" : "solid"}
+          menuItems={menuItems}
+          rightElement={
+            <div className="flex items-center gap-2">
+              <ThemeToggle darkNav={isDark} />
+              <AuthButtons isDark={isDark} />
+            </div>
+          }
+        />
+        <div className="flex-1">{children}</div>
+        <LandingFooter />
+      </div>
+      <AuthModal />
+    </AuthModalProvider>
   );
 }

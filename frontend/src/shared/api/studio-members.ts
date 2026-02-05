@@ -69,7 +69,7 @@ export async function kickStudioMember(
 export async function updateMemberRole(
   studioId: string | number,
   memberId: number,
-  role: "HOST" | "MANAGER" | "GUEST"
+  role: "ADMIN" | "MEMBER" | "MANAGER"
 ): Promise<StudioMemberResponseDto> {
   const ApiResponseMemberSchema = z.object({
     resultCode: z.string().optional(),

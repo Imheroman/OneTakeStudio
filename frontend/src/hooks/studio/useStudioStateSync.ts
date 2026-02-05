@@ -36,7 +36,7 @@ export type StudioStateType =
 
 export interface StudioStateMessage {
   type: StudioStateType;
-  studioId: string;
+  studioId: number;
   userId: string;
   nickname: string;
   payload?: Record<string, unknown>;
@@ -44,32 +44,16 @@ export interface StudioStateMessage {
 }
 
 export interface UseStudioStateSyncOptions {
-  studioId: string;
+  studioId: number;
   userId: string;
   nickname: string;
   onStateChange?: (message: StudioStateMessage) => void;
   onLockChange?: (message: StudioStateMessage) => void;
   onPresenceChange?: (message: StudioStateMessage) => void;
-  /** 채팅 메시지 수신 콜백 (항상 활성 구독) */
-  onChatMessage?: (message: unknown) => void;
 }
 
-function getWebSocketUrl(): string {
-  if (process.env.NEXT_PUBLIC_WS_URL) {
-    return process.env.NEXT_PUBLIC_WS_URL;
-  }
-  // 브라우저 환경에서 현재 프로토콜에 맞게 자동 설정
-  // HTTPS 환경에서는 wss://, HTTP 환경에서는 ws:// 사용 (SockJS 호환)
-  if (typeof window !== "undefined") {
-    const isSecure = window.location.protocol === "https:";
-    const host = window.location.host;
-    const baseUrl = isSecure
-      ? `https://${host}`
-      : "http://localhost:8082";
-    return `${baseUrl}/ws/media`;
-  }
-  return "http://localhost:8082/ws/media";
-}
+const WS_URL =
+  process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8082/ws/media";
 
 export interface OnlineMember {
   odUserId: string;
@@ -85,7 +69,6 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
     onStateChange,
     onLockChange,
     onPresenceChange,
-    onChatMessage,
   } = options;
 
   const clientRef = useRef<Client | null>(null);
@@ -96,25 +79,20 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
   const onStateChangeRef = useRef(onStateChange);
   const onLockChangeRef = useRef(onLockChange);
   const onPresenceChangeRef = useRef(onPresenceChange);
-  const onChatMessageRef = useRef(onChatMessage);
   onStateChangeRef.current = onStateChange;
   onLockChangeRef.current = onLockChange;
   onPresenceChangeRef.current = onPresenceChange;
-  onChatMessageRef.current = onChatMessage;
 
   // WebSocket 연결
   useEffect(() => {
-    if (!studioId) return;
+    if (!studioId || studioId === 0) return;
     if (!userId) {
       console.warn("[StudioStateSync] userId가 없어서 WebSocket 연결 스킵");
       return;
     }
 
-    const wsUrl = getWebSocketUrl();
-    console.log("[StudioStateSync] WebSocket URL:", wsUrl);
-
     const client = new Client({
-      webSocketFactory: () => new SockJS(wsUrl),
+      webSocketFactory: () => new SockJS(WS_URL),
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
@@ -210,19 +188,6 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
               onPresenceChangeRef.current?.(presenceMessage);
             } catch (e) {
               console.error("[StudioStateSync] 프레즌스 메시지 파싱 실패:", e);
-            }
-          }
-        );
-
-        // 채팅 메시지 구독 (탭 상태와 무관하게 항상 활성)
-        client.subscribe(
-          `/topic/chat/${studioId}`,
-          (message: IMessage) => {
-            try {
-              const chatMsg = JSON.parse(message.body);
-              onChatMessageRef.current?.(chatMsg);
-            } catch (e) {
-              console.error("[StudioStateSync] 채팅 메시지 파싱 실패:", e);
             }
           }
         );
@@ -369,7 +334,6 @@ export function useStudioStateSync(options: UseStudioStateSyncOptions) {
   return {
     isConnected,
     onlineMembers,
-    stompClient: clientRef,
     broadcastState,
     broadcastLayoutChange,
     broadcastSourceTransform,

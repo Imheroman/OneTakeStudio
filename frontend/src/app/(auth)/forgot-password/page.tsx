@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { apiClient } from "@/shared/api/client";
+import { SimpleResponseSchema } from "@/entities/user/model";
+import { getHttpErrorMessage } from "@/shared/lib/error-utils";
 import { Button } from "@/shared/ui/button";
 import {
   Form,
@@ -32,6 +35,7 @@ const formSchema = z.object({
 export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,14 +47,21 @@ export default function ForgotPasswordPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsSubmitting(true);
-      // TODO: 백엔드 비밀번호 재설정 API 연동
-      // await apiClient.post("/api/auth/forgot-password", { email: values.email });
+      setErrorMsg("");
 
-      // 임시로 성공 상태로 전환 (실제 API 연동 시 제거)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await apiClient.post("/api/auth/password-reset", SimpleResponseSchema, {
+        email: values.email.trim(),
+      });
+
       setIsEmailSent(true);
     } catch (error) {
       console.error("비밀번호 재설정 요청 실패:", error);
+      setErrorMsg(
+        getHttpErrorMessage(
+          error,
+          "비밀번호 재설정 요청에 실패했습니다. 이메일을 확인해주세요."
+        )
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +89,10 @@ export default function ForgotPasswordPage() {
           </p>
           <Button
             variant="outline"
-            onClick={() => setIsEmailSent(false)}
+            onClick={() => {
+              setIsEmailSent(false);
+              setErrorMsg("");
+            }}
             className="w-full bg-white/10 border-white/20 text-white/80 hover:bg-white/20 hover:text-white"
           >
             다시 시도하기
@@ -86,7 +100,7 @@ export default function ForgotPasswordPage() {
         </CardContent>
         <CardFooter className="flex justify-center pb-10">
           <Link
-            href="/login"
+            href="/?auth=login"
             className="text-indigo-300 hover:text-indigo-200 font-medium text-sm flex items-center gap-1 hover:underline transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -137,6 +151,10 @@ export default function ForgotPasswordPage() {
               )}
             />
 
+            {errorMsg && (
+              <p className="text-sm text-red-300 text-center">{errorMsg}</p>
+            )}
+
             <Button
               type="submit"
               disabled={isSubmitting}
@@ -154,7 +172,7 @@ export default function ForgotPasswordPage() {
 
       <CardFooter className="flex justify-center text-sm text-white/70 pb-10">
         <Link
-          href="/login"
+          href="/?auth=login"
           className="text-indigo-300 hover:text-indigo-200 font-medium flex items-center gap-1 hover:underline transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

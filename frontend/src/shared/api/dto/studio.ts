@@ -10,18 +10,18 @@ export const StudioMemberResponseSchema = z.object({
   nickname: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
   profileImageUrl: z.string().nullable().optional(),
-  role: z.enum(["host", "manager", "guest"]),
+  role: z.enum(["host", "manager"]),
   joinedAt: z.string().optional(),
 });
 
 export const InviteMemberRequestSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["HOST", "MANAGER", "GUEST"]),
+  role: z.enum(["ADMIN", "MEMBER", "MANAGER"]),
 });
 
 export const InviteResponseSchema = z.object({
   inviteId: z.string(),
-  studioId: z.union([z.string(), z.number()]).optional(),
+  studioId: z.number().optional(),
   email: z.string().optional(),
   inviteeEmail: z.string().optional(),
   role: z.string(),

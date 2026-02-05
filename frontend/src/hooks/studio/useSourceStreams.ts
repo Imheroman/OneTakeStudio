@@ -196,6 +196,11 @@ export function useSourceStreams(
   );
   /** bannerRemainingSeconds 등 부모 리렌더 시 새 배열 생성 방지 → PreviewArea 불필요 리렌더/깜빡임 방지 */
   const streamIds = useMemo(() => Array.from(streamsMap.keys()), [streamsMap]);
+  /** Go Live 시 availableStreamIds 배열 ref만 바뀌어도 setupSources 재실행 → video 엘리먼트 교체 → 화면공유 새로고침/끊김 방지용 */
+  const streamIdsKey = useMemo(
+    () => [...streamIds].sort().join(","),
+    [streamIds]
+  );
 
-  return { streamsMap, getStream, streamIds };
+  return { streamsMap, getStream, streamIds, streamIdsKey };
 }

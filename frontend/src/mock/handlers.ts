@@ -46,7 +46,7 @@ let favorites: Favorite[] = [
 const MAX_FAVORITES = 10;
 
 // 녹화 상태 (MSW 메모리)
-let recordingState: {
+const recordingState: {
   active: { studioId: number; recordingId: string } | null;
   list: {
     recordingId: string;
@@ -76,7 +76,7 @@ interface Channel {
 }
 
 // 초기 채널 데이터
-let channels: Channel[] = [
+const channels: Channel[] = [
   {
     id: "channel_1",
     platform: "youtube",
@@ -121,13 +121,16 @@ export const handlers = [
     if (email === "test@example.com" && password === "12345678") {
       // 서버에서 생성된 고유 ID (실제로는 UUID 등 사용)
       const userId = "user_" + Math.random().toString(36).substring(2, 11);
+      // 유효한 JWT 형식 (header.payload.signature) - exp가 없으면 isTokenExpired가 만료로 처리됨
+      const mockJwt =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.c2ln";
       // 실제 API 응답 형식에 맞춤
       return HttpResponse.json(
         {
           success: true,
           message: "로그인 성공",
           data: {
-            accessToken: "fake-jwt-token-one-take",
+            accessToken: mockJwt,
             refreshToken: "fake-refresh-token-one-take",
             user: {
               userId: userId,
@@ -191,59 +194,526 @@ export const handlers = [
     });
   }),
 
-  // 스토리지 정보 조회
+  // 스토리지 정보 조회 — GET /api/storage (StorageController 형식)
   http.get(`${BASE_URL}/api/storage`, async () => {
     console.log("[MSW] 스토리지 정보 요청");
     return HttpResponse.json({
-      used: 40.09,
       total: 50.0,
+      used: 40.09,
+      available: 9.91,
       videoUsage: 40.2,
       assetUsage: 4.89,
+      usedBytes: 43048912896,
+      limitBytes: 53687091200,
+      usedPercentage: 80.18,
+      usedFormatted: "40.09 GB",
+      limitFormatted: "50.00 GB",
     });
   }),
 
-  // 스토리지 파일 목록 조회
-  http.get(`${BASE_URL}/api/storage/files`, async () => {
-    console.log("[MSW] 스토리지 파일 목록 요청");
+  // 스토리지 파일 목록 조회 — GET /api/storage/files (StorageController 형식)
+  http.get(`${BASE_URL}/api/storage/files`, async ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") ?? 0);
+    const size = Number(url.searchParams.get("size") ?? 50);
+    console.log("[MSW] 스토리지 파일 목록 요청", `page=${page} size=${size}`);
+
+    const allFiles = [
+      {
+        id: "rec-1",
+        title: "Weekly Podcast Episode #45",
+        name: "Weekly Podcast Episode #45",
+        date: "2026-01-15 15:16",
+        uploadedAt: "2026-01-15T15:16:00.000Z",
+        size: "4.20 GB",
+        sizeBytes: 4509715660,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+      {
+        id: "rec-2",
+        title: "Product Demo - Q1 Launch",
+        name: "Product Demo - Q1 Launch",
+        date: "2026-01-14 10:30",
+        uploadedAt: "2026-01-14T10:30:00.000Z",
+        size: "1.20 GB",
+        sizeBytes: 1288490188,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+      {
+        id: "rec-3",
+        title: "Tutorial: Getting Started",
+        name: "Tutorial: Getting Started",
+        date: "2026-01-12 09:15",
+        uploadedAt: "2026-01-12T09:15:00.000Z",
+        size: "2.80 GB",
+        sizeBytes: 3006477107,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+      {
+        id: "rec-4",
+        title: "Live Stream Highlight Reel",
+        name: "Live Stream Highlight Reel",
+        date: "2026-01-10 16:00",
+        uploadedAt: "2026-01-10T16:00:00.000Z",
+        size: "800.00 MB",
+        sizeBytes: 858993459,
+        type: "Recording",
+        status: "Uploaded",
+        thumbnailUrl: null,
+      },
+    ];
+
+    const start = page * size;
+    const paginatedFiles = allFiles.slice(start, start + size);
+    const totalElements = allFiles.length;
+
     return HttpResponse.json({
-      files: [
-        {
-          id: 1,
-          title: "Weekly Podcast Episode #4",
-          date: "Jan 4, 2026",
-          size: "4.2 GB",
-          type: "Video",
-          status: "Uploaded",
-        },
-        {
-          id: 2,
-          title: "Product Demo - Q1 Launch",
-          date: "Jan 12, 2026",
-          size: "1.2 GB",
-          type: "Video",
-          status: "Processing",
-        },
-        {
-          id: 3,
-          title: "Team Meeting Recording",
-          date: "Jan 8, 2026",
-          size: "800 MB",
-          type: "Shorts",
-          status: "Saved",
-        },
-        {
-          id: 4,
-          title: "Gaming Stream Highlight",
-          date: "Jan 2, 2026",
-          size: "2.5 GB",
-          type: "Video",
-          status: "Uploaded",
-        },
-      ],
+      files: paginatedFiles,
+      totalPages: Math.ceil(totalElements / size) || 1,
+      totalElements,
+      currentPage: page,
     });
   }),
 
-  // 비디오 라이브러리 목록 조회 (백엔드 형식: { success, data })
+  // --- 라이브러리(녹화) API (실제 사용: /api/library/recordings) ---
+  // 녹화 목록 조회
+  http.get(`${BASE_URL}/api/library/recordings`, async ({ request }) => {
+    const url = new URL(request.url);
+    const page = Number(url.searchParams.get("page") ?? 0);
+    const size = Number(url.searchParams.get("size") ?? 20);
+    const studioId = url.searchParams.get("studioId");
+
+    console.log(
+      "[MSW] 녹화 목록 요청",
+      studioId ? `(studioId: ${studioId})` : "",
+      `page=${page}, size=${size}`
+    );
+
+    const allRecordings = [
+      {
+        recordingId: "rec-1",
+        studioId: 1,
+        userId: "user-1",
+        title: "Weekly Podcast Episode #45",
+        description: "Weekly podcast discussing the latest trends.",
+        thumbnailUrl: null as string | null,
+        s3Url: "https://example.com/video1.mp4",
+        fileSize: 512000000,
+        durationSeconds: 2538,
+        status: "READY" as const,
+        createdAt: "2026-01-15T15:16:00Z",
+        updatedAt: "2026-01-15T15:16:00Z",
+      },
+      {
+        recordingId: "rec-2",
+        studioId: 1,
+        userId: "user-1",
+        title: "Product Demo - Q1 Launch",
+        description: null,
+        thumbnailUrl: null,
+        s3Url: null,
+        fileSize: null,
+        durationSeconds: 932,
+        status: "READY" as const,
+        createdAt: "2026-01-14T10:30:00Z",
+        updatedAt: "2026-01-14T10:30:00Z",
+      },
+      {
+        recordingId: "rec-3",
+        studioId: 2,
+        userId: "user-1",
+        title: "Tutorial: Getting Started",
+        description: null,
+        thumbnailUrl: null,
+        s3Url: null,
+        fileSize: null,
+        durationSeconds: 1694,
+        status: "PROCESSING" as const,
+        createdAt: "2026-01-12T09:00:00Z",
+        updatedAt: "2026-01-12T09:00:00Z",
+      },
+      {
+        recordingId: "rec-4",
+        studioId: 1,
+        userId: "user-1",
+        title: "Live Stream Highlight Reel",
+        description: null,
+        thumbnailUrl: null,
+        s3Url: null,
+        fileSize: null,
+        durationSeconds: 532,
+        status: "READY" as const,
+        createdAt: "2026-01-10T14:20:00Z",
+        updatedAt: "2026-01-10T14:20:00Z",
+      },
+      {
+        recordingId: "rec-5",
+        studioId: 1,
+        userId: "user-1",
+        title: "Summer Vlog Highlights",
+        description: null,
+        thumbnailUrl: null,
+        s3Url: null,
+        fileSize: null,
+        durationSeconds: 323,
+        status: "READY" as const,
+        createdAt: "2026-01-08T11:45:00Z",
+        updatedAt: "2026-01-08T11:45:00Z",
+      },
+    ];
+
+    const filtered =
+      studioId != null
+        ? allRecordings.filter((r) => String(r.studioId) === studioId)
+        : allRecordings;
+
+    const start = page * size;
+    const recordings = filtered.slice(start, start + size);
+
+    return HttpResponse.json({
+      success: true,
+      data: {
+        recordings,
+        pagination: {
+          page,
+          size,
+          totalElements: filtered.length,
+          totalPages: Math.ceil(filtered.length / size) || 1,
+          hasNext: start + size < filtered.length,
+          hasPrevious: page > 0,
+        },
+      },
+    });
+  }),
+
+  // 녹화 상세 조회
+  http.get(
+    `${BASE_URL}/api/library/recordings/:recordingId`,
+    async ({ params }) => {
+      const recordingId = Array.isArray(params.recordingId)
+        ? params.recordingId[0]
+        : params.recordingId;
+      console.log("[MSW] 녹화 상세 요청:", recordingId);
+
+      const details: Record<string, object> = {
+        "rec-1": {
+          recordingId: "rec-1",
+          studioId: 1,
+          userId: "user-1",
+          title: "Weekly Podcast Episode #45",
+          description:
+            "Weekly podcast discussing the latest industry trends and insights.",
+          thumbnailUrl: null,
+          s3Url:
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          fileSize: 512000000,
+          durationSeconds: 2538,
+          status: "READY",
+          createdAt: "2026-01-15T15:16:00Z",
+          updatedAt: "2026-01-15T15:16:00Z",
+        },
+        "rec-2": {
+          recordingId: "rec-2",
+          studioId: 1,
+          userId: "user-1",
+          title: "Product Demo - Q1 Launch",
+          description: null,
+          thumbnailUrl: null,
+          s3Url: null,
+          fileSize: null,
+          durationSeconds: 932,
+          status: "READY",
+          createdAt: "2026-01-14T10:30:00Z",
+          updatedAt: "2026-01-14T10:30:00Z",
+        },
+        "rec-3": {
+          recordingId: "rec-3",
+          studioId: 2,
+          userId: "user-1",
+          title: "Tutorial: Getting Started",
+          description: null,
+          thumbnailUrl: null,
+          s3Url: null,
+          fileSize: null,
+          durationSeconds: 1694,
+          status: "PROCESSING",
+          createdAt: "2026-01-12T09:00:00Z",
+          updatedAt: "2026-01-12T09:00:00Z",
+        },
+        "rec-4": {
+          recordingId: "rec-4",
+          studioId: 1,
+          userId: "user-1",
+          title: "Live Stream Highlight Reel",
+          description: null,
+          thumbnailUrl: null,
+          s3Url: null,
+          fileSize: null,
+          durationSeconds: 532,
+          status: "READY",
+          createdAt: "2026-01-10T14:20:00Z",
+          updatedAt: "2026-01-10T14:20:00Z",
+        },
+        "rec-5": {
+          recordingId: "rec-5",
+          studioId: 1,
+          userId: "user-1",
+          title: "Summer Vlog Highlights",
+          description: null,
+          thumbnailUrl: null,
+          s3Url: null,
+          fileSize: null,
+          durationSeconds: 323,
+          status: "READY",
+          createdAt: "2026-01-08T11:45:00Z",
+          updatedAt: "2026-01-08T11:45:00Z",
+        },
+      };
+
+      const r = details[recordingId ?? ""];
+      if (!r) {
+        return HttpResponse.json(
+          { success: false, message: "Not found" },
+          { status: 404 }
+        );
+      }
+
+      return HttpResponse.json({
+        success: true,
+        data: r,
+      });
+    }
+  ),
+
+  // 녹화 다운로드 URL 조회
+  http.get(
+    `${BASE_URL}/api/library/recordings/:recordingId/download`,
+    async ({ params }) => {
+      const recordingId = Array.isArray(params.recordingId)
+        ? params.recordingId[0]
+        : params.recordingId;
+      console.log("[MSW] 녹화 다운로드 URL 요청:", recordingId);
+      return HttpResponse.json({
+        success: true,
+        data: {
+          downloadUrl: `https://example.com/download/${recordingId}.mp4?token=mock-token`,
+          expiresIn: 3600,
+        },
+      });
+    }
+  ),
+
+  // 시간대별 댓글 개수 분석 (A방식: on-the-fly 집계 시뮬레이션)
+  http.get(
+    `${BASE_URL}/api/library/recordings/:recordingId/comment-analysis`,
+    async ({ params }) => {
+      const recordingId = Array.isArray(params.recordingId)
+        ? params.recordingId[0]
+        : params.recordingId;
+      console.log("[MSW] 시간대별 댓글 분석 요청:", recordingId);
+
+      // 녹화별 durationSeconds에 맞춰 60초 단위 버킷 생성 (목업)
+      const durationByRecording: Record<string, number> = {
+        "rec-1": 2538,
+        "rec-2": 932,
+        "rec-3": 1694,
+        "rec-4": 532,
+        "rec-5": 323,
+      };
+      const durationSeconds = durationByRecording[recordingId ?? ""] ?? 600;
+
+      const bucketSize = 60;
+      const bucketCount = Math.ceil(durationSeconds / bucketSize);
+      const buckets = Array.from({ length: bucketCount }, (_, i) => {
+        const timeSec = i * bucketSize;
+        // 시드 기반으로 댓글 수 변동 (피크 구간 시뮬레이션)
+        const seed = (i * 7 + (recordingId?.length ?? 0)) % 10;
+        const base = 3 + (seed % 8);
+        const peak =
+          i === Math.floor(bucketCount * 0.3) ||
+          i === Math.floor(bucketCount * 0.65)
+            ? 1.8
+            : 1;
+        const count = Math.max(0, Math.round(base * peak + (i % 5)));
+        return { timeSec, count };
+      });
+
+      return HttpResponse.json({
+        success: true,
+        data: {
+          recordingId: recordingId ?? "",
+          durationSeconds,
+          buckets,
+        },
+      });
+    }
+  ),
+
+  // 녹화별 북마크(마커) 목록
+  http.get(
+    `${BASE_URL}/api/library/recordings/:recordingId/markers`,
+    async ({ params }) => {
+      const recordingId = Array.isArray(params.recordingId)
+        ? params.recordingId[0]
+        : params.recordingId;
+      console.log("[MSW] 북마크 목록 요청:", recordingId);
+
+      const markersByRecording: Record<
+        string,
+        Array<{ timestampSec: number; label: string | null }>
+      > = {
+        "rec-1": [
+          { timestampSec: 180, label: "인트로 하이라이트" },
+          { timestampSec: 720, label: "주요 토론 시작" },
+          { timestampSec: 1560, label: "결론 정리" },
+        ],
+        "rec-2": [
+          { timestampSec: 120, label: "오프닝" },
+          { timestampSec: 480, label: "핵심 내용" },
+        ],
+        "rec-3": [{ timestampSec: 300, label: "중요 포인트" }],
+      };
+
+      const items = markersByRecording[recordingId ?? ""] ?? [];
+      const markers = items.map((item, i) => ({
+        markerId: `m-${recordingId}-${i}`,
+        recordingId: recordingId ?? "",
+        timestampSec: item.timestampSec,
+        label: item.label,
+      }));
+
+      return HttpResponse.json({
+        success: true,
+        data: { markers },
+      });
+    }
+  ),
+
+  // 라이브러리 스토리지 용량 조회
+  http.get(`${BASE_URL}/api/library/storage`, async () => {
+    console.log("[MSW] 라이브러리 스토리지 요청");
+    const gb = 1024 ** 3;
+    return HttpResponse.json({
+      success: true,
+      data: {
+        usedBytes: 42 * gb,
+        limitBytes: 50 * gb,
+        usedPercentage: 84,
+        usedFormatted: "42 GB",
+        limitFormatted: "50 GB",
+        videoCount: 8,
+        videoLimit: 50,
+      },
+    });
+  }),
+
+  // 라이브러리 스토리지 파일 목록 조회
+  http.get(`${BASE_URL}/api/library/storage/files`, async () => {
+    console.log("[MSW] 라이브러리 스토리지 파일 목록 요청");
+    return HttpResponse.json({
+      success: true,
+      data: {
+        files: [
+          {
+            id: "rec-1",
+            title: "Weekly Podcast Episode #45",
+            date: "Jan 15, 2026",
+            createdAt: "2026-01-15T10:00:00Z",
+            size: "4.2 GB",
+            sizeBytes: 4509715660,
+            type: "Video",
+            status: "Uploaded",
+            daysUntilDeletion: 30,
+          },
+          {
+            id: "rec-2",
+            title: "Product Demo - Q1 Launch",
+            date: "Jan 14, 2026",
+            createdAt: "2026-01-14T14:30:00Z",
+            size: "1.2 GB",
+            sizeBytes: 1288490188,
+            type: "Video",
+            status: "Processing",
+            daysUntilDeletion: 29,
+          },
+          {
+            id: "rec-3",
+            title: "Tutorial: Getting Started",
+            date: "Jan 12, 2026",
+            createdAt: "2026-01-12T09:15:00Z",
+            size: "2.8 GB",
+            sizeBytes: 3006477107,
+            type: "Video",
+            status: "Saved",
+            daysUntilDeletion: 27,
+          },
+          {
+            id: "clip-4",
+            title: "Live Stream Highlight Reel",
+            date: "Jan 10, 2026",
+            createdAt: "2026-01-10T16:00:00Z",
+            size: "800 MB",
+            sizeBytes: 858993459,
+            type: "Shorts",
+            status: "Uploaded",
+            daysUntilDeletion: 25,
+          },
+          {
+            id: "clip-5",
+            title: "Summer Vlog Highlights",
+            date: "Jan 8, 2026",
+            createdAt: "2026-01-08T11:20:00Z",
+            size: "520 MB",
+            sizeBytes: 545259520,
+            type: "Shorts",
+            status: "Saved",
+            daysUntilDeletion: 23,
+          },
+          {
+            id: "rec-6",
+            title: "Team Meeting Recording",
+            date: "Jan 5, 2026",
+            createdAt: "2026-01-05T08:45:00Z",
+            size: "3.1 GB",
+            sizeBytes: 3328599654,
+            type: "Video",
+            status: "Uploaded",
+            daysUntilDeletion: 20,
+          },
+          {
+            id: "rec-7",
+            title: "Morning Briefing Ep.12",
+            date: "Dec 28, 2025",
+            createdAt: "2025-12-28T07:00:00Z",
+            size: "1.5 GB",
+            sizeBytes: 1610612736,
+            type: "Video",
+            status: "Uploaded",
+            daysUntilDeletion: 5,
+          },
+          {
+            id: "clip-8",
+            title: "Year End Special Cut",
+            date: "Dec 25, 2025",
+            createdAt: "2025-12-25T20:00:00Z",
+            size: "650 MB",
+            sizeBytes: 681574400,
+            type: "Shorts",
+            status: "Uploaded",
+            daysUntilDeletion: 2,
+          },
+        ],
+      },
+    });
+  }),
+
+  // 비디오 라이브러리 목록 조회 (레거시: /api/library/videos)
   http.get(`${BASE_URL}/api/library/videos`, async ({ request }) => {
     const url = new URL(request.url);
     const type = url.searchParams.get("type");

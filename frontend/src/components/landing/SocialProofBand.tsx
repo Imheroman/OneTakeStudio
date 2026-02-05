@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useLandingThemeStore } from "@/stores/useLandingThemeStore";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 
 export function SocialProofBand() {
-  const theme = useLandingThemeStore((s) => s.theme);
-  const isDark = theme === "dark";
+  const resolved = useResolvedTheme();
+  const isDark = resolved === "dark";
 
   return (
     <section

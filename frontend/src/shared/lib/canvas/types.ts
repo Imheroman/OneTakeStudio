@@ -4,16 +4,23 @@
  * (entities/studio의 LayoutType·Source·SourceType과 구조적으로 동일하여 호환)
  */
 
-/** 레이아웃 타입 (entities/studio LayoutType과 동일 구조) */
+/** 레이아웃 타입 (entities/studio LayoutType + pip: full 레이아웃 2소스 시 내부 사용) */
 export type LayoutType =
   | "full"
+  | "pip"
   | "split"
   | "three-grid"
   | "four-grid"
   | "custom";
 
 /** 소스 타입 (entities/studio SourceType과 동일) */
-export type SourceType = "video" | "audio" | "screen" | "image" | "text" | "browser";
+export type SourceType =
+  | "video"
+  | "audio"
+  | "screen"
+  | "image"
+  | "text"
+  | "browser";
 
 /** 소스 정보 (entities/studio Source와 동일 구조) */
 export interface Source {

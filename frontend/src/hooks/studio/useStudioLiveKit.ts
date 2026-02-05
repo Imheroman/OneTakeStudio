@@ -36,7 +36,7 @@ export interface LocalPublishedTrack {
 }
 
 export interface UseStudioLiveKitOptions {
-  studioId: string;
+  studioId: number;
   userId: string;
   nickname: string;
   enabled?: boolean;
@@ -58,30 +58,45 @@ export interface UseStudioLiveKitReturn {
   /** 로컬 publish 스트림 캐시 (Go Live 시 캔버스가 화면공유를 그리기 위해 유지) */
   localPublishedStreamsRef: React.MutableRefObject<Map<string, MediaStream>>;
   /** 비디오 트랙 publish */
-  publishVideoTrack: (sourceId: string, deviceId?: string) => Promise<string | null>;
+  publishVideoTrack: (
+    sourceId: string,
+    deviceId?: string
+  ) => Promise<string | null>;
   /** 오디오 트랙 publish */
-  publishAudioTrack: (sourceId: string, deviceId?: string) => Promise<string | null>;
+  publishAudioTrack: (
+    sourceId: string,
+    deviceId?: string
+  ) => Promise<string | null>;
   /** 화면 공유 트랙 publish */
   publishScreenTrack: (sourceId: string) => Promise<string | null>;
-  /** 트랙 unpublish */
-  unpublishTrack: (sourceId: string) => Promise<void>;
+  /** 트랙 unpublish. keepTrackAlive=true면 track.stop() 생략 (캔버스 그리기용 유지) */
+  unpublishTrack: (
+    sourceId: string,
+    options?: { keepTrackAlive?: boolean }
+  ) => Promise<void>;
   /** 특정 원격 소스의 MediaStream 가져오기 */
   getRemoteStream: (trackSid: string) => MediaStream | null;
 }
 
-export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiveKitReturn {
+export function useStudioLiveKit(
+  options: UseStudioLiveKitOptions
+): UseStudioLiveKitReturn {
   const { studioId, userId, nickname, enabled = true, onTrackEnded } = options;
 
   const roomRef = useRef<Room | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [remoteSources, setRemoteSources] = useState<RemoteSource[]>([]);
-  const [publishedTracks, setPublishedTracks] = useState<LocalPublishedTrack[]>([]);
+  const [publishedTracks, setPublishedTracks] = useState<LocalPublishedTrack[]>(
+    []
+  );
   /** Go Live 시 캔버스가 화면공유/웹캠을 그리기 위해 유지 (unpublish 후에도 사용) */
   const localPublishedStreamsRef = useRef<Map<string, MediaStream>>(new Map());
+  /** Go Live unpublish 중인 소스 (ended 이벤트 시 onTrackEnded 호출 방지) */
+  const unpublishingForGoLiveRef = useRef<Set<string>>(new Set());
 
   // LiveKit Room 연결
   useEffect(() => {
-    if (!enabled || !studioId || !userId) {
+    if (!enabled || !studioId || studioId === 0 || !userId) {
       return;
     }
 
@@ -126,24 +141,33 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
         });
 
         // 원격 트랙 구독
-        room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-          if (mounted) {
-            handleTrackSubscribed(track, publication, participant);
+        room.on(
+          RoomEvent.TrackSubscribed,
+          (track, publication, participant) => {
+            if (mounted) {
+              handleTrackSubscribed(track, publication, participant);
+            }
           }
-        });
+        );
 
         // 원격 트랙 구독 해제
-        room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-          if (mounted) {
-            handleTrackUnsubscribed(track, publication, participant);
+        room.on(
+          RoomEvent.TrackUnsubscribed,
+          (track, publication, participant) => {
+            if (mounted) {
+              handleTrackUnsubscribed(track, publication, participant);
+            }
           }
-        });
+        );
 
         // Room 연결
         await room.connect(tokenResponse.livekitUrl, tokenResponse.token);
         roomRef.current = room;
 
-        console.log("[StudioLiveKit] LiveKit Room 연결 완료:", tokenResponse.roomName);
+        console.log(
+          "[StudioLiveKit] LiveKit Room 연결 완료:",
+          tokenResponse.roomName
+        );
       } catch (error) {
         console.error("[StudioLiveKit] LiveKit 연결 실패:", error);
       }
@@ -165,7 +189,11 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
 
   // 원격 트랙 구독 핸들러
   const handleTrackSubscribed = useCallback(
-    (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+    (
+      track: RemoteTrack,
+      publication: RemoteTrackPublication,
+      participant: RemoteParticipant
+    ) => {
       console.log("[StudioLiveKit] 원격 트랙 구독:", {
         trackSid: track.sid,
         trackName: publication.trackName,
@@ -188,8 +216,8 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
         track.source === Track.Source.ScreenShare
           ? "screen"
           : track.kind === Track.Kind.Video
-            ? "video"
-            : "audio";
+          ? "video"
+          : "audio";
 
       const trackSid = track.sid;
       // publication.trackName은 publish할 때 설정한 sourceId
@@ -217,7 +245,11 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
 
   // 원격 트랙 구독 해제 핸들러
   const handleTrackUnsubscribed = useCallback(
-    (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+    (
+      track: RemoteTrack,
+      publication: RemoteTrackPublication,
+      participant: RemoteParticipant
+    ) => {
       console.log("[StudioLiveKit] 원격 트랙 구독 해제:", track.sid);
 
       setRemoteSources((prev) => prev.filter((s) => s.trackSid !== track.sid));
@@ -249,7 +281,10 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
         console.log("[StudioLiveKit] 비디오 트랙 publish 완료:", trackSid);
 
         if (track.mediaStreamTrack) {
-          localPublishedStreamsRef.current.set(sourceId, new MediaStream([track.mediaStreamTrack]));
+          localPublishedStreamsRef.current.set(
+            sourceId,
+            new MediaStream([track.mediaStreamTrack])
+          );
         }
         setPublishedTracks((prev) => [...prev, { sourceId, track, trackSid }]);
 
@@ -319,24 +354,45 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
         // 화면 공유 중지 감지 (브라우저에서 "공유 중지" 클릭 시)
         const mediaStreamTrack = videoTrack.mediaStreamTrack;
         if (mediaStreamTrack) {
-          localPublishedStreamsRef.current.set(sourceId, new MediaStream([mediaStreamTrack]));
+          localPublishedStreamsRef.current.set(
+            sourceId,
+            new MediaStream([mediaStreamTrack])
+          );
           mediaStreamTrack.addEventListener("ended", () => {
-            console.log("[StudioLiveKit] 화면 공유 트랙 ended:", sourceId);
+            if (unpublishingForGoLiveRef.current.has(sourceId)) {
+              console.log(
+                "[StudioLiveKit] 화면 공유 트랙 ended (Go Live unpublish, 소스 유지):",
+                sourceId
+              );
+              return;
+            }
+            console.log(
+              "[StudioLiveKit] 화면 공유 트랙 ended, 소스 제거:",
+              sourceId
+            );
             localPublishedStreamsRef.current.delete(sourceId);
-            setPublishedTracks((prev) => prev.filter((t) => t.sourceId !== sourceId));
+            setPublishedTracks((prev) =>
+              prev.filter((t) => t.sourceId !== sourceId)
+            );
             onTrackEnded?.(sourceId);
           });
         }
 
-        const publication = await room.localParticipant.publishTrack(videoTrack, {
-          name: sourceId,
-          source: Track.Source.ScreenShare,
-        });
+        const publication = await room.localParticipant.publishTrack(
+          videoTrack,
+          {
+            name: sourceId,
+            source: Track.Source.ScreenShare,
+          }
+        );
 
         const trackSid = publication.trackSid;
         console.log("[StudioLiveKit] 화면 공유 트랙 publish 완료:", trackSid);
 
-        setPublishedTracks((prev) => [...prev, { sourceId, track: videoTrack, trackSid }]);
+        setPublishedTracks((prev) => [
+          ...prev,
+          { sourceId, track: videoTrack, trackSid },
+        ]);
 
         return trackSid;
       } catch (error) {
@@ -347,40 +403,73 @@ export function useStudioLiveKit(options: UseStudioLiveKitOptions): UseStudioLiv
     [onTrackEnded]
   );
 
-  // 트랙 unpublish
-  const unpublishTrack = useCallback(async (sourceId: string): Promise<void> => {
-    const room = roomRef.current;
-    if (!room) return;
+  // 트랙 unpublish. keepTrackAlive=true면 track.stop() 생략 (Go Live 시 캔버스 그리기용 유지)
+  const unpublishTrack = useCallback(
+    async (
+      sourceId: string,
+      options?: { keepTrackAlive?: boolean }
+    ): Promise<void> => {
+      const room = roomRef.current;
+      if (!room) return;
 
-    const publishedTrack = publishedTracks.find((t) => t.sourceId === sourceId);
-    if (!publishedTrack) return;
+      const publishedTrack = publishedTracks.find(
+        (t) => t.sourceId === sourceId
+      );
+      if (!publishedTrack) return;
 
-    try {
-      await room.localParticipant.unpublishTrack(publishedTrack.track);
-      publishedTrack.track.stop();
+      try {
+        if (options?.keepTrackAlive) {
+          unpublishingForGoLiveRef.current.add(sourceId);
+        }
+        // keepTrackAlive 시 stopOnUnpublish=false → LiveKit이 track.stop() 호출 안 함 (캔버스/프리뷰용 유지)
+        const stopOnUnpublish = !options?.keepTrackAlive;
+        await room.localParticipant.unpublishTrack(
+          publishedTrack.track,
+          stopOnUnpublish
+        );
+        if (!options?.keepTrackAlive) {
+          publishedTrack.track.stop();
+        }
 
-      setPublishedTracks((prev) => prev.filter((t) => t.sourceId !== sourceId));
+        setPublishedTracks((prev) =>
+          prev.filter((t) => t.sourceId !== sourceId)
+        );
 
-      console.log("[StudioLiveKit] 트랙 unpublish 완료:", sourceId);
-    } catch (error) {
-      console.error("[StudioLiveKit] 트랙 unpublish 실패:", error);
-    }
-  }, [publishedTracks]);
+        console.log(
+          "[StudioLiveKit] 트랙 unpublish 완료:",
+          sourceId,
+          options?.keepTrackAlive ? "(track 유지)" : ""
+        );
+        if (options?.keepTrackAlive) {
+          setTimeout(() => {
+            unpublishingForGoLiveRef.current.delete(sourceId);
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("[StudioLiveKit] 트랙 unpublish 실패:", error);
+        unpublishingForGoLiveRef.current.delete(sourceId);
+      }
+    },
+    [publishedTracks]
+  );
 
   // 원격 소스의 MediaStream 가져오기
-  const getRemoteStream = useCallback((trackSid: string): MediaStream | null => {
-    const remoteSource = remoteSources.find((s) => s.trackSid === trackSid);
-    if (!remoteSource) return null;
+  const getRemoteStream = useCallback(
+    (trackSid: string): MediaStream | null => {
+      const remoteSource = remoteSources.find((s) => s.trackSid === trackSid);
+      if (!remoteSource) return null;
 
-    const track = remoteSource.track;
-    if (track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio) {
-      const mediaStreamTrack = track.mediaStreamTrack;
-      if (mediaStreamTrack) {
-        return new MediaStream([mediaStreamTrack]);
+      const track = remoteSource.track;
+      if (track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio) {
+        const mediaStreamTrack = track.mediaStreamTrack;
+        if (mediaStreamTrack) {
+          return new MediaStream([mediaStreamTrack]);
+        }
       }
-    }
-    return null;
-  }, [remoteSources]);
+      return null;
+    },
+    [remoteSources]
+  );
 
   const getRoom = useCallback(() => roomRef.current, []);
 

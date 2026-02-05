@@ -23,16 +23,21 @@ export function HeroSection() {
         </h1>
 
         <p className="mt-6 text-base sm:text-lg text-white/80 max-w-3xl mx-auto leading-relaxed">
-          OneTake와 함께 라이브 스트리밍, 녹화, 운영을 하나의 플랫폼에서 경험하세요.
+          OneTake와 함께 라이브 스트리밍, 녹화, 운영을 하나의 플랫폼에서
+          경험하세요.
           <br />
           전문가 수준의 방송을 누구나 쉽게.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <ActionButton href="/signup" variant="outline">
+          <ActionButton href="/?auth=signup" variant="outline">
             무료로 시작하기
           </ActionButton>
-          <ActionButton href="/#guide" variant="primary" icon={<ArrowRight className="h-4 w-4" />}>
+          <ActionButton
+            href="/#guide"
+            variant="primary"
+            icon={<ArrowRight className="h-4 w-4" />}
+          >
             데모 보기
           </ActionButton>
         </div>

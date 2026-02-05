@@ -11,12 +11,16 @@ function ChannelsOAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoggedIn, hasHydrated } = useAuthStore();
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    "loading"
+  );
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (!hasHydrated || !isLoggedIn) {
-      router.replace("/login");
+      router.replace(
+        `/?auth=login&redirect=${encodeURIComponent("/channels")}`
+      );
       return;
     }
 
@@ -89,7 +93,9 @@ function ChannelsOAuthCallbackContent() {
             <div className="flex flex-col items-center justify-center py-8">
               <XCircle className="h-12 w-12 text-red-500 mb-4" />
               <p className="text-gray-900 font-medium mb-2">연결 실패</p>
-              <p className="text-sm text-gray-600 text-center mb-4">{message}</p>
+              <p className="text-sm text-gray-600 text-center mb-4">
+                {message}
+              </p>
               <Button
                 onClick={() => router.push("/channels")}
                 className="w-full"

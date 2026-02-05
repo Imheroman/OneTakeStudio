@@ -17,9 +17,11 @@ export default function StudioPage({ params }: StudioPageProps) {
 
   useEffect(() => {
     if (hasHydrated && !isLoggedIn) {
-      router.replace("/login");
+      router.replace(
+        `/?auth=login&redirect=${encodeURIComponent(`/studio/${studioId}`)}`
+      );
     }
-  }, [hasHydrated, isLoggedIn, router]);
+  }, [hasHydrated, isLoggedIn, router, studioId]);
 
   if (!hasHydrated) return null;
   if (!isLoggedIn) return null;

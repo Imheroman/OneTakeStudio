@@ -1,6 +1,8 @@
 "use client";
 
 import type { VideoDetail, Clip } from "@/entities/video/model";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import { cn } from "@/shared/lib/utils";
 
 interface VideoSidebarProps {
   video: VideoDetail;
@@ -9,14 +11,27 @@ interface VideoSidebarProps {
 
 export const VideoSidebar = ({ video, onClipClick }: VideoSidebarProps) => {
   const clips = video.clips ?? [];
+  const isDark = useResolvedTheme() === "dark";
 
   return (
     <div className="space-y-6">
       <div>
-        <div className="text-xs font-semibold text-blue-600 mb-2 px-1">
+        <div
+          className={cn(
+            "text-xs font-semibold mb-2 px-1",
+            isDark ? "text-blue-400" : "text-blue-600"
+          )}
+        >
           원본
         </div>
-        <div className="border-2 border-blue-500 rounded-xl p-3 bg-blue-50/30">
+        <div
+          className={cn(
+            "border-2 rounded-xl p-3",
+            isDark
+              ? "border-blue-500/60 bg-blue-500/10"
+              : "border-blue-500 bg-blue-50/30"
+          )}
+        >
           {video.thumbnailUrl ? (
             <img
               src={video.thumbnailUrl}
@@ -28,27 +43,61 @@ export const VideoSidebar = ({ video, onClipClick }: VideoSidebarProps) => {
               Thumbnail
             </div>
           )}
-          <div className="font-semibold text-sm text-gray-900 truncate">
+          <div
+            className={cn(
+              "font-semibold text-sm truncate",
+              isDark ? "text-white/90" : "text-gray-900"
+            )}
+          >
             {video.title}
           </div>
-          <div className="text-xs text-gray-500 mt-1">{video.duration}</div>
+          <div
+            className={cn(
+              "text-xs mt-1",
+              isDark ? "text-white/60" : "text-gray-500"
+            )}
+          >
+            {video.duration}
+          </div>
         </div>
       </div>
 
-      <div className="h-px bg-gray-100" />
+      <div className={cn("h-px", isDark ? "bg-white/10" : "bg-gray-100")} />
 
       <div>
-        <div className="text-xs font-semibold text-gray-500 mb-3 px-1">
+        <div
+          className={cn(
+            "text-xs font-semibold mb-3 px-1",
+            isDark ? "text-white/60" : "text-gray-500"
+          )}
+        >
           Shorts
         </div>
         {clips.length === 0 ? (
           <div className="py-10 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3 text-xl">
+            <div
+              className={cn(
+                "w-12 h-12 rounded-full flex items-center justify-center mb-3 text-xl",
+                isDark ? "bg-white/10" : "bg-gray-100"
+              )}
+            >
               🎬
             </div>
-            <p className="text-sm text-gray-500">아직 생성된 쇼츠가 없어요.</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Generate Shorts 또는 Save(트림) 버튼을 눌러보세요!
+            <p
+              className={cn(
+                "text-sm",
+                isDark ? "text-white/60" : "text-gray-500"
+              )}
+            >
+              아직 생성된 쇼츠가 없어요.
+            </p>
+            <p
+              className={cn(
+                "text-xs mt-1",
+                isDark ? "text-white/50" : "text-gray-400"
+              )}
+            >
+              Generate Shorts 버튼을 눌러보세요!
             </p>
           </div>
         ) : (
@@ -58,7 +107,12 @@ export const VideoSidebar = ({ video, onClipClick }: VideoSidebarProps) => {
                 key={clip.id}
                 type="button"
                 onClick={() => onClipClick?.(clip)}
-                className="w-full text-left border border-gray-200 rounded-xl p-3 hover:border-purple-300 hover:bg-purple-50/30 transition-colors"
+                className={cn(
+                  "w-full text-left border rounded-xl p-3 transition-colors",
+                  isDark
+                    ? "border-white/10 hover:border-blue-500/50 hover:bg-blue-500/10"
+                    : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/30"
+                )}
               >
                 {clip.thumbnailUrl ? (
                   <img
@@ -71,11 +125,23 @@ export const VideoSidebar = ({ video, onClipClick }: VideoSidebarProps) => {
                     쇼츠
                   </div>
                 )}
-                <div className="font-medium text-sm text-gray-900 truncate">
+                <div
+                  className={cn(
+                    "font-medium text-sm truncate",
+                    isDark ? "text-white/90" : "text-gray-900"
+                  )}
+                >
                   {clip.title}
                 </div>
                 {clip.duration && (
-                  <div className="text-xs text-gray-500">{clip.duration}</div>
+                  <div
+                    className={cn(
+                      "text-xs",
+                      isDark ? "text-white/60" : "text-gray-500"
+                    )}
+                  >
+                    {clip.duration}
+                  </div>
                 )}
               </button>
             ))}

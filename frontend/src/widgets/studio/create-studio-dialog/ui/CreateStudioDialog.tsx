@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Radio, Video, HardDrive, Cloud, ArrowRight } from "lucide-react";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { ComingSoonModal } from "@/shared/ui/coming-soon-modal";
 import {
   Dialog,
@@ -42,19 +43,21 @@ export function CreateStudioDialog({
   initialType = "live",
 }: CreateStudioDialogProps) {
   const [transmissionType, setTransmissionType] = useState<TransmissionType>(
-    initialType === "live" ? "live" : "saved_video",
+    initialType === "live" ? "live" : "saved_video"
   );
-  const [storageLocation, setStorageLocation] = useState<StorageLocation>("local");
+  const [storageLocation, setStorageLocation] =
+    useState<StorageLocation>("local");
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [comingSoonOpen, setComingSoonOpen] = useState(false);
   const [comingSoonMessage, setComingSoonMessage] = useState("");
+  const isDark = useResolvedTheme() === "dark";
 
   const handlePlatformToggle = (platform: Platform) => {
     if (platform === "chzzk" || platform === "twitch") {
       setComingSoonMessage(
-        "치지직/트위치 송출은 준비 중입니다. 현재는 YouTube만 지원됩니다.",
+        "치지직/트위치 송출은 준비 중입니다. 현재는 YouTube만 지원됩니다."
       );
       setComingSoonOpen(true);
       return;
@@ -62,7 +65,7 @@ export function CreateStudioDialog({
     setPlatforms((prev) =>
       prev.includes(platform)
         ? prev.filter((p) => p !== platform)
-        : [...prev, platform],
+        : [...prev, platform]
     );
   };
 
@@ -104,12 +107,26 @@ export function CreateStudioDialog({
     twitch: "트위치",
   };
 
+  const selectedCardClass = isDark
+    ? "border-indigo-500 bg-indigo-500/20"
+    : "border-indigo-500 bg-indigo-50";
+  const unselectedCardClass = isDark
+    ? "border-white/20 hover:border-white/30 hover:bg-white/5"
+    : "border-gray-200 hover:border-gray-300";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className={cn(
+          "sm:max-w-[600px] max-h-[90vh] overflow-y-auto",
+          isDark && "bg-[#0c0c0f] border-white/10 text-white"
+        )}
+      >
         <DialogHeader>
-          <DialogTitle>스튜디오 생성</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className={cn(isDark && "text-white/90")}>
+            스튜디오 생성
+          </DialogTitle>
+          <DialogDescription className={cn(isDark && "text-white/70")}>
             새로운 스튜디오를 생성하여 라이브 스트리밍이나 녹화를 시작하세요.
           </DialogDescription>
         </DialogHeader>
@@ -117,7 +134,14 @@ export function CreateStudioDialog({
         <div className="space-y-6 py-4">
           {/* 송출 타입 */}
           <div className="space-y-3">
-            <Label className="text-base font-semibold">송출 타입</Label>
+            <Label
+              className={cn(
+                "text-base font-semibold",
+                isDark && "text-white/90"
+              )}
+            >
+              송출 타입
+            </Label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
@@ -125,17 +149,15 @@ export function CreateStudioDialog({
                 className={cn(
                   "p-4 border-2 rounded-lg transition-all text-left",
                   transmissionType === "live"
-                    ? "border-indigo-500 bg-indigo-50"
-                    : "border-gray-200 hover:border-gray-300",
+                    ? selectedCardClass
+                    : unselectedCardClass,
+                  isDark && "text-white/90"
                 )}
               >
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3">
                   <Radio className="h-5 w-5" />
                   <span className="font-semibold">라이브 송출</span>
                 </div>
-                {transmissionType === "live" && (
-                  <div className="h-2 w-2 bg-indigo-500 rounded-full mx-auto mt-2" />
-                )}
               </button>
 
               <button
@@ -144,17 +166,15 @@ export function CreateStudioDialog({
                 className={cn(
                   "p-4 border-2 rounded-lg transition-all text-left",
                   transmissionType === "saved_video"
-                    ? "border-indigo-500 bg-indigo-50"
-                    : "border-gray-200 hover:border-gray-300",
+                    ? selectedCardClass
+                    : unselectedCardClass,
+                  isDark && "text-white/90"
                 )}
               >
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3">
                   <Video className="h-5 w-5" />
                   <span className="font-semibold">저장된 영상</span>
                 </div>
-                {transmissionType === "saved_video" && (
-                  <div className="h-2 w-2 bg-indigo-500 rounded-full mx-auto mt-2" />
-                )}
               </button>
             </div>
           </div>
@@ -162,44 +182,76 @@ export function CreateStudioDialog({
           {/* 송출 플랫폼 (라이브 송출일 때만) */}
           {transmissionType === "live" && (
             <div className="space-y-3">
-              <Label className="text-base font-semibold">송출 플랫폼</Label>
+              <Label
+                className={cn(
+                  "text-base font-semibold",
+                  isDark && "text-white/90"
+                )}
+              >
+                송출 플랫폼
+              </Label>
               <div className="grid grid-cols-3 gap-3">
-                {(["youtube", "chzzk", "twitch"] as Platform[]).map((platform) => {
-                  const isComingSoon = platform === "chzzk" || platform === "twitch";
-                  return (
-                    <button
-                      key={platform}
-                      type="button"
-                      onClick={() => handlePlatformToggle(platform)}
-                      className={cn(
-                        "p-4 border-2 rounded-lg transition-all text-center relative",
-                        platforms.includes(platform)
-                          ? "border-indigo-500 bg-indigo-50"
-                          : "border-gray-200 hover:border-gray-300",
-                        isComingSoon && !platforms.includes(platform) && "opacity-75",
-                      )}
-                      title={isComingSoon ? "준비 중" : undefined}
-                    >
-                      <div className="text-2xl mb-2">{platformIcons[platform]}</div>
-                      <div className="text-sm font-medium">
-                        {platformNames[platform]}
-                        {isComingSoon && (
-                          <span className="block text-xs text-amber-600 font-normal mt-0.5">
-                            준비 중
-                          </span>
+                {(["youtube", "chzzk", "twitch"] as Platform[]).map(
+                  (platform) => {
+                    const isComingSoon =
+                      platform === "chzzk" || platform === "twitch";
+                    return (
+                      <button
+                        key={platform}
+                        type="button"
+                        onClick={() => handlePlatformToggle(platform)}
+                        className={cn(
+                          "p-4 border-2 rounded-lg transition-all text-center relative",
+                          platforms.includes(platform)
+                            ? selectedCardClass
+                            : unselectedCardClass,
+                          isComingSoon &&
+                            !platforms.includes(platform) &&
+                            "opacity-75",
+                          isDark && "text-white/90"
                         )}
-                      </div>
-                    </button>
-                  );
-                })}
+                        title={isComingSoon ? "준비 중" : undefined}
+                      >
+                        <div className="text-2xl mb-2">
+                          {platformIcons[platform]}
+                        </div>
+                        <div className="text-sm font-medium">
+                          {platformNames[platform]}
+                          {isComingSoon && (
+                            <span
+                              className={cn(
+                                "block text-xs font-normal mt-0.5",
+                                isDark ? "text-amber-400" : "text-amber-600"
+                              )}
+                            >
+                              준비 중
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  }
+                )}
               </div>
             </div>
           )}
 
           {/* 녹화 저장 위치 (라이브/저장 모두 표시) */}
           <div className="space-y-3">
-            <Label className="text-base font-semibold">녹화 저장 위치</Label>
-            <p className="text-sm text-gray-500">
+            <Label
+              className={cn(
+                "text-base font-semibold",
+                isDark && "text-white/90"
+              )}
+            >
+              녹화 저장 위치
+            </Label>
+            <p
+              className={cn(
+                "text-sm",
+                isDark ? "text-white/60" : "text-gray-500"
+              )}
+            >
               라이브 종료 후 저장 및 수동 녹화 시 파일이 저장될 위치입니다.
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -209,15 +261,21 @@ export function CreateStudioDialog({
                 className={cn(
                   "p-4 border-2 rounded-lg transition-all text-left",
                   storageLocation === "local"
-                    ? "border-indigo-500 bg-indigo-50"
-                    : "border-gray-200 hover:border-gray-300",
+                    ? selectedCardClass
+                    : unselectedCardClass,
+                  isDark && "text-white/90"
                 )}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <HardDrive className="h-5 w-5" />
                   <span className="font-semibold">내 컴퓨터</span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p
+                  className={cn(
+                    "text-xs",
+                    isDark ? "text-white/60" : "text-gray-500"
+                  )}
+                >
                   녹화 완료 시 자동으로 다운로드
                 </p>
               </button>
@@ -226,24 +284,35 @@ export function CreateStudioDialog({
                 type="button"
                 onClick={() => {
                   setComingSoonMessage(
-                    "클라우드 저장은 준비 중입니다. 현재는 내 컴퓨터 저장만 지원됩니다.",
+                    "클라우드 저장은 준비 중입니다. 현재는 내 컴퓨터 저장만 지원됩니다."
                   );
                   setComingSoonOpen(true);
                 }}
                 className={cn(
                   "p-4 border-2 rounded-lg transition-all text-left opacity-70",
-                  "border-gray-200 hover:border-gray-300",
+                  unselectedCardClass,
+                  isDark && "text-white/90"
                 )}
                 title="준비 중"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <Cloud className="h-5 w-5" />
                   <span className="font-semibold">클라우드</span>
-                  <span className="text-xs text-amber-600 font-normal">
+                  <span
+                    className={cn(
+                      "text-xs font-normal",
+                      isDark ? "text-amber-400" : "text-amber-600"
+                    )}
+                  >
                     (준비 중)
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p
+                  className={cn(
+                    "text-xs",
+                    isDark ? "text-white/60" : "text-gray-500"
+                  )}
+                >
                   서버에 저장
                 </p>
               </button>
@@ -252,35 +321,60 @@ export function CreateStudioDialog({
 
           {/* 제목 */}
           <div className="space-y-2">
-            <Label htmlFor="title">제목</Label>
+            <Label htmlFor="title" className={cn(isDark && "text-white/90")}>
+              제목
+            </Label>
             <Input
               id="title"
               placeholder="스트리밍 제목을 입력하세요..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className={cn(
+                isDark &&
+                  "bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:ring-white/20"
+              )}
             />
           </div>
 
           {/* 설명 */}
           <div className="space-y-2">
-            <Label htmlFor="description">설명</Label>
+            <Label
+              htmlFor="description"
+              className={cn(isDark && "text-white/90")}
+            >
+              설명
+            </Label>
             <Textarea
               id="description"
               placeholder="스트리밍 설명을 입력하세요..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
+              className={cn(
+                isDark &&
+                  "bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:ring-white/20"
+              )}
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className={cn(
+              isDark &&
+                "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+            )}
+          >
             취소
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!title.trim() || (transmissionType === "live" && platforms.length === 0)}
+            disabled={
+              !title.trim() ||
+              (transmissionType === "live" && platforms.length === 0)
+            }
             className="bg-indigo-600 hover:bg-indigo-700"
           >
             다음

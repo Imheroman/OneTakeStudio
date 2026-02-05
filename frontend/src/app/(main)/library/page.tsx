@@ -17,7 +17,7 @@ export default function LibraryPage() {
 
   useEffect(() => {
     if (hasHydrated && !isLoggedIn) {
-      router.replace("/login");
+      router.replace(`/?auth=login&redirect=${encodeURIComponent("/library")}`);
     }
   }, [hasHydrated, isLoggedIn, router]);
 
