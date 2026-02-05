@@ -49,6 +49,8 @@ public enum ErrorCode {
     FILE_STORAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 저장에 실패했습니다"),
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "F002", "파일을 찾을 수 없습니다"),
     FILE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "F003", "파일 접근이 거부되었습니다"),
+    STORAGE_QUOTA_EXCEEDED(HttpStatus.PAYLOAD_TOO_LARGE, "F004", "스토리지 용량이 부족합니다 (10GB 제한)"),
+    STORAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F005", "스토리지 오류가 발생했습니다"),
 
     // Media Settings
     MEDIA_SETTINGS_NOT_FOUND(HttpStatus.NOT_FOUND, "MS001", "미디어 설정을 찾을 수 없습니다"),

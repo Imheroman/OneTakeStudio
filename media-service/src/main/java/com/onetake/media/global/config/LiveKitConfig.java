@@ -23,6 +23,9 @@ public class LiveKitConfig {
     @Value("${livekit.host}")
     private String host;
 
+    @Value("${livekit.public-url:${livekit.host}}")
+    private String publicUrl;
+
     @Bean
     public RoomServiceClient roomServiceClient() {
         return RoomServiceClient.createClient(host, apiKey, apiSecret);

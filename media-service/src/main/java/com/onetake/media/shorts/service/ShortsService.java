@@ -13,6 +13,8 @@ import com.onetake.media.shorts.dto.*;
 import com.onetake.media.shorts.entity.ShortsJob;
 import com.onetake.media.shorts.entity.ShortsStatus;
 import com.onetake.media.shorts.repository.ShortsJobRepository;
+import com.onetake.media.notification.service.NotificationService;
+import com.onetake.media.notification.entity.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +44,7 @@ public class ShortsService {
     private final CommentStatsRepository commentStatsRepository;
     private final AiServiceClient aiServiceClient;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
 
     @Value("${ai.service.webhook-url:http://localhost:8082/api/callback/ai-result}")
     private String webhookUrl;
@@ -111,9 +114,27 @@ public class ShortsService {
             job.startProcessing();
             log.info("Shorts generation started: jobId={}, recordingId={}",
                     jobId, request.getRecordingId());
+
+            // 알림: 숏츠 생성 시작
+            notificationService.createNotification(
+                    odUserId,
+                    NotificationType.SHORTS_PROCESSING,
+                    "숏츠 생성 중",
+                    "AI가 하이라이트 영상을 생성하고 있습니다.",
+                    jobId
+            );
         } else {
             job.fail("Failed to request AI service");
             log.error("Failed to start shorts generation: jobId={}", jobId);
+
+            // 알림: 숏츠 생성 실패
+            notificationService.createNotification(
+                    odUserId,
+                    NotificationType.SHORTS_FAILED,
+                    "숏츠 생성 실패",
+                    "AI 서버 요청에 실패했습니다.",
+                    jobId
+            );
         }
 
         return ShortsResponse.from(job);
@@ -247,6 +268,15 @@ public class ShortsService {
 
         log.info("Shorts generation completed: jobId={}, outputUrl={}",
                 job.getJobId(), outputUrl);
+
+        // 알림: 숏츠 생성 완료
+        notificationService.createNotification(
+                job.getOdUserId(),
+                NotificationType.SHORTS_COMPLETED,
+                "숏츠 생성 완료",
+                "하이라이트 영상이 준비되었습니다.",
+                job.getJobId()
+        );
     }
 
     private void handleFailure(ShortsJob job, AiCallbackRequest callback) {
@@ -254,6 +284,15 @@ public class ShortsService {
         job.fail(error);
 
         log.error("Shorts generation failed: jobId={}, error={}", job.getJobId(), error);
+
+        // 알림: 숏츠 생성 실패
+        notificationService.createNotification(
+                job.getOdUserId(),
+                NotificationType.SHORTS_FAILED,
+                "숏츠 생성 실패",
+                "하이라이트 영상 생성 중 오류가 발생했습니다: " + error,
+                job.getJobId()
+        );
     }
 
     private String generateOutputUrl(String filePath) {

@@ -216,6 +216,57 @@ public class LibraryService {
     }
 
     /**
+     * 스토리지 용량 체크 (10GB 제한)
+     * @param userId 사용자 ID
+     * @param additionalBytes 추가로 저장할 파일 크기 (bytes)
+     * @throws com.onetake.core.library.exception.StorageQuotaExceededException 용량 초과 시
+     */
+    public void checkStorageQuota(String userId, Long additionalBytes) {
+        if (additionalBytes == null || additionalBytes <= 0) {
+            return; // 용량 체크 불필요
+        }
+
+        Long recordingSize = recordingRepository.getTotalFileSizeByUserId(userId);
+        Long clipSize = clipRepository.getTotalFileSizeByUserId(userId);
+
+        Long shortsSize = 0L;
+        User user = userRepository.findByUserId(userId).orElse(null);
+        if (user != null) {
+            shortsSize = shortsResultRepository.getTotalSavedFileSizeByUserId(user.getId());
+        }
+
+        Long currentUsed = (recordingSize != null ? recordingSize : 0L) +
+                           (clipSize != null ? clipSize : 0L) +
+                           (shortsSize != null ? shortsSize : 0L);
+
+        Long totalAfter = currentUsed + additionalBytes;
+
+        if (totalAfter > storageLimitBytes) {
+            Long available = storageLimitBytes - currentUsed;
+            throw new com.onetake.core.library.exception.StorageQuotaExceededException(
+                    userId, additionalBytes, available);
+        }
+
+        log.debug("Storage quota check passed: userId={}, current={}GB, adding={}GB, limit={}GB",
+                userId,
+                currentUsed / (1024.0 * 1024.0 * 1024.0),
+                additionalBytes / (1024.0 * 1024.0 * 1024.0),
+                storageLimitBytes / (1024.0 * 1024.0 * 1024.0));
+    }
+
+    /**
+     * 스토리지 여유 공간 확인
+     */
+    public boolean hasStorageSpace(String userId, Long requiredBytes) {
+        try {
+            checkStorageQuota(userId, requiredBytes);
+            return true;
+        } catch (com.onetake.core.library.exception.StorageQuotaExceededException e) {
+            return false;
+        }
+    }
+
+    /**
      * 저장된 파일 목록 조회 (녹화 + 클립)
      */
     public StorageFilesResponse getStorageFiles(String userId, int page, int size) {

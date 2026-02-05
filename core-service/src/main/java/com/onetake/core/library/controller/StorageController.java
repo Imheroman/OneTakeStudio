@@ -56,4 +56,37 @@ public class StorageController {
 
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 스토리지 파일 삭제 (녹화 파일)
+     * DELETE /api/storage/files/{recordingId}
+     */
+    @DeleteMapping("/files/{recordingId}")
+    public ResponseEntity<ApiResponse<Void>> deleteStorageFile(
+            @CurrentUser CustomUserDetails userDetails,
+            @PathVariable String recordingId) {
+
+        log.debug("스토리지 파일 삭제: userId={}, recordingId={}",
+                userDetails.getUserId(), recordingId);
+
+        libraryService.deleteRecording(userDetails.getUserId(), recordingId);
+
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    /**
+     * 스토리지 용량 체크 (내부 API - Media Service 호출용)
+     * POST /api/storage/check-quota
+     */
+    @PostMapping("/check-quota")
+    public ResponseEntity<ApiResponse<Boolean>> checkQuota(
+            @RequestParam String userId,
+            @RequestParam Long fileSize) {
+
+        log.debug("스토리지 용량 체크: userId={}, fileSize={}bytes", userId, fileSize);
+
+        libraryService.checkStorageQuota(userId, fileSize);
+
+        return ResponseEntity.ok(ApiResponse.success(true));
+    }
 }

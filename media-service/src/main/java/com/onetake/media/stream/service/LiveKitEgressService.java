@@ -21,7 +21,7 @@ public class LiveKitEgressService {
 
     private final EgressServiceClient egressServiceClient;
 
-    @Value("${livekit.egress.output-path:/data/recordings/}")
+    @Value("${livekit.egress.output-path:/recordings/}")
     private String outputPath;
 
     /**

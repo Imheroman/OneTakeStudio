@@ -23,7 +23,7 @@ import java.nio.file.Paths;
 @Service
 public class LocalStorageService {
 
-    @Value("${recording.storage.base-path:/data/recordings}")
+    @Value("${recording.storage.base-path:/recordings}")
     private String basePath;
 
     @Value("${recording.storage.base-url:http://localhost:8082/api/recordings/files}")
@@ -40,6 +40,30 @@ public class LocalStorageService {
         } catch (IOException e) {
             log.error("Failed to create recording storage directory: {}", basePath, e);
         }
+    }
+
+    /**
+     * 사용자별 디렉토리 생성 및 경로 반환
+     */
+    public String getUserStoragePath(String userId) {
+        try {
+            Path userPath = Paths.get(basePath, "user-" + userId);
+            if (!Files.exists(userPath)) {
+                Files.createDirectories(userPath);
+                log.info("User storage directory created: {}", userPath);
+            }
+            return userPath.toString();
+        } catch (IOException e) {
+            log.error("Failed to create user storage directory for userId: {}", userId, e);
+            throw new BusinessException(ErrorCode.STORAGE_ERROR);
+        }
+    }
+
+    /**
+     * 사용자별 파일 경로 생성
+     */
+    public String getUserFilePath(String userId, String fileName) {
+        return Paths.get("user-" + userId, fileName).toString();
     }
 
     /**

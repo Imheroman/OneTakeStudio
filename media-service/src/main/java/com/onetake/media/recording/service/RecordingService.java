@@ -16,9 +16,12 @@ import com.onetake.media.stream.repository.StreamSessionRepository;
 import com.onetake.media.stream.service.LiveKitEgressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -38,6 +41,11 @@ public class RecordingService {
     private final LiveKitEgressService liveKitEgressService;
     private final CommentCounterService commentCounterService;
     private final ChunkedUploadService chunkedUploadService;
+    private final LocalStorageService localStorageService;
+    private final RestTemplate restTemplate;
+
+    @Value("${core.service.url:http://localhost:8080}")
+    private String coreServiceUrl;
 
     @Transactional
     public RecordingResponse startRecording(String odUserId, String studioId, RecordingStartRequest request) {
@@ -51,19 +59,23 @@ public class RecordingService {
                 .findByStudioIdAndStatus(studioId, SessionStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STREAM_SESSION_NOT_FOUND));
 
-        // 녹화 세션 생성
-        String fileName = generateFileName(studioId, request.getOutputFormat());
+        // 녹화 세션 생성 - 사용자별 디렉토리 사용
+        // 사용자 스토리지 디렉토리 생성 (없으면 자동 생성)
+        localStorageService.getUserStoragePath(odUserId);
+
+        String baseFileName = generateFileName(studioId, request.getOutputFormat());
+        String userFilePath = localStorageService.getUserFilePath(odUserId, baseFileName);
 
         RecordingSession recordingSession = RecordingSession.builder()
                 .studioId(studioId)
                 .odUserId(odUserId)
                 .streamSessionId(streamSession.getId())
                 .status(RecordingStatus.PENDING)
-                .fileName(fileName)
+                .fileName(userFilePath)  // user-{userId}/filename.mp4 형식으로 저장
                 .build();
 
         // LiveKit Egress를 통한 녹화 시작
-        String egressId = liveKitEgressService.startRoomCompositeRecording(streamSession.getRoomName(), fileName);
+        String egressId = liveKitEgressService.startRoomCompositeRecording(streamSession.getRoomName(), userFilePath);
         recordingSession.startRecording(egressId);
 
         recordingSessionRepository.save(recordingSession);
@@ -131,6 +143,9 @@ public class RecordingService {
     public void completeRecording(Long recordingId, String filePath, String fileUrl, Long fileSize, Long durationSeconds) {
         RecordingSession recordingSession = recordingSessionRepository.findById(recordingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
+
+        // 스토리지 용량 체크 (10GB 제한)
+        checkStorageQuota(recordingSession.getOdUserId(), fileSize);
 
         recordingSession.complete(filePath, fileUrl, fileSize, durationSeconds);
 
@@ -222,5 +237,34 @@ public class RecordingService {
         String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String extension = format != null ? format : "mp4";
         return String.format("studio_%s_%s_%s.%s", studioId, timestamp, UUID.randomUUID().toString().substring(0, 8), extension);
+    }
+
+    /**
+     * Core Service API를 통해 스토리지 용량 체크 (10GB 제한)
+     * @param userId 사용자 ID
+     * @param fileSize 파일 크기 (bytes)
+     * @throws BusinessException 용량 초과 시
+     */
+    private void checkStorageQuota(String userId, Long fileSize) {
+        if (fileSize == null || fileSize <= 0) {
+            log.warn("Invalid file size for quota check: userId={}, fileSize={}", userId, fileSize);
+            return;
+        }
+
+        String url = coreServiceUrl + "/api/storage/check-quota?userId={userId}&fileSize={fileSize}";
+
+        try {
+            restTemplate.postForObject(url, null, String.class, userId, fileSize);
+            log.debug("Storage quota check passed: userId={}, fileSize={}bytes ({}GB)",
+                    userId, fileSize, fileSize / (1024.0 * 1024.0 * 1024.0));
+        } catch (HttpClientErrorException e) {
+            log.error("Storage quota exceeded: userId={}, fileSize={}bytes, error={}",
+                    userId, fileSize, e.getMessage());
+            throw new BusinessException(ErrorCode.STORAGE_QUOTA_EXCEEDED);
+        } catch (Exception e) {
+            log.error("Failed to check storage quota: userId={}, fileSize={}", userId, fileSize, e);
+            // 네트워크 오류 등의 경우 일단 허용 (관대한 정책)
+            log.warn("Quota check failed, allowing upload due to service error");
+        }
     }
 }

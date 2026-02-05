@@ -28,6 +28,7 @@ eureka:
 
 livekit:
   host: ${LIVEKIT_HOST}
+  public-url: ${LIVEKIT_PUBLIC_URL}
   api:
     key: ${LIVEKIT_API_KEY}
     secret: ${LIVEKIT_API_SECRET}

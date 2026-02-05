@@ -48,7 +48,7 @@ public class LiveKitService {
                     .token(token)
                     .roomName(roomName)
                     .participantIdentity(participantIdentity)
-                    .livekitUrl(liveKitConfig.getHost())
+                    .livekitUrl(liveKitConfig.getPublicUrl())
                     .build();
 
         } catch (Exception e) {

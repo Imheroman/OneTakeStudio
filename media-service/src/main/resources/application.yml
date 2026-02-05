@@ -77,9 +77,11 @@ oauth:
   frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:http://localhost:3000/channels/oauth/callback}
 
 # Recording Storage
+# 클라우드 환경: /recordings (k8s volume mount)
+# 로컬 개발 환경: 절대 경로 사용
 recording:
   storage:
-    base-path: ${RECORDING_BASE_PATH:C:/Users/SSAFY/Desktop/project/test}
+    base-path: ${RECORDING_BASE_PATH:C:/Users/SSAFY/Desktop/project/test/recordings}
     base-url: ${RECORDING_BASE_URL:http://localhost:8082/api/media/record/files}
 
 # Logging

@@ -38,6 +38,9 @@ public class LiveKitWebhookController {
     @Value("${recording.storage.base-url:http://localhost:8082/api/recordings/files}")
     private String baseUrl;
 
+    @Value("${recording.storage.base-path:/recordings}")
+    private String basePath;
+
     /**
      * LiveKit Webhook 수신
      */
@@ -193,7 +196,7 @@ public class LiveKitWebhookController {
             if (egressInfo.hasFile()) {
                 LivekitEgress.FileInfo fileInfo = egressInfo.getFile();
                 filePath = fileInfo.getFilename();
-                fileName = extractFileName(filePath);
+                fileName = extractRelativePath(filePath);  // 사용자 경로 포함 (user-xxx/file.mp4)
                 fileSize = fileInfo.getSize();
                 durationSeconds = fileInfo.getDuration() / 1_000_000_000; // 나노초 -> 초
             }
@@ -201,7 +204,7 @@ public class LiveKitWebhookController {
             else if (egressInfo.getFileResultsCount() > 0) {
                 LivekitEgress.FileInfo fileInfo = egressInfo.getFileResults(0);
                 filePath = fileInfo.getFilename();
-                fileName = extractFileName(filePath);
+                fileName = extractRelativePath(filePath);  // 사용자 경로 포함 (user-xxx/file.mp4)
                 fileSize = fileInfo.getSize();
                 durationSeconds = fileInfo.getDuration() / 1_000_000_000;
             }
@@ -211,7 +214,7 @@ public class LiveKitWebhookController {
                 return;
             }
 
-            // 파일 URL 생성
+            // 파일 URL 생성 (사용자 경로 포함)
             String fileUrl = localStorageService.getFileUrl(fileName);
 
             // 녹화 완료 처리
@@ -240,5 +243,24 @@ public class LiveKitWebhookController {
         }
         int lastSlash = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
         return lastSlash >= 0 ? filePath.substring(lastSlash + 1) : filePath;
+    }
+
+    /**
+     * 전체 경로에서 basePath 이후의 상대 경로 추출
+     * 예: /recordings/user-123/file.mp4 -> user-123/file.mp4
+     */
+    private String extractRelativePath(String absolutePath) {
+        if (absolutePath == null) {
+            return null;
+        }
+
+        // basePath가 있으면 제거 (예: /recordings/ 제거)
+        String normalizedBasePath = basePath.endsWith("/") ? basePath : basePath + "/";
+        if (absolutePath.startsWith(normalizedBasePath)) {
+            return absolutePath.substring(normalizedBasePath.length());
+        }
+
+        // basePath가 없으면 파일명만 반환
+        return extractFileName(absolutePath);
     }
 }
