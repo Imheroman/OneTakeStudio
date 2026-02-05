@@ -631,3 +631,5 @@ docker-compose.override.yml
 # Recording files
 recordings/
 /mnt/storage/
+storage/
+external-storage-service/data/
