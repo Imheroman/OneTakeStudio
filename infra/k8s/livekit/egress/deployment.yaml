@@ -43,10 +43,10 @@ spec:
           resources:
             requests:
               memory: "512Mi"
-              cpu: "1000m"
+              cpu: "1500m"
             limits:
               memory: "1Gi"
-              cpu: "2000m"
+              cpu: "3"
       volumes:
         - name: recordings
           hostPath:
