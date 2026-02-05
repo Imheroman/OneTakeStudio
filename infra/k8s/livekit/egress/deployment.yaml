@@ -45,8 +45,8 @@ spec:
               memory: "512Mi"
               cpu: "1500m"
             limits:
-              memory: "1Gi"
-              cpu: "3"
+              memory: "2Gi"
+              cpu: "4"
       volumes:
         - name: recordings
           hostPath:
