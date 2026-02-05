@@ -66,3 +66,14 @@ spec:
   replacePathRegex:
     regex: ^/api/recordings/(.*)
     replacement: /api/media/record/$1
+---
+# /livekit/** -> /** (LiveKit 서버로 프록시)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: media-strip-livekit-prefix
+  namespace: media
+spec:
+  stripPrefix:
+    prefixes:
+      - /livekit
