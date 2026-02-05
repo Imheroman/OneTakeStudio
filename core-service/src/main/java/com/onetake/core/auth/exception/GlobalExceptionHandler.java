@@ -132,6 +132,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
     }
 
+    @ExceptionHandler(BannerNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBannerNotFoundException(BannerNotFoundException e) {
+        log.warn("BannerNotFoundException: {}", e.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(e.getMessage(), e.getErrorCode()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("IllegalArgumentException: {}", e.getMessage());

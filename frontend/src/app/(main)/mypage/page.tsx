@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
-import { updateProfile } from "@/shared/api/users";
+import { updateProfile, changePassword } from "@/shared/api/users";
 
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -103,7 +103,11 @@ export default function MyPage() {
   async function onPasswordSubmit(values: z.infer<typeof passwordSchema>) {
     try {
       setIsLoading(true);
-      // TODO: PUT /api/users/password 연동 후 실제 요청
+      await changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+        confirmPassword: values.confirmPassword,
+      });
       alert("비밀번호가 성공적으로 변경되었습니다.");
       passwordForm.reset();
     } catch (error) {
