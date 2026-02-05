@@ -21,7 +21,7 @@ export const RecordingSchema = z.object({
   title: z.string(),
   description: z.string().nullable().optional(),
   thumbnailUrl: z.string().nullable().optional(),
-  s3Url: z.string().nullable().optional(),
+  fileUrl: z.string().nullable().optional(),
   fileSize: z.number().nullable().optional(),
   durationSeconds: z.number().nullable().optional(),
   status: RecordingStatusSchema,

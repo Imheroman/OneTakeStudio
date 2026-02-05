@@ -66,12 +66,12 @@ public class AiShortsService {
      * 공유 스토리지(NFS) 기준 절대 경로 반환
      */
     private String resolveFilePath(Recording recording) {
-        // s3Key가 절대 경로면 그대로 사용, 아니면 storageBasePath 기준으로 조합
-        String s3Key = recording.getS3Key();
-        if (s3Key != null && s3Key.startsWith("/")) {
-            return s3Key;
+        // filePath가 절대 경로면 그대로 사용, 아니면 storageBasePath 기준으로 조합
+        String filePath = recording.getFilePath();
+        if (filePath != null && filePath.startsWith("/")) {
+            return filePath;
         }
-        return storageBasePath + "/" + (s3Key != null ? s3Key : recording.getFileName());
+        return storageBasePath + "/" + (filePath != null ? filePath : recording.getFileName());
     }
 
     /**

@@ -22,7 +22,7 @@ public class ClipResponse {
     private String title;
     private String description;
     private String thumbnailUrl;
-    private String s3Url;
+    private String fileUrl;
     private Long fileSize;
     private Integer durationSeconds;
     private Integer startTime;
@@ -41,7 +41,7 @@ public class ClipResponse {
                 .title(clip.getTitle())
                 .description(clip.getDescription())
                 .thumbnailUrl(clip.getThumbnailUrl())
-                .s3Url(clip.getS3Url())
+                .fileUrl(clip.getFileUrl())
                 .fileSize(clip.getFileSize())
                 .durationSeconds(clip.getDurationSeconds())
                 .startTime(clip.getStartTime())

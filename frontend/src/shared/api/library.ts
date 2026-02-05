@@ -110,7 +110,7 @@ export async function getRecordingDetail(
     date,
     duration: formatDuration(r.durationSeconds ?? undefined),
     description: r.description ?? undefined,
-    videoUrl: r.s3Url ?? undefined,
+    videoUrl: r.fileUrl ?? undefined,
     thumbnailUrl: r.thumbnailUrl ?? undefined,
     clips: [],
   };
