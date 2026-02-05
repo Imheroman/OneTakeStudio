@@ -59,12 +59,14 @@ function getWebSocketUrl(): string {
     return process.env.NEXT_PUBLIC_WS_URL;
   }
   // 브라우저 환경에서 현재 프로토콜에 맞게 자동 설정
+  // HTTPS 환경에서는 wss://, HTTP 환경에서는 ws:// 사용 (SockJS 호환)
   if (typeof window !== "undefined") {
     const isSecure = window.location.protocol === "https:";
     const host = window.location.host;
-    return isSecure
-      ? `https://${host}/ws/media`
-      : "http://localhost:8082/ws/media";
+    const baseUrl = isSecure
+      ? `https://${host}`
+      : "http://localhost:8082";
+    return `${baseUrl}/ws/media`;
   }
   return "http://localhost:8082/ws/media";
 }

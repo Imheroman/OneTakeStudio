@@ -52,6 +52,13 @@ spec:
                 name: media-server
                 port:
                   number: 8081
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: media-server
+                port:
+                  number: 8081
 ---
 # /api/publish/** -> /api/media/publish/**
 apiVersion: networking.k8s.io/v1
