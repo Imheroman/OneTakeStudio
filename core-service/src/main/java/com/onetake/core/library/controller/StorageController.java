@@ -87,6 +87,6 @@ public class StorageController {
 
         libraryService.checkStorageQuota(userId, fileSize);
 
-        return ResponseEntity.ok(ApiResponse.success(true));
+        return ResponseEntity.ok(ApiResponse.success("용량 체크 성공", true));
     }
 }
