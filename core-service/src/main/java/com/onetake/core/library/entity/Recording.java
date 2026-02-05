@@ -23,7 +23,7 @@ public class Recording {
     @Column(name = "recording_id", unique = true, nullable = false, length = 36)
     private String recordingId;
 
-    @Column(name = "studio_id", nullable = false)
+    @Column(name = "studio_id")
     private Long studioId;
 
     @Column(name = "user_id", nullable = false, length = 36)
