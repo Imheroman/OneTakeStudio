@@ -72,6 +72,11 @@ spec:
                 configMapKeyRef:
                   name: media-config
                   key: LIVEKIT_HOST
+            - name: LIVEKIT_PUBLIC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: LIVEKIT_PUBLIC_URL
             - name: CORE_SERVICE_URL
               valueFrom:
                 configMapKeyRef:
