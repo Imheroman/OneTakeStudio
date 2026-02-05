@@ -8,7 +8,7 @@ metadata:
 data:
   REDIS_HOST: "redis.database.svc.cluster.local"
   REDIS_PORT: "6379"
-  LIVEKIT_HOST: "https://i14c206.p.ssafy.io/livekit"
+  LIVEKIT_HOST: "https://i14c206.p.ssafy.io/livekit/"
   CORE_SERVICE_URL: "http://api-server.core.svc.cluster.local:8080"
   RECORDING_BASE_PATH: "/recordings"
   RECORDING_BASE_URL: "https://www.onetakestudio.duckdns.org/recordings"
