@@ -140,26 +140,26 @@ public class LibraryService {
 
         validateAccess(userId, recording);
 
-        if (recording.getS3Url() == null) {
+        if (recording.getFileUrl() == null) {
             throw new RecordingNotFoundException(recordingId);
         }
 
         return DownloadUrlResponse.builder()
-                .downloadUrl(recording.getS3Url())
+                .downloadUrl(recording.getFileUrl())
                 .expiresIn(3600L)
                 .build();
     }
 
     @Transactional
-    public RecordingResponse updateRecordingMedia(Long mediaRecordingId, String s3Key, String s3Url,
+    public RecordingResponse updateRecordingMedia(Long mediaRecordingId, String filePath, String fileUrl,
                                                    Long fileSize, Integer durationSeconds, String thumbnailUrl) {
         Recording recording = recordingRepository.findByMediaRecordingId(mediaRecordingId)
                 .orElseThrow(() -> new RecordingNotFoundException(mediaRecordingId));
 
-        recording.updateMediaInfo(s3Key, s3Url, fileSize, durationSeconds, thumbnailUrl);
+        recording.updateMediaInfo(filePath, fileUrl, fileSize, durationSeconds, thumbnailUrl);
         recordingRepository.save(recording);
 
-        log.info("Recording media updated: recordingId={}, s3Key={}", recording.getRecordingId(), s3Key);
+        log.info("Recording media updated: recordingId={}, filePath={}", recording.getRecordingId(), filePath);
 
         String studioUuid = resolveStudioUuid(recording.getStudioId());
         return RecordingResponse.from(recording, studioUuid);

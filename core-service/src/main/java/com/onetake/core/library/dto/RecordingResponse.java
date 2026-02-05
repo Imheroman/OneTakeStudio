@@ -21,7 +21,7 @@ public class RecordingResponse {
     private String title;
     private String description;
     private String thumbnailUrl;
-    private String s3Url;
+    private String fileUrl;
     private Long fileSize;
     private Integer durationSeconds;
     private RecordingStatus status;
@@ -36,7 +36,7 @@ public class RecordingResponse {
                 .title(recording.getTitle())
                 .description(recording.getDescription())
                 .thumbnailUrl(recording.getThumbnailUrl())
-                .s3Url(recording.getS3Url())
+                .fileUrl(recording.getFileUrl())
                 .fileSize(recording.getFileSize())
                 .durationSeconds(recording.getDurationSeconds())
                 .status(recording.getStatus())
