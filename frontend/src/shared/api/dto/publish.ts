@@ -12,14 +12,14 @@ export const PublishStatusSchema = z.enum([
 ]);
 
 export const PublishStartRequestSchema = z.object({
-  studioId: z.union([z.string(), z.number()]),
+  studioId: z.string(),
   destinationIds: z.array(z.number()).min(1, "송출 채널은 최소 1개 이상이어야 합니다"),
   streamSessionId: z.string().optional(),
 });
 
 export const PublishResponseSchema = z.object({
   publishSessionId: z.string(),
-  studioId: z.union([z.string(), z.number()]),
+  studioId: z.string(),
   status: PublishStatusSchema,
   destinationIds: z.string().nullable().optional(),
   startedAt: z.string().nullable().optional(),
@@ -42,7 +42,7 @@ export const DestinationStatusSchema = z.object({
 
 export const PublishStatusResponseSchema = z.object({
   publishSessionId: z.string(),
-  studioId: z.union([z.string(), z.number()]),
+  studioId: z.string(),
   status: PublishStatusSchema,
   destinations: z.array(DestinationStatusSchema),
   startedAt: z.string().nullable().optional(),

@@ -16,7 +16,7 @@ import type { OnlineMember } from "@/hooks/studio";
 import { cn } from "@/shared/lib/utils";
 
 interface StudioMemberPanelProps {
-  studioId: string | number;
+  studioId: string;
   onClose?: () => void;
   onInviteClick?: () => void;
   /** 초대 성공 후 부모에서 증가시키면 멤버·초대 목록 재조회 */

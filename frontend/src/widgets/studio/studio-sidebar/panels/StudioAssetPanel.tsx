@@ -37,7 +37,7 @@ function mapAssetResponseToItem(a: {
 }
 
 interface StudioAssetPanelProps {
-  studioId: string | number;
+  studioId: string;
   onClose?: () => void;
   onSelectAsset?: (asset: AssetItem | null) => void;
   /** 송출 화면에 표시 중인 에셋 ID (패널에서 하이라이트용) */

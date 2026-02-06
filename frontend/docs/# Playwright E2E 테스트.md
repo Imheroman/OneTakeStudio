@@ -202,6 +202,6 @@ test('워크스페이스 접근', async ({ page }) => {
 
 ## 📚 참고 자료
 
-- [테스트 전략 문서](../docs/PLAYWRIGHT_TEST_STRATEGY.md)
-- [실제 API 전환 가이드](../docs/PLAYWRIGHT_REAL_API_MIGRATION.md)
+- [테스트 전략 문서](PLAYWRIGHT_TEST_STRATEGY.md)
+- [실제 API 전환 가이드](PLAYWRIGHT_REAL_API_MIGRATION.md)
 - [Playwright 공식 문서](https://playwright.dev/)

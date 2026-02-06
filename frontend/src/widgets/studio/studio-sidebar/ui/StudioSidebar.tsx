@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import {
   MessageSquare,
@@ -105,24 +105,25 @@ export function StudioSidebar({
   const prefersMotion = usePrefersMotion();
   const sidebarTransition = prefersMotion ? sidebarSpring : sidebarEaseReduced;
 
-  const studioIdNum = Number(studioId) || 0;
-  const studioIdStr = String(studioIdNum);
   const unreadCount = usePrivateChatStore(
-    (state) => state.unreadCounts[studioIdStr] ?? 0
+    (state) => state.unreadCounts[studioId] ?? 0
+  );
+  const lastSeenId = usePrivateChatStore(
+    (state) => state.lastSeenMessageIds[studioId]
   );
   const markAsRead = usePrivateChatStore((state) => state.markAsRead);
   const setUnreadCount = usePrivateChatStore((state) => state.setUnreadCount);
-
-  // 로컬 ref로 마지막으로 본 메시지 ID 추적
-  const lastSeenIdRef = useRef<string | number | null>(null);
+  const setLastSeenMessageId = usePrivateChatStore(
+    (state) => state.setLastSeenMessageId
+  );
 
   // 프라이빗 메시지 폴링 (프라이빗 패널이 열려있지 않을 때만)
   useEffect(() => {
-    if (activeTab === "private" || studioIdNum === 0) return;
+    if (activeTab === "private" || !studioId) return;
 
     const checkNewPrivateMessages = async () => {
       try {
-        const messages = await getChatHistory(studioIdNum);
+        const messages = await getChatHistory(studioId);
         const privateMessages = messages.filter(
           (m) => m.platform === "INTERNAL"
         );
@@ -133,20 +134,20 @@ export function StudioSidebar({
         const latestMessageId = privateMessages[0]?.messageId;
 
         // 처음 로드 시 lastSeenId 설정
-        if (lastSeenIdRef.current == null && latestMessageId) {
-          lastSeenIdRef.current = latestMessageId;
+        if (!lastSeenId && latestMessageId) {
+          setLastSeenMessageId(studioId, latestMessageId);
           return;
         }
 
         // 새 메시지가 있으면 카운트 업데이트
-        if (latestMessageId && latestMessageId !== lastSeenIdRef.current) {
+        if (latestMessageId && latestMessageId !== lastSeenId) {
           const lastSeenIndex = privateMessages.findIndex(
-            (m) => m.messageId === lastSeenIdRef.current
+            (m) => m.messageId === lastSeenId
           );
           const newCount =
             lastSeenIndex === -1 ? privateMessages.length : lastSeenIndex;
           if (newCount > 0) {
-            setUnreadCount(studioIdStr, newCount);
+            setUnreadCount(studioId, newCount);
           }
         }
       } catch (e) {
@@ -159,24 +160,25 @@ export function StudioSidebar({
 
     return () => clearInterval(interval);
   }, [
-    studioIdNum,
-    studioIdStr,
+    studioId,
     activeTab,
+    lastSeenId,
     setUnreadCount,
+    setLastSeenMessageId,
   ]);
 
   // 프라이빗 패널 열면 lastSeenId 업데이트
   useEffect(() => {
-    if (activeTab !== "private" || studioIdNum === 0) return;
+    if (activeTab !== "private" || !studioId) return;
 
     const updateLastSeen = async () => {
       try {
-        const messages = await getChatHistory(studioIdNum);
+        const messages = await getChatHistory(studioId);
         const privateMessages = messages.filter(
           (m) => m.platform === "INTERNAL"
         );
         if (privateMessages.length > 0) {
-          lastSeenIdRef.current = privateMessages[0].messageId;
+          setLastSeenMessageId(studioId, privateMessages[0].messageId);
         }
       } catch (e) {
         // 조용히 실패
@@ -184,12 +186,12 @@ export function StudioSidebar({
     };
 
     updateLastSeen();
-  }, [activeTab, studioIdNum]);
+  }, [activeTab, studioId, setLastSeenMessageId]);
 
   const handleTabClick = (id: StudioSidebarTabId) => {
     // 프라이빗 탭 열면 읽음 처리
     if (id === "private") {
-      markAsRead(studioIdStr);
+      markAsRead(studioId);
     }
     setActiveTab((prev) => (prev === id ? null : id));
   };
@@ -244,14 +246,14 @@ export function StudioSidebar({
             )}
             {activeTab === "chat" && (
               <StudioChatPanel
-                studioId={studioIdNum}
+                studioId={studioId}
                 onClose={closePanel}
                 filterPlatform={null}
               />
             )}
             {activeTab === "banner" && (
               <StudioBannerPanel
-                studioId={studioIdNum}
+                studioId={studioId}
                 onClose={closePanel}
                 onSelectBanner={onSelectBanner}
                 selectedBannerId={activeBanner?.id ?? null}
@@ -260,7 +262,7 @@ export function StudioSidebar({
             )}
             {activeTab === "assets" && (
               <StudioAssetPanel
-                studioId={studioIdNum}
+                studioId={studioId}
                 onClose={closePanel}
                 onSelectAsset={onSelectAsset}
                 selectedAssetId={activeAsset?.id ?? null}
@@ -268,14 +270,14 @@ export function StudioSidebar({
             )}
             {activeTab === "style" && (
               <StudioStylePanel
-                studioId={studioIdNum}
+                studioId={studioId}
                 onClose={closePanel}
                 onStyleChange={onStyleChange}
                 initialStyle={styleState}
               />
             )}
             {activeTab === "notes" && (
-              <StudioNotePanel studioId={studioIdNum} onClose={closePanel} />
+              <StudioNotePanel studioId={studioId} onClose={closePanel} />
             )}
             {activeTab === "members" && (
               <StudioMemberPanel
@@ -288,14 +290,14 @@ export function StudioSidebar({
             )}
             {activeTab === "private" && (
               <StudioChatPanel
-                studioId={studioIdNum}
+                studioId={studioId}
                 onClose={closePanel}
                 filterPlatform="INTERNAL"
               />
             )}
             {activeTab === "recording" && (
               <StudioRecordingPanel
-                studioId={studioIdNum}
+                studioId={studioId}
                 onClose={closePanel}
                 isRecordingLocal={isRecordingLocal}
                 isRecordingCloud={isRecordingCloud}

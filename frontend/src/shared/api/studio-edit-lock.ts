@@ -26,7 +26,7 @@ export type EditLockResponse = z.infer<typeof EditLockResponseSchema>;
 /**
  * 편집 락 획득
  */
-export async function acquireEditLock(studioId: string | number): Promise<EditLockResponse> {
+export async function acquireEditLock(studioId: string): Promise<EditLockResponse> {
   const response = await apiClient.post(
     `/api/studios/${studioId}/edit-lock`,
     ApiResponseEditLockSchema,
@@ -38,7 +38,7 @@ export async function acquireEditLock(studioId: string | number): Promise<EditLo
 /**
  * 편집 락 갱신 (heartbeat)
  */
-export async function extendEditLock(studioId: string | number): Promise<EditLockResponse> {
+export async function extendEditLock(studioId: string): Promise<EditLockResponse> {
   const response = await apiClient.post(
     `/api/studios/${studioId}/edit-lock`,
     ApiResponseEditLockSchema,
@@ -50,7 +50,7 @@ export async function extendEditLock(studioId: string | number): Promise<EditLoc
 /**
  * 편집 락 해제
  */
-export async function releaseEditLock(studioId: string | number): Promise<void> {
+export async function releaseEditLock(studioId: string): Promise<void> {
   await apiClient.delete(
     `/api/studios/${studioId}/edit-lock`,
     z.object({ success: z.boolean(), message: z.string().optional() })
@@ -60,7 +60,7 @@ export async function releaseEditLock(studioId: string | number): Promise<void> 
 /**
  * 편집 락 상태 조회
  */
-export async function getEditLockStatus(studioId: string | number): Promise<EditLockResponse> {
+export async function getEditLockStatus(studioId: string): Promise<EditLockResponse> {
   const response = await apiClient.get(
     `/api/studios/${studioId}/edit-lock`,
     ApiResponseEditLockSchema
@@ -71,7 +71,7 @@ export async function getEditLockStatus(studioId: string | number): Promise<Edit
 /**
  * 편집 락 강제 해제 (호스트 전용)
  */
-export async function forceReleaseEditLock(studioId: string | number): Promise<void> {
+export async function forceReleaseEditLock(studioId: string): Promise<void> {
   await apiClient.delete(
     `/api/studios/${studioId}/edit-lock/force`,
     z.object({ success: z.boolean(), message: z.string().optional() })

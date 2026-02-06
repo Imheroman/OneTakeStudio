@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export interface LocalRecording {
   id: string;
-  studioId: string | number;
+  studioId: string;
   blob: Blob;
   fileName: string;
   mimeType: string;
@@ -15,15 +15,15 @@ export interface LocalRecording {
 interface LocalRecordingState {
   recordings: LocalRecording[];
   currentRecording: {
-    studioId: string | number;
+    studioId: string;
     startedAt: Date;
   } | null;
 
   /** 녹화 시작 */
-  startRecording: (studioId: string | number) => void;
+  startRecording: (studioId: string) => void;
 
   /** 녹화 완료 및 저장 */
-  saveRecording: (studioId: string | number, blob: Blob, mimeType: string) => void;
+  saveRecording: (studioId: string, blob: Blob, mimeType: string) => void;
 
   /** 녹화 취소 */
   cancelRecording: () => void;
@@ -32,7 +32,7 @@ interface LocalRecordingState {
   deleteRecording: (id: string) => void;
 
   /** 특정 스튜디오의 녹화 목록 조회 */
-  getRecordingsByStudio: (studioId: string | number) => LocalRecording[];
+  getRecordingsByStudio: (studioId: string) => LocalRecording[];
 
   /** 녹화 다운로드 */
   downloadRecording: (id: string) => void;

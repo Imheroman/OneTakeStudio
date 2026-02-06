@@ -17,7 +17,7 @@ export function useWorkspaceHome(userId: string) {
   const [createDialogType, setCreateDialogType] = useState<
     "live" | "recording"
   >("live");
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const latestRef = useRef(0);
 
   const fetchRecentStudios = useCallback(async () => {
@@ -61,7 +61,7 @@ export function useWorkspaceHome(userId: string) {
   }, [fetchRecentStudios]);
 
   const handleDeleteStudio = useCallback(
-    async (studioId: number) => {
+    async (studioId: string) => {
       if (
         !confirm(
           "정말 이 스튜디오를 삭제하시겠습니까? 삭제된 스튜디오는 복구할 수 없습니다."

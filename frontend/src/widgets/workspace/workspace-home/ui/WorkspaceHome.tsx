@@ -65,7 +65,7 @@ function StudioListItem({
 }: {
   studio: RecentStudio;
   isDark: boolean;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
   isDeleting: boolean;
 }) {
   return (

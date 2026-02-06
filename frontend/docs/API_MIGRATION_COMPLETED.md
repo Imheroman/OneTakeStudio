@@ -97,5 +97,5 @@
 ---
 
 ## 참고 문서
-- [API_SPECIFICATION.md](./API_SPECIFICATION.md) - 백엔드 API 명세서
+- [API_SPECIFICATION.md](API_SPECIFICATION.md) - 백엔드 API 명세서
 - [API_MIGRATION_PLAN.md](./API_MIGRATION_PLAN.md) - 마이그레이션 계획

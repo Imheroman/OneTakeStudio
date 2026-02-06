@@ -21,7 +21,7 @@ export const InviteMemberRequestSchema = z.object({
 
 export const InviteResponseSchema = z.object({
   inviteId: z.string(),
-  studioId: z.number().optional(),
+  studioId: z.string().optional(),
   email: z.string().optional(),
   inviteeEmail: z.string().optional(),
   role: z.string(),

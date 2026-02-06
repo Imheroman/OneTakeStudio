@@ -27,7 +27,7 @@ const defaultStyle: StudioStyleState = {
 };
 
 interface StudioStylePanelProps {
-  studioId: string | number;
+  studioId: string;
   onClose?: () => void;
   onStyleChange?: (style: StudioStyleState) => void;
   /** 부모(송출 화면)에서 내려준 스타일 — 동기화용 */

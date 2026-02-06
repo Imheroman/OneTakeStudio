@@ -3,6 +3,8 @@ import { create } from "zustand";
 interface PrivateChatState {
   /** 스튜디오별 읽지 않은 프라이빗 메시지 수 */
   unreadCounts: Record<string, number>;
+  /** 마지막으로 확인한 메시지 ID (스튜디오별) */
+  lastSeenMessageIds: Record<string, string>;
 
   /** 읽지 않은 메시지 수 증가 */
   incrementUnread: (studioId: string) => void;
@@ -10,12 +12,15 @@ interface PrivateChatState {
   markAsRead: (studioId: string) => void;
   /** 읽지 않은 메시지 수 설정 */
   setUnreadCount: (studioId: string, count: number) => void;
+  /** 마지막 확인 메시지 ID 설정 */
+  setLastSeenMessageId: (studioId: string, messageId: string) => void;
   /** 읽지 않은 메시지 수 조회 */
   getUnreadCount: (studioId: string) => number;
 }
 
 export const usePrivateChatStore = create<PrivateChatState>((set, get) => ({
   unreadCounts: {},
+  lastSeenMessageIds: {},
 
   incrementUnread: (studioId) =>
     set((state) => ({
@@ -38,6 +43,14 @@ export const usePrivateChatStore = create<PrivateChatState>((set, get) => ({
       unreadCounts: {
         ...state.unreadCounts,
         [studioId]: count,
+      },
+    })),
+
+  setLastSeenMessageId: (studioId, messageId) =>
+    set((state) => ({
+      lastSeenMessageIds: {
+        ...state.lastSeenMessageIds,
+        [studioId]: messageId,
       },
     })),
 

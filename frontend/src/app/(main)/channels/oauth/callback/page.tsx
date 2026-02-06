@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
+import { getHttpErrorMessage } from "@/shared/lib/error-utils";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 function ChannelsOAuthCallbackContent() {
@@ -24,38 +25,48 @@ function ChannelsOAuthCallbackContent() {
       return;
     }
 
-    const handleCallback = () => {
-      // Media Service OAuth 콜백에서 리다이렉트됨 (status + message 파라미터)
-      const callbackStatus = searchParams.get("status");
-      const callbackMessage = searchParams.get("message");
-      const error = searchParams.get("error");
+    const handleCallback = async () => {
+      try {
+        // URL에서 쿼리 파라미터 추출
+        const code = searchParams.get("code");
+        const state = searchParams.get("state");
+        const error = searchParams.get("error");
 
-      if (error) {
-        setStatus("error");
-        setMessage(`인증 실패: ${error}`);
-        return;
-      }
+        if (error) {
+          setStatus("error");
+          setMessage(`인증 실패: ${error}`);
+          return;
+        }
 
-      if (callbackStatus === "success") {
+        if (!code || !state) {
+          setStatus("error");
+          setMessage("인증 정보가 올바르지 않습니다.");
+          return;
+        }
+
+        // TODO: 백엔드 OAuth 콜백 엔드포인트 구현 대기
+        // 백엔드에서 OAuth 콜백 처리
+        // 백엔드는 인증 코드를 토큰으로 교환하고 채널 정보를 저장
+        // const response = await apiClient.get(
+        //   `/api/destinations/oauth/callback?code=${code}&state=${state}`,
+        //   OAuthCallbackResponseSchema,
+        // );
+
+        // 임시 처리: 백엔드 미구현으로 인해 성공 메시지만 표시
         setStatus("success");
-        const platformName = callbackMessage === "youtube" ? "YouTube" :
-                             callbackMessage === "chzzk" ? "치지직" : callbackMessage;
-        setMessage(`${platformName} 채팅 인증이 완료되었습니다.`);
+        setMessage("채널 연결이 완료되었습니다. (백엔드 구현 대기 중)");
+
+        // 2초 후 채널 페이지로 리다이렉트
         setTimeout(() => {
           router.push("/channels");
         }, 2000);
-        return;
-      }
-
-      if (callbackStatus === "error") {
+      } catch (error: unknown) {
+        console.error("OAuth 콜백 처리 실패:", error);
         setStatus("error");
-        setMessage(callbackMessage ?? "채널 연결 중 오류가 발생했습니다.");
-        return;
+        setMessage(
+          getHttpErrorMessage(error, "채널 연결 중 오류가 발생했습니다.")
+        );
       }
-
-      // 알 수 없는 파라미터
-      setStatus("error");
-      setMessage("인증 정보가 올바르지 않습니다.");
     };
 
     handleCallback();

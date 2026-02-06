@@ -2,10 +2,10 @@
 
 ## 완료된 마이그레이션
 
-### 1. proxy → proxy (Next.js 16)
-- **경고**: `The "proxy" file convention is deprecated. Please use "proxy" instead.`
-- **조치**: `src/proxy.ts` → `src/proxy.ts`로 파일명 변경, `export function proxy` → `export function proxy`로 함수명 변경.
-- **참고**: Next.js 16부터 "proxy"라는 이름이 Express 미들웨어와 혼동된다고 하여 "proxy"로 개칭됨. 동작은 동일.
+### 1. middleware → proxy (Next.js 16)
+- **경고**: `The "middleware" file convention is deprecated. Please use "proxy" instead.`
+- **조치**: `src/middleware.ts` → `src/proxy.ts`로 파일명 변경, `export function middleware` → `export function proxy`로 함수명 변경.
+- **참고**: Next.js 16부터 "middleware"라는 이름이 Express 미들웨어와 혼동된다고 하여 "proxy"로 개칭됨. 동작은 동일.
 
 ### 2. 백스테이지 드래그앤드롭 → @dnd-kit
 - **기존**: HTML5 `draggable` + `dataTransfer` 직접 구현 (브라우저별 드래그 미동작 이슈).

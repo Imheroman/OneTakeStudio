@@ -74,7 +74,7 @@ export function useEditLock(options: UseEditLockOptions): UseEditLockReturn {
 
   // 락 획득
   const acquire = useCallback(async (): Promise<boolean> => {
-    if (!studioId || studioId === "") return false;
+    if (!studioId) return false;
 
     setIsLoading(true);
     try {
@@ -101,7 +101,7 @@ export function useEditLock(options: UseEditLockOptions): UseEditLockReturn {
 
   // 락 해제
   const release = useCallback(async () => {
-    if (!studioId || studioId === "") return;
+    if (!studioId) return;
 
     try {
       await releaseEditLock(studioId);
@@ -114,7 +114,7 @@ export function useEditLock(options: UseEditLockOptions): UseEditLockReturn {
 
   // 락 강제 해제
   const forceRelease = useCallback(async () => {
-    if (!studioId || studioId === "") return;
+    if (!studioId) return;
 
     try {
       await forceReleaseEditLock(studioId);
@@ -127,7 +127,7 @@ export function useEditLock(options: UseEditLockOptions): UseEditLockReturn {
 
   // 락 갱신 (heartbeat)
   const extend = useCallback(async () => {
-    if (!studioId || studioId === "") return;
+    if (!studioId) return;
     if (!lockStatus?.isMyLock) return;
 
     try {

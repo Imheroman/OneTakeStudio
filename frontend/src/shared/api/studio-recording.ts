@@ -25,7 +25,7 @@ export async function startRecording(
 }
 
 export async function stopRecording(
-  studioId: number,
+  studioId: string,
 ): Promise<RecordingResponseDto> {
   const res = await apiClient.post(
     `${RECORDINGS_BASE}/${studioId}/stop`,
@@ -35,7 +35,7 @@ export async function stopRecording(
 }
 
 export async function pauseRecording(
-  studioId: number,
+  studioId: string,
 ): Promise<RecordingResponseDto> {
   const res = await apiClient.post(
     `${RECORDINGS_BASE}/${studioId}/pause`,
@@ -45,7 +45,7 @@ export async function pauseRecording(
 }
 
 export async function resumeRecording(
-  studioId: number,
+  studioId: string,
 ): Promise<RecordingResponseDto> {
   const res = await apiClient.post(
     `${RECORDINGS_BASE}/${studioId}/resume`,
@@ -55,7 +55,7 @@ export async function resumeRecording(
 }
 
 export async function getRecordingsByStudio(
-  studioId: number,
+  studioId: string,
 ): Promise<RecordingResponseDto[]> {
   const res = await apiClient.get(
     `${RECORDINGS_BASE}/studio/${studioId}`,
@@ -65,7 +65,7 @@ export async function getRecordingsByStudio(
 }
 
 export async function getActiveRecording(
-  studioId: number,
+  studioId: string,
 ): Promise<RecordingResponseDto | null> {
   const res = await apiClient.get(
     `${RECORDINGS_BASE}/studio/${studioId}/active`,

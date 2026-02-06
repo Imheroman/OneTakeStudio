@@ -22,10 +22,10 @@ export const ChatMessageTypeSchema = z.enum([
 
 export const ChatMessageSchema = z.object({
   messageId: z.string(),
-  studioId: z.union([z.string(), z.number()]),
+  studioId: z.string(),
   platform: ChatPlatformSchema,
   messageType: ChatMessageTypeSchema,
-  userId: z.number().nullable().optional(),
+  userId: z.string().nullable().optional(),
   senderName: z.string(),
   senderProfileUrl: z.string().nullable().optional(),
   content: z.string(),
@@ -36,7 +36,7 @@ export const ChatMessageSchema = z.object({
 });
 
 export const ChatSendRequestSchema = z.object({
-  studioId: z.union([z.string(), z.number()]),
+  studioId: z.string(),
   content: z.string(),
   senderName: z.string(),
   platform: ChatPlatformSchema.optional(),

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { apiClient } from "./client";
 
 const RecentStudioItemSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   title: z.string(),
   date: z.string(),
 });

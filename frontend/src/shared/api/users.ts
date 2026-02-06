@@ -8,17 +8,10 @@ import {
   ApiResponseUserProfileSchema,
   type UserProfileDto,
 } from "./dto/user";
-import { SuccessResponseSchema } from "./schemas";
 
 export type UpdateProfileRequest = {
   nickname?: string;
   profileImageUrl?: string | null;
-};
-
-export type ChangePasswordRequest = {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
 };
 
 function toProfileDto(d: { userId: string; email: string; nickname: string; profileImageUrl?: string | null; createdAt?: string }): UserProfileDto {
@@ -50,15 +43,4 @@ export async function updateProfile(
     body,
   );
   return toProfileDto(res.data);
-}
-
-/** 비밀번호 변경 — PUT /api/users/password */
-export async function changePassword(
-  body: ChangePasswordRequest,
-): Promise<void> {
-  await apiClient.put(
-    "/api/users/password",
-    SuccessResponseSchema,
-    body,
-  );
 }

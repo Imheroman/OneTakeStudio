@@ -14,7 +14,7 @@ export function useVideoLibrary() {
   const fetchVideos = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { videos: list } = await getRecordings({ page: 0, size: 100 });
+      const { videos: list } = await getRecordings({ page: 0, size: 50 });
       setVideos(list);
     } catch (error) {
       console.error("비디오 목록 조회 실패:", error);
@@ -37,6 +37,6 @@ export function useVideoLibrary() {
     setFilter,
     isLoading,
     handleMoreClick,
-    refetch: () => fetchVideos(),
+    refetch: fetchVideos,
   };
 }

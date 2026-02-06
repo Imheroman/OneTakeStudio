@@ -36,7 +36,7 @@ export interface LocalPublishedTrack {
 }
 
 export interface UseStudioLiveKitOptions {
-  studioId: number;
+  studioId: string;
   userId: string;
   nickname: string;
   enabled?: boolean;
@@ -96,7 +96,7 @@ export function useStudioLiveKit(
 
   // LiveKit Room 연결
   useEffect(() => {
-    if (!enabled || !studioId || studioId === 0 || !userId) {
+    if (!enabled || !studioId || !userId) {
       return;
     }
 

@@ -119,5 +119,5 @@ Access to fetch at 'http://localhost:8080/api/...' has been blocked by CORS poli
 
 ## 📚 더 자세한 정보
 
-- [전환 가이드](./PLAYWRIGHT_REAL_API_MIGRATION.md)
-- [테스트 전략](./PLAYWRIGHT_TEST_STRATEGY.md)
+- [전환 가이드](PLAYWRIGHT_REAL_API_MIGRATION.md)
+- [테스트 전략](PLAYWRIGHT_TEST_STRATEGY.md)

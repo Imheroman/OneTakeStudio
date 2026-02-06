@@ -95,7 +95,7 @@ export const SourceSchema = z.object({
 
 // 스튜디오 스키마 (백엔드 API 응답 형식)
 export const StudioSchema = z.object({
-  studioId: z.number(),
+  studioId: z.string(),
   /** 현재 사용자의 스튜디오 내 역할 (HOST, MANAGER) */
   myRole: z.enum(["HOST", "MANAGER"]).optional(),
   name: z.string(),
@@ -111,9 +111,9 @@ export const StudioSchema = z.object({
   updatedAt: z.string().nullable().optional(),
 });
 
-// 최근 스튜디오 스키마 (워크스페이스용 - id가 number, date 필드 포함)
+// 최근 스튜디오 스키마 (워크스페이스용 - id는 백엔드 UUID 문자열, date 필드 포함)
 export const RecentStudioSchema = z.object({
-  id: z.number(),
+  id: z.string(),
   title: z.string(),
   date: z.string(),
   role: z.enum(["HOST", "MANAGER"]).optional(),
@@ -164,7 +164,7 @@ export const InviteMemberRequestSchema = z.object({
 // 백엔드 InviteResponse: inviteeEmail 사용, studioId는 목록 응답에 없을 수 있음
 export const InviteResponseSchema = z.object({
   inviteId: z.string(),
-  studioId: z.number().optional(),
+  studioId: z.string().optional(),
   email: z.string().optional(),
   inviteeEmail: z.string().optional(),
   role: z.string(),

@@ -1,15 +1,9 @@
 import { create } from "zustand";
 export type ShortStatus = "idle" | "loading" | "completed";
 
-export interface ShortItem {
+interface ShortItem {
   id: number;
   status: ShortStatus;
-  currentStep?: number;
-  totalSteps?: number;
-  currentStepKey?: string;
-  videoUrl?: string;
-  jobId?: string;
-  videoId?: string;
 }
 
 interface ShortsStore {
@@ -18,10 +12,8 @@ interface ShortsStore {
   isModalOpen: boolean;
 
   // 단순 상태 변경 액션들만 남김
-  setShortsStatus: (shorts: ShortItem[]) => void;
+  setShortsStatus: (count: number) => void;
   addNotification: (msg: string) => void;
-  removeNotification: (index: number) => void;
-  clearNotifications: () => void;
   openResultModal: () => void;
   closeResultModal: () => void;
   reset: () => void;
@@ -40,41 +32,17 @@ export const useShortsStore = create<ShortsStore>((set) => ({
   closeResultModal: () => set({ isModalOpen: false }),
   addNotification: (msg) =>
     set((state) => ({ notifications: [msg, ...state.notifications] })),
-  removeNotification: (index) =>
-    set((state) => ({
-      notifications: state.notifications.filter((_, i) => i !== index),
-    })),
-  clearNotifications: () => set({ notifications: [] }),
 
-  // 서버에서 받은 shorts 배열 기반으로 상태 업데이트
-  setShortsStatus: (serverShorts) =>
+  // 서버에서 받은 '완료된 개수'에 따라 상태 업데이트
+  setShortsStatus: (count) =>
     set((state) => {
-      const newShorts = state.shorts.map((item, index) => {
-        const server = serverShorts[index];
-        if (!server) return item;
-
-        if (server.status === "completed") {
-          return {
-            ...item,
-            status: "completed" as ShortStatus,
-            videoUrl: server.videoUrl ?? item.videoUrl,
-            jobId: server.jobId ?? item.jobId,
-            videoId: server.videoId ?? item.videoId,
-          };
-        }
-        if (server.status === "loading") {
-          return {
-            ...item,
-            status: "loading" as ShortStatus,
-            currentStep: server.currentStep,
-            totalSteps: server.totalSteps,
-            currentStepKey: server.currentStepKey,
-            jobId: server.jobId ?? item.jobId,
-            videoId: server.videoId ?? item.videoId,
-          };
-        }
-        return item;
-      });
+      const newShorts = state.shorts.map((item, index) => ({
+        ...item,
+        status:
+          index < count
+            ? ("completed" as ShortStatus)
+            : ("loading" as ShortStatus),
+      }));
       return { shorts: newShorts };
     }),
 

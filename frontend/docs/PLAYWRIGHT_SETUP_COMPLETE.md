@@ -170,7 +170,7 @@ http.post(`${BASE_URL}/api/v1/auth/login`, async ({ request }) => {
 
 ## 📚 참고 자료
 
-- [테스트 전략 문서](./PLAYWRIGHT_TEST_STRATEGY.md)
+- [테스트 전략 문서](PLAYWRIGHT_TEST_STRATEGY.md)
 - [테스트 가이드](../tests/README.md)
 - [Playwright 공식 문서](https://playwright.dev/)
 

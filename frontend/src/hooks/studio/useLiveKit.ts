@@ -14,7 +14,7 @@ import {
 import { joinStream, leaveStream } from "@/shared/api/studio-stream";
 
 export interface UseLiveKitOptions {
-  studioId: string | number;
+  studioId: string;
   participantName: string;
   onConnected?: () => void;
   onDisconnected?: () => void;
@@ -166,7 +166,7 @@ export function useLiveKit(options: UseLiveKitOptions): UseLiveKitReturn {
       }
 
       // 서버에 퇴장 알림
-      await leaveStream(Number(studioId)).catch(console.error);
+      await leaveStream(studioId).catch(console.error);
 
       setConnectionState(ConnectionState.Disconnected);
       console.log("Disconnected from LiveKit");

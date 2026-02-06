@@ -23,8 +23,6 @@ interface NotificationPanelProps {
   onClose: () => void;
   onAccept?: (id: string) => void;
   onDecline?: (id: string) => void;
-  onDismiss?: (id: string) => void;
-  onClearAll?: () => void;
 }
 
 function NotificationRow({
@@ -127,8 +125,6 @@ export function NotificationPanel({
   onClose,
   onAccept,
   onDecline,
-  onDismiss,
-  onClearAll,
 }: NotificationPanelProps) {
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
@@ -172,33 +168,18 @@ export function NotificationPanel({
         >
           알림
         </h2>
-        <div className="flex items-center gap-1">
-          {notifications.length > 0 && onClearAll && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClearAll}
-              className={cn(
-                "text-xs h-8 px-2",
-                isDark ? "text-gray-400 hover:text-white hover:bg-gray-800" : "text-gray-500 hover:text-gray-700"
-              )}
-            >
-              모두 삭제
-            </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className={cn(
+            "h-8 w-8",
+            isDark ? "text-gray-400 hover:text-white hover:bg-gray-800" : ""
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className={cn(
-              "h-8 w-8",
-              isDark ? "text-gray-400 hover:text-white hover:bg-gray-800" : ""
-            )}
-            aria-label="알림 패널 닫기"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+          aria-label="알림 패널 닫기"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* 알림 목록 */}
@@ -245,24 +226,12 @@ export function NotificationPanel({
             <div
               key={notification.id}
               className={cn(
-                "group relative rounded-lg p-4 space-y-3 transition-colors",
+                "rounded-lg p-4 space-y-3 transition-colors",
                 isDark
                   ? "bg-gray-800/50 border border-gray-700"
                   : "border border-gray-200 bg-gray-50/50"
               )}
             >
-              {onDismiss && (
-                <button
-                  onClick={() => onDismiss(notification.id)}
-                  className={cn(
-                    "absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity",
-                    isDark ? "hover:bg-gray-700 text-gray-400" : "hover:bg-gray-200 text-gray-400"
-                  )}
-                  aria-label="알림 삭제"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
               <div className="flex items-start gap-3">
                 <div
                   className={cn(

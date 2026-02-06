@@ -157,8 +157,8 @@ const envSchema = z.object({
 ## 📚 참고 문서
 
 - [Zod 공식 문서](https://zod.dev/)
-- [ZOD_VS_TRPC_ANALYSIS.md](./ZOD_VS_TRPC_ANALYSIS.md) - zod vs tRPC 비교 분석
-- [ZOD_VALIDATION_CHECKLIST.md](./ZOD_VALIDATION_CHECKLIST.md) - 체크리스트
+- [ZOD_VS_TRPC_ANALYSIS.md](ZOD_VS_TRPC_ANALYSIS.md) - zod vs tRPC 비교 분석
+- [ZOD_VALIDATION_CHECKLIST.md](ZOD_VALIDATION_CHECKLIST.md) - 체크리스트
 
 ---
 

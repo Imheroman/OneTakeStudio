@@ -33,7 +33,7 @@ export interface BannerItem {
   isTicker?: boolean;
 }
 
-function loadBannersFromStorage(studioId: string | number): BannerItem[] {
+function loadBannersFromStorage(studioId: string): BannerItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = sessionStorage.getItem(`${STORAGE_KEY_PREFIX}${studioId}`);
@@ -52,7 +52,7 @@ function loadBannersFromStorage(studioId: string | number): BannerItem[] {
   }
 }
 
-function saveBannersToStorage(studioId: string | number, banners: BannerItem[]) {
+function saveBannersToStorage(studioId: string, banners: BannerItem[]) {
   try {
     sessionStorage.setItem(
       `${STORAGE_KEY_PREFIX}${studioId}`,
@@ -64,7 +64,7 @@ function saveBannersToStorage(studioId: string | number, banners: BannerItem[]) 
 }
 
 interface StudioBannerPanelProps {
-  studioId: string | number;
+  studioId: string;
   onClose?: () => void;
   onSelectBanner?: (banner: BannerItem | null) => void;
   /** 송출 화면에 표시 중인 배너 ID (패널에서 하이라이트용) */

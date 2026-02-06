@@ -8,7 +8,7 @@ import { apiClient } from "./client";
 
 const BannerSchema = z.object({
   id: z.union([z.string(), z.number()]),
-  studioId: z.union([z.string(), z.number()]).optional(),
+  studioId: z.string().optional(),
   text: z.string(),
   timerSeconds: z.number().nullable().optional(),
   isTicker: z.boolean().optional(),

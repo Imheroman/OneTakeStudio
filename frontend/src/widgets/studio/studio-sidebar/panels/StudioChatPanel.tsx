@@ -50,7 +50,7 @@ function ChatMessageRow({
 }
 
 interface StudioChatPanelProps {
-  studioId: number;
+  studioId: string;
   onClose?: () => void;
   filterPlatform?: "INTERNAL" | null; // null = 전체(공개), INTERNAL = 프라이빗만
 }
