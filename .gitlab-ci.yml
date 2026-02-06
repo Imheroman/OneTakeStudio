@@ -107,7 +107,7 @@ setup-secrets:
 
     - echo "=== Secrets 생성 완료 ==="
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
 #      changes:
 #        - infra/apps/**
       when: manual
@@ -126,7 +126,7 @@ build-core:
       - core-service/target/*.jar
     expire_in: 1 hour
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
@@ -144,7 +144,7 @@ build-media:
       - media-service/target/*.jar
     expire_in: 1 hour
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
@@ -173,7 +173,7 @@ docker-core:
     - job: build-core
       artifacts: true
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
@@ -199,7 +199,7 @@ docker-media:
     - job: build-media
       artifacts: true
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
@@ -231,7 +231,7 @@ deploy-core:
   needs:
     - job: docker-core
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
@@ -259,7 +259,7 @@ deploy-media:
   needs:
     - job: docker-media
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
@@ -291,7 +291,7 @@ deploy-livekit:
       # Wait for server
       kubectl rollout status deployment/livekit-server -n livekit --timeout=300s
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
@@ -315,7 +315,7 @@ deploy-frontend:
     - vercel deploy --prod --yes --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN  # vercel build 작동
   rules:
     # main, master 브랜치이면서 'frontend' 폴더 내부에 변경이 있을 때만 실행
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "INFRA/infra"  # TODO: infra 추후 제거
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev3" || $CI_COMMIT_BRANCH == "INFRA/infra"
       changes:
         compare_to: refs/heads/master
         paths:
