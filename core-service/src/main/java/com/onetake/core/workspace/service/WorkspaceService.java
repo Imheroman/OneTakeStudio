@@ -43,7 +43,7 @@ public class WorkspaceService {
                     return RecentStudioResponse.from(studio, member.getRole());
                 })
                 .filter(response -> response != null)
-                .sorted(Comparator.comparing(RecentStudioResponse::getDate).reversed())
+                .sorted(Comparator.comparing(RecentStudioResponse::getCreatedAt).reversed())
                 .limit(RECENT_STUDIO_LIMIT)
                 .toList();
 

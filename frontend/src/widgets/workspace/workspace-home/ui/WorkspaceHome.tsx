@@ -10,12 +10,49 @@ import {
   Shield,
   Trash2,
   Loader2,
+  HardDrive,
+  Cloud,
 } from "lucide-react";
 import { StudioCreation } from "@/widgets/studio/studio-creation";
 import { useWorkspaceHome } from "@/features/workspace/workspace-home";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { cn } from "@/shared/lib/utils";
 import type { RecentStudio } from "@/entities/studio/model";
+
+// 저장 유형 배지 컴포넌트
+function StorageBadge({ storage }: { storage?: string }) {
+  if (!storage) return null;
+
+  const config = {
+    LOCAL: {
+      label: "로컬",
+      icon: HardDrive,
+      className:
+        "bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-600",
+    },
+    CLOUD: {
+      label: "클라우드",
+      icon: Cloud,
+      className:
+        "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700",
+    },
+  }[storage];
+
+  if (!config) return null;
+
+  const Icon = config.icon;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border",
+        config.className
+      )}
+    >
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </span>
+  );
+}
 
 // 역할별 배지 컴포넌트
 function RoleBadge({ role }: { role?: string }) {
@@ -107,6 +144,7 @@ function StudioListItem({
             {studio.date}
           </p>
           {studio.role && <RoleBadge role={studio.role} />}
+          <StorageBadge storage={studio.recordingStorage} />
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">

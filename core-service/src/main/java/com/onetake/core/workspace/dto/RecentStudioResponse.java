@@ -5,6 +5,9 @@ import com.onetake.core.studio.entity.StudioMemberRole;
 import lombok.Builder;
 import lombok.Getter;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Getter
@@ -17,6 +20,10 @@ public class RecentStudioResponse {
     private String title;
     private String date;
     private String role;  // HOST, MANAGER
+    private String recordingStorage;  // LOCAL, CLOUD
+
+    @JsonIgnore
+    private LocalDateTime createdAt;
 
     public static RecentStudioResponse from(Studio studio, StudioMemberRole role) {
         return RecentStudioResponse.builder()
@@ -24,6 +31,8 @@ public class RecentStudioResponse {
                 .title(studio.getName())
                 .date(studio.getCreatedAt().format(DATE_FORMAT))
                 .role(role.name())
+                .recordingStorage(studio.getRecordingStorage() != null ? studio.getRecordingStorage().name() : "LOCAL")
+                .createdAt(studio.getCreatedAt())
                 .build();
     }
 }

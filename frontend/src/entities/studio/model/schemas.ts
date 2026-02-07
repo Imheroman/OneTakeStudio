@@ -117,6 +117,7 @@ export const RecentStudioSchema = z.object({
   title: z.string(),
   date: z.string(),
   role: z.enum(["HOST", "MANAGER"]).optional(),
+  recordingStorage: z.enum(["LOCAL", "CLOUD"]).optional(),
 });
 
 // 스튜디오 목록 응답 스키마 (워크스페이스용)
