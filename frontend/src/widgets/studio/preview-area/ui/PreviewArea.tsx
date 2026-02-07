@@ -559,7 +559,10 @@ function PreviewAreaInner({
   const trRef = useRef<Konva.Transformer>(null);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [effectivePixelRatio, setEffectivePixelRatio] = useState(1);
+  /** 마운트 시 DPR 1회 캡처 — 줌 시 동적 갱신하지 않아 Konva 캔버스 재생성(검은 화면) 방지 */
+  const stablePixelRatio = useRef(
+    typeof window !== "undefined" ? Math.ceil(window.devicePixelRatio ?? 1) : 1
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCapturePreview, setShowCapturePreview] = useState(false);
   const [sourceElements, setSourceElements] = useState<
@@ -597,36 +600,9 @@ function PreviewAreaInner({
     };
   }, []);
 
-  /** 줌 시 DPR만 갱신. containerSize는 ResizeObserver에서만 갱신해 충돌 방지. Stage key 제거로 리마운트 없이 RAF 유지. */
-  const VIEWPORT_DEBOUNCE_MS = 120;
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.visualViewport) return;
-
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-    const applyPixelRatio = () => {
-      const dpr = window.devicePixelRatio ?? 1;
-      const zoom = window.visualViewport?.scale ?? 1;
-      setEffectivePixelRatio(Math.min(Math.max(dpr * zoom, 1), 5));
-    };
-
-    const scheduleUpdate = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        timeoutId = null;
-        applyPixelRatio();
-      }, VIEWPORT_DEBOUNCE_MS);
-    };
-
-    applyPixelRatio();
-    window.visualViewport.addEventListener("resize", scheduleUpdate);
-    window.visualViewport.addEventListener("scroll", scheduleUpdate);
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      window.visualViewport?.removeEventListener("resize", scheduleUpdate);
-      window.visualViewport?.removeEventListener("scroll", scheduleUpdate);
-    };
-  }, []);
+  /** DPR은 마운트 시 stablePixelRatio ref에 1회 캡처.
+   *  줌 시 visualViewport 이벤트로 State를 갱신하면 Konva Stage의 pixelRatio prop이
+   *  바뀌어 내부 캔버스가 재생성되고 검은 화면이 깜빡이므로 동적 갱신하지 않음. */
 
   const { width: stageWidth, height: stageHeight } =
     RESOLUTION_SIZE[resolution];
@@ -766,22 +742,41 @@ function PreviewAreaInner({
     scheduleCaptureBatchDraw();
   }, [hasSources, sourceElementsKey, sortedSourcesKey, sourceTransformsSyncKey, scheduleCaptureBatchDraw]);
 
-  /** hasSources가 true일 때만 containerRef가 마운트됨. 의존성에 포함해 컨테이너가 렌더된 후 ResizeObserver 설정 */
+  /** hasSources가 true일 때만 containerRef가 마운트됨. 의존성에 포함해 컨테이너가 렌더된 후 ResizeObserver 설정.
+   *  줌 시 ResizeObserver가 연속 호출되어 Stage width/height가 계속 바뀌면 검은 화면이 깜빡이므로
+   *  rAF + 300ms 디바운스로 최종 크기만 반영한다. */
   useEffect(() => {
     if (!hasSources) return;
     const el = containerRef.current;
     if (!el) return;
-    const updateSize = () => {
+    let rafId: number | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const commitSize = () => {
       const w = Math.floor(el.clientWidth);
       const h = Math.floor(el.clientHeight);
       setContainerSize((prev) =>
         prev.width === w && prev.height === h ? prev : { width: w, height: h }
       );
     };
-    const ro = new ResizeObserver(updateSize);
+    const onResize = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          commitSize();
+        });
+      }, 300);
+    };
+    const ro = new ResizeObserver(onResize);
     ro.observe(el);
-    updateSize();
-    return () => ro.disconnect();
+    commitSize(); // 최초 1회 즉시 측정
+    return () => {
+      ro.disconnect();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, [hasSources]);
 
   /** 해상도 변경 시에도 컨테이너 재측정 및 스케일 재계산 트리거 */
@@ -1168,7 +1163,7 @@ function PreviewAreaInner({
         ref={stageRef}
         width={Math.max(1, displayWidth)}
         height={Math.max(1, displayHeight)}
-        pixelRatio={effectivePixelRatio}
+        pixelRatio={stablePixelRatio.current}
         className="absolute inset-0"
         style={{ left: 0, top: 0 }}
         onClick={(e) => {
