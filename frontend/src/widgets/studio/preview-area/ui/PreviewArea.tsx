@@ -937,10 +937,21 @@ function PreviewAreaInner({
 
   const streamsMap = useRef<Map<string, MediaStream>>(new Map());
 
+  /** 소스 ID 목록 안정화: visibility/순서 변경만으로 재실행 방지 */
+  const sourceIdsKey = useMemo(
+    () => sources.map((s) => s.id).sort().join(","),
+    [sources]
+  );
+  /** 소스 셋업 시 최신 sources를 참조하기 위한 ref */
+  const sourcesRef = useRef(sources);
+  sourcesRef.current = sources;
+
   useEffect(() => {
     let cancelled = false;
-    const sourceIds = new Set(sources.map((s) => s.id));
-    // 제거된 소스만 삭제 (전체 클리어 X → 캡처 시점 공백 방지)
+    const currentSources = sourcesRef.current;
+    const sourceIds = new Set(currentSources.map((s) => s.id));
+
+    // 제거된 소스만 삭제 + 해당 스트림 정리 (전체 클리어 X → 검은 화면 방지)
     setSourceElements((prev) => {
       if (prev.size === 0) return prev;
       let changed = false;
@@ -948,6 +959,12 @@ function PreviewAreaInner({
       next.forEach((_, id) => {
         if (!sourceIds.has(id)) {
           next.delete(id);
+          // 제거된 소스의 스트림만 정리
+          const stream = streamsMap.current.get(id);
+          if (stream) {
+            stream.getTracks().forEach((t) => t.stop());
+            streamsMap.current.delete(id);
+          }
           changed = true;
         }
       });
@@ -959,28 +976,17 @@ function PreviewAreaInner({
       element: HTMLVideoElement | HTMLImageElement
     ) => {
       if (cancelled) return;
-      
-      // 소스 엘리먼트 정보 확인
-      if (element instanceof HTMLVideoElement && element.srcObject) {
-        const stream = element.srcObject as MediaStream;
-        const videoTrack = stream.getVideoTracks()[0];
-        console.log(`[PreviewArea] 비디오 소스 추가:`, {
-          sourceId,
-          trackLabel: videoTrack?.label,
-          trackSettings: videoTrack?.getSettings(),
-          videoSize: {
-            width: element.videoWidth,
-            height: element.videoHeight,
-          },
-        });
-      }
-      
       setSourceElements((prev) => new Map(prev).set(sourceId, element));
     };
 
     const setupSources = async () => {
-      for (const source of sources) {
+      for (const source of currentSources) {
         if (cancelled) return;
+
+        // 이미 엘리먼트가 존재하면 건너뛰기 → 불필요한 재생성/검은 화면 방지
+        const existing = sourceElements.get(source.id);
+        if (existing) continue;
+
         if (source.type === "image") {
           const img = document.createElement("img");
           img.crossOrigin = "anonymous";
@@ -1084,12 +1090,8 @@ function PreviewAreaInner({
 
     return () => {
       cancelled = true;
-      streamsMap.current.forEach((stream) =>
-        stream.getTracks().forEach((t) => t.stop())
-      );
-      streamsMap.current.clear();
     };
-  }, [sources, streamIdsKey ?? availableStreamIds, getSourceStream]);
+  }, [sourceIdsKey, streamIdsKey ?? availableStreamIds, getSourceStream]);
 
   if (!hasSources) {
     return (
