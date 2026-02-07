@@ -733,15 +733,20 @@ export function useStudioMain(
     });
   }, [sources]);
 
+  /** displaySources의 ID + 타입을 안정적 문자열로 캡처 — 참조 변경에 의한 불필요한 effect 재실행 방지 */
   const displaySourceOrderKey = useMemo(
-    () => displaySources.map((s) => s.id).join(","),
+    () => displaySources.map((s) => `${s.id}:${s.type}`).join(","),
     [displaySources]
   );
+  /** displaySources 최신 값을 ref로 유지 — effect 의존성에서 제외하면서도 콜백 내에서 접근 가능 */
+  const displaySourcesRef = useRef(displaySources);
+  displaySourcesRef.current = displaySources;
   useEffect(() => {
-    if (displaySources.length === 0) return;
+    const ds = displaySourcesRef.current;
+    if (ds.length === 0) return;
     const { width: stageWidth, height: stageHeight } = stageSize;
     setSourceTransforms((prev) => {
-      const sorted = [...displaySources].sort(
+      const sorted = [...ds].sort(
         (a, b) => (prev[a.id]?.zIndex ?? 0) - (prev[b.id]?.zIndex ?? 0)
       );
       const arranged = arrangeSourcesInLayout(
@@ -752,19 +757,20 @@ export function useStudioMain(
       );
       const next: Record<string, SourceTransform> = { ...prev };
       const isPipLayout =
-        displaySources.length === 2 &&
-        displaySources.some((s) => s.type === "screen") &&
-        displaySources.some((s) => s.type === "video");
+        ds.length === 2 &&
+        ds.some((s) => s.type === "screen") &&
+        ds.some((s) => s.type === "video");
       // arranged 순서로 할당 (pip: 화면공유 전체→cell0, 웹캠 작게→cell1)
       // pip: 웹캠이 오버레이이므로 앞에 보여야 함 → zIndex 역순 (arranged[0]=화면 z0, arranged[1]=웹캠 z1)
       arranged.forEach((item, i) => {
         const s = item.source;
-        const z = isPipLayout ? i : displaySources.length - 1 - i;
+        const z = isPipLayout ? i : ds.length - 1 - i;
         const current = prev[s.id];
         const cell = item;
         const hasValidTransform =
           current != null && current.width > 0 && current.height > 0;
-        if (hasValidTransform && !isPipLayout) {
+        if (hasValidTransform) {
+          // 기존 transform 보존 (PIP/일반 레이아웃 모두 사용자 위치 유지)
           next[s.id] = { ...current, zIndex: z };
         } else if (cell) {
           next[s.id] = toNormalizedTransform(
@@ -790,7 +796,7 @@ export function useStudioMain(
       });
       return next;
     });
-  }, [displaySourceOrderKey, displaySources, currentLayout, stageSize]);
+  }, [displaySourceOrderKey, currentLayout, stageSize]);
 
   // LiveKit 연결 및 송출 시작
   const getPreviewStreamRef = options?.getPreviewStreamRef;

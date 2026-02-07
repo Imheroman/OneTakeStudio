@@ -557,6 +557,8 @@ function PreviewAreaInner({
   const assetGroupRef = useRef<Konva.Group>(null);
   const chatOverlayGroupRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
+  /** 드래그 중인 소스 ID — 드래그 중에는 Konva 노드의 현재 위치를 사용해 re-render snap-back 방지 */
+  const draggingIdRef = useRef<string | null>(null);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   /** 마운트 시 DPR 1회 캡처 — 줌 시 동적 갱신하지 않아 Konva 캔버스 재생성(검은 화면) 방지 */
@@ -684,16 +686,6 @@ function PreviewAreaInner({
           stageHeight
         );
       }
-      
-      // 디버깅: 좌표 변환 확인
-      if (index === 0) {
-        console.log(`[PreviewArea] getTransform(${sourceId}):`, {
-          normalized: t,
-          pixel: result,
-          stageSize: { width: stageWidth, height: stageHeight },
-        });
-      }
-      
       return result;
     },
     [sourceTransforms, arranged, stageWidth, stageHeight]
@@ -1224,6 +1216,11 @@ function PreviewAreaInner({
             {sortedSources.map((source, index) => {
               const transform = getTransform(source.id, index);
               const el = sourceElements.get(source.id);
+              // 드래그 중이면 Konva 노드의 현재 위치를 사용 (re-render 시 상태 값으로 snap-back 방지)
+              const isDragging = draggingIdRef.current === source.id;
+              const existingNode = nodeRefs.current.get(source.id);
+              const groupX = isDragging && existingNode ? existingNode.x() : transform.x;
+              const groupY = isDragging && existingNode ? existingNode.y() : transform.y;
               return (
                 <Group
                   key={source.id}
@@ -1231,8 +1228,8 @@ function PreviewAreaInner({
                   ref={(node) => {
                     if (node) nodeRefs.current.set(source.id, node);
                   }}
-                  x={transform.x}
-                  y={transform.y}
+                  x={groupX}
+                  y={groupY}
                   clip={
                     source.type === "video" && styleState?.theme === "circle"
                       ? undefined
@@ -1270,7 +1267,11 @@ function PreviewAreaInner({
                       : undefined
                   }
                   draggable={isEditMode}
+                  onDragStart={() => {
+                    draggingIdRef.current = source.id;
+                  }}
                   onDragEnd={(e) => {
+                    draggingIdRef.current = null;
                     const node = e.target;
                     // Group 내부의 논리 좌표 (스케일 적용 전)
                     const tx = node.x();
