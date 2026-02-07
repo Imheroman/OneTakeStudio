@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { motion, LayoutGroup } from "motion/react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { sidebarSpring } from "@/shared/lib/sidebar-motion";
@@ -34,8 +34,15 @@ import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBa
 import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
 import type { StudioStyleState } from "@/widgets/studio/studio-sidebar/panels/StudioStylePanel";
 import type { ConnectedDestinationItem } from "@/widgets/studio/studio-sidebar/ui/StudioSidebar";
+import { z } from "zod";
 import { getChatHistory } from "@/shared/api/studio-chat";
 import type { ChatMessage } from "@/entities/chat/model";
+
+const ApiResponseMarkerSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  data: z.any().optional().nullable(),
+});
 
 const DEFAULT_STYLE: StudioStyleState = {
   brandColor: "#5d4cc7",
@@ -62,6 +69,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const [showUnsavedConfirmModal, setShowUnsavedConfirmModal] = useState(false);
   const [showLockedByOtherModal, setShowLockedByOtherModal] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const liveStartedAtRef = useRef<number | null>(null);
   const [chatOverlayVisible, setChatOverlayVisible] = useState(false);
   const [chatOverlayMessages, setChatOverlayMessages] = useState<ChatMessage[]>([]);
 
@@ -219,6 +227,38 @@ export function StudioMain({ studioId }: StudioMainProps) {
     getPreviewStreamRef,
     requestCaptureDrawRef,
   });
+
+  // 라이브 시작/종료 시 타임스탬프 기록 (북마크 경과 시간 계산용)
+  useEffect(() => {
+    if (isLive) {
+      liveStartedAtRef.current = Date.now();
+    } else {
+      liveStartedAtRef.current = null;
+    }
+  }, [isLive]);
+
+  // 북마크 클릭 핸들러: API로 마커 생성
+  const handleBookmarkClick = useCallback(async () => {
+    const startedAt = liveStartedAtRef.current;
+    if (!startedAt) {
+      // 라이브 중이 아니면 로컬 카운터만 증가
+      setBookmarkCount((c) => c + 1);
+      return;
+    }
+    const timestampSec = (Date.now() - startedAt) / 1000;
+    try {
+      await apiClient.post("/api/media/markers", ApiResponseMarkerSchema, {
+        studioId,
+        timestampSec,
+        label: "북마크",
+      });
+      setBookmarkCount((c) => c + 1);
+    } catch (error) {
+      console.error("북마크 생성 실패:", error);
+      // API 실패해도 UI 카운터는 증가시켜 피드백 제공
+      setBookmarkCount((c) => c + 1);
+    }
+  }, [studioId]);
 
   // 편집 모드 진입 시 락 획득 시도
   const handleEditModeToggle = async () => {
@@ -410,7 +450,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             onForceReleaseLock={handleForceReleaseLock}
             isStateSyncConnected={isStateSyncConnected}
             bookmarkCount={bookmarkCount}
-            onBookmarkClick={() => setBookmarkCount((c) => c + 1)}
+            onBookmarkClick={handleBookmarkClick}
           />
 
           {/* 콘텐츠: 전체 높이 사용. 하단 pb로 접힌 토글 네브에 퀵 레이아웃 바가 가리지 않도록 여백 */}
