@@ -34,6 +34,8 @@ import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBa
 import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
 import type { StudioStyleState } from "@/widgets/studio/studio-sidebar/panels/StudioStylePanel";
 import type { ConnectedDestinationItem } from "@/widgets/studio/studio-sidebar/ui/StudioSidebar";
+import { getChatHistory } from "@/shared/api/studio-chat";
+import type { ChatMessage } from "@/entities/chat/model";
 
 const DEFAULT_STYLE: StudioStyleState = {
   brandColor: "#5d4cc7",
@@ -60,6 +62,33 @@ export function StudioMain({ studioId }: StudioMainProps) {
   const [showUnsavedConfirmModal, setShowUnsavedConfirmModal] = useState(false);
   const [showLockedByOtherModal, setShowLockedByOtherModal] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [chatOverlayVisible, setChatOverlayVisible] = useState(false);
+  const [chatOverlayMessages, setChatOverlayMessages] = useState<ChatMessage[]>([]);
+
+  // 채팅 오버레이용 폴링: chatOverlayVisible이 true일 때만 5초 간격으로 채팅 조회
+  useEffect(() => {
+    if (!chatOverlayVisible || !studioId) return;
+    let cancelled = false;
+    const fetchOverlayChat = async () => {
+      try {
+        const list = await getChatHistory(studioId);
+        if (cancelled) return;
+        // INTERNAL 제외, 공개 메시지만
+        const publicMessages = list.filter((m) => m.platform !== "INTERNAL");
+        // 최신순 → 오래된순으로 뒤집기
+        publicMessages.reverse();
+        setChatOverlayMessages(publicMessages);
+      } catch {
+        // 조용히 실패
+      }
+    };
+    fetchOverlayChat();
+    const interval = setInterval(fetchOverlayChat, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [chatOverlayVisible, studioId]);
 
   // 배너 타이머: timerSeconds가 있으면 카운트다운, 0이 되면 자동 중단
   useEffect(() => {
@@ -407,6 +436,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
                 activeBanner={activeBanner}
                 activeAsset={activeAsset}
                 styleState={styleState}
+                chatOverlayConfig={chatOverlayVisible ? { visible: true, messageCount: 5 } : null}
+                chatMessages={chatOverlayMessages}
               />
             </div>
 
@@ -614,6 +645,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
           onStartCloudRecording={handleStartCloudRecording}
           onStopCloudRecording={handleStopCloudRecording}
           onlineMembers={onlineMembers}
+          chatOverlayVisible={chatOverlayVisible}
+          onToggleChatOverlay={() => setChatOverlayVisible((v) => !v)}
         />
       </div>
     </LayoutGroup>

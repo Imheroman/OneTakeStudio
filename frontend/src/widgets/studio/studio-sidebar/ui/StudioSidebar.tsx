@@ -81,6 +81,8 @@ interface StudioSidebarProps {
   onStopCloudRecording?: () => void;
   /** 현재 접속 중인 멤버 목록 */
   onlineMembers?: OnlineMember[];
+  chatOverlayVisible?: boolean;
+  onToggleChatOverlay?: () => void;
 }
 
 export function StudioSidebar({
@@ -104,6 +106,8 @@ export function StudioSidebar({
   onStartCloudRecording,
   onStopCloudRecording,
   onlineMembers = [],
+  chatOverlayVisible,
+  onToggleChatOverlay,
 }: StudioSidebarProps) {
   const [activeTab, setActiveTab] = useState<StudioSidebarTabId | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -257,6 +261,8 @@ export function StudioSidebar({
                 studioId={studioId}
                 onClose={closePanel}
                 filterPlatform={null}
+                chatOverlayVisible={chatOverlayVisible}
+                onToggleChatOverlay={onToggleChatOverlay}
               />
             )}
             {activeTab === "banner" && (

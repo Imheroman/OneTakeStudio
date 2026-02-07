@@ -39,6 +39,12 @@ import {
 import type { BannerItem } from "@/widgets/studio/studio-sidebar/panels/StudioBannerPanel";
 import type { AssetItem } from "@/widgets/studio/studio-sidebar/panels/StudioAssetPanel";
 import type { StudioStyleState } from "@/widgets/studio/studio-sidebar/panels/StudioStylePanel";
+import type { ChatMessage } from "@/entities/chat/model";
+
+export interface ChatOverlayConfig {
+  visible: boolean;
+  messageCount: number; // 표시할 최근 메시지 수 (기본 5)
+}
 
 export type PreviewResolution = "720p" | "1080p";
 
@@ -122,6 +128,8 @@ interface PreviewAreaProps {
   activeBanner?: BannerItem | null;
   activeAsset?: AssetItem | null;
   styleState?: StudioStyleState | null;
+  chatOverlayConfig?: ChatOverlayConfig | null;
+  chatMessages?: ChatMessage[];
 }
 
 /** 비디오/화면 소스: Konva Image에 비디오를 매 프레임 그리기. scheduleBatchDraw로 프레임당 1회만 그리기 요청. registerExternalUpdate 있으면 단일 RAF에서 호출됨(캡처용). */
@@ -441,6 +449,82 @@ function AssetOverlayNode({
   );
 }
 
+/** 채팅 오버레이: 최근 메시지를 반투명 배경 위에 표시. 편집 모드에서 드래그 가능 */
+function ChatOverlayNode({
+  messages,
+  messageCount,
+  stageWidth,
+  stageHeight,
+  position,
+  isEditMode,
+  groupRef,
+  onDragEnd,
+}: {
+  messages: ChatMessage[];
+  messageCount: number;
+  stageWidth: number;
+  stageHeight: number;
+  position: { x: number; y: number };
+  isEditMode: boolean;
+  groupRef: React.RefObject<Konva.Group | null>;
+  onDragEnd: (x: number, y: number) => void;
+}) {
+  const BOX_WIDTH = 320;
+  const BOX_HEIGHT = 250;
+  const LINE_HEIGHT = 20;
+  const PADDING = 10;
+  const FONT_SIZE = 13;
+
+  const recent = messages.slice(-messageCount);
+
+  return (
+    <Group
+      id="overlay-chat"
+      ref={groupRef}
+      x={position.x}
+      y={position.y}
+      width={BOX_WIDTH}
+      height={BOX_HEIGHT}
+      draggable={isEditMode}
+      listening={true}
+      onDragEnd={(e) => {
+        const node = e.target;
+        onDragEnd(node.x(), node.y());
+      }}
+    >
+      <Rect
+        x={0}
+        y={0}
+        width={BOX_WIDTH}
+        height={BOX_HEIGHT}
+        fill="rgba(0,0,0,0.55)"
+        cornerRadius={8}
+        listening={false}
+      />
+      <Group
+        clip={{ x: 0, y: 0, width: BOX_WIDTH, height: BOX_HEIGHT }}
+        listening={false}
+      >
+        {recent.map((m, i) => (
+          <Text
+            key={m.messageId}
+            x={PADDING}
+            y={BOX_HEIGHT - (recent.length - i) * LINE_HEIGHT - PADDING}
+            width={BOX_WIDTH - PADDING * 2}
+            text={`${m.senderName}: ${m.content}`}
+            fontSize={FONT_SIZE}
+            fontFamily="Arial"
+            fill="white"
+            wrap="none"
+            ellipsis={true}
+            listening={false}
+          />
+        ))}
+      </Group>
+    </Group>
+  );
+}
+
 function PreviewAreaInner({
   className,
   layout = "full",
@@ -461,6 +545,8 @@ function PreviewAreaInner({
   activeAsset = null,
   styleState = null,
   isStreaming = false,
+  chatOverlayConfig = null,
+  chatMessages = [],
 }: PreviewAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<Konva.Layer>(null);
@@ -469,6 +555,7 @@ function PreviewAreaInner({
   const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef<Map<string, Konva.Group>>(new Map());
   const assetGroupRef = useRef<Konva.Group>(null);
+  const chatOverlayGroupRef = useRef<Konva.Group>(null);
   const trRef = useRef<Konva.Transformer>(null);
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -554,6 +641,7 @@ function PreviewAreaInner({
     [stageWidth]
   );
   const [assetTransform, setAssetTransform] = useState(defaultAssetTransform);
+  const [chatOverlayPos, setChatOverlayPos] = useState({ x: stageWidth - 336, y: stageHeight - 310 });
 
   useEffect(() => {
     if (activeAsset) setAssetTransform(defaultAssetTransform());
@@ -719,6 +807,9 @@ function PreviewAreaInner({
   useEffect(() => {
     if (selectedId === "overlay-asset") {
       const node = assetGroupRef.current;
+      trRef.current?.nodes(node ? [node] : []);
+    } else if (selectedId === "overlay-chat") {
+      const node = chatOverlayGroupRef.current;
       trRef.current?.nodes(node ? [node] : []);
     } else if (selectedId) {
       const node = nodeRefs.current.get(selectedId);
@@ -1089,6 +1180,13 @@ function PreviewAreaInner({
               setSelectedId("overlay-asset");
               return;
             }
+            if (
+              node.getClassName?.() === "Group" &&
+              (node as Konva.Group).id?.() === "overlay-chat"
+            ) {
+              setSelectedId("overlay-chat");
+              return;
+            }
             const gid = (node as Konva.Group).id?.();
             if (gid && sortedSources.some((s) => s.id === gid)) {
               setSelectedId(gid);
@@ -1330,6 +1428,18 @@ function PreviewAreaInner({
                 }
               />
             )}
+            {chatOverlayConfig?.visible && chatMessages.length > 0 && (
+              <ChatOverlayNode
+                messages={chatMessages}
+                messageCount={chatOverlayConfig.messageCount}
+                stageWidth={stageWidth}
+                stageHeight={stageHeight}
+                position={chatOverlayPos}
+                isEditMode={isEditMode}
+                groupRef={chatOverlayGroupRef}
+                onDragEnd={(x, y) => setChatOverlayPos({ x, y })}
+              />
+            )}
             {isEditMode && <Transformer ref={trRef} />}
           </Group>
         </Layer>
@@ -1482,6 +1592,18 @@ function PreviewAreaInner({
               groupRef={{ current: null }}
               onDragEnd={() => {}}
               onTransformEnd={() => {}}
+            />
+          )}
+          {chatOverlayConfig?.visible && chatMessages.length > 0 && (
+            <ChatOverlayNode
+              messages={chatMessages}
+              messageCount={chatOverlayConfig.messageCount}
+              stageWidth={stageWidth}
+              stageHeight={stageHeight}
+              position={chatOverlayPos}
+              isEditMode={false}
+              groupRef={{ current: null }}
+              onDragEnd={() => {}}
             />
           )}
         </Layer>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { List } from "react-window";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, MonitorPlay } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { getChatHistory, sendChatMessage } from "@/shared/api/studio-chat";
@@ -20,6 +20,15 @@ const PLATFORM_LABEL: Record<string, string> = {
   HOST: "방장",
   INTERNAL: "프라이빗",
 };
+
+function formatChatTime(isoString: string): string {
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
 
 function ChatMessageRow({
   index,
@@ -40,6 +49,9 @@ function ChatMessageRow({
         m.platform === "INTERNAL" && "bg-purple-900/30"
       )}
     >
+      <span className="text-gray-500 text-[10px] tabular-nums mr-1">
+        {formatChatTime(m.createdAt)}
+      </span>
       <span className="text-gray-400 text-xs mr-2">
         [{PLATFORM_LABEL[m.platform] ?? m.platform}]
       </span>
@@ -53,18 +65,23 @@ interface StudioChatPanelProps {
   studioId: string;
   onClose?: () => void;
   filterPlatform?: "INTERNAL" | null; // null = 전체(공개), INTERNAL = 프라이빗만
+  chatOverlayVisible?: boolean;
+  onToggleChatOverlay?: () => void;
 }
 
 export function StudioChatPanel({
   studioId,
   onClose,
   filterPlatform = null,
+  chatOverlayVisible = false,
+  onToggleChatOverlay,
 }: StudioChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const scrollAnchorRef = useRef<HTMLDivElement>(null);
   const [listHeight, setListHeight] = useState(300);
   const user = useAuthStore((state) => state.user);
 
@@ -83,11 +100,13 @@ export function StudioChatPanel({
     try {
       setLoading(true);
       const list = await getChatHistory(studioId);
-      setMessages(
+      const filtered =
         filterPlatform === "INTERNAL"
           ? list.filter((m) => m.platform === "INTERNAL") // 프라이빗: INTERNAL만
-          : list.filter((m) => m.platform !== "INTERNAL"), // 전체: INTERNAL 제외 (HOST, YOUTUBE 등 포함)
-      );
+          : list.filter((m) => m.platform !== "INTERNAL"); // 전체: INTERNAL 제외 (HOST, YOUTUBE 등 포함)
+      // API는 최신순 반환 → 오래된순으로 뒤집어 최신 메시지가 아래에 오도록
+      filtered.reverse();
+      setMessages(filtered);
     } catch (e) {
       console.error("채팅 히스토리 조회 실패:", e);
     } finally {
@@ -101,6 +120,11 @@ export function StudioChatPanel({
     const interval = setInterval(fetchHistory, 5000);
     return () => clearInterval(interval);
   }, [fetchHistory]);
+
+  // 자동 스크롤: 메시지 변경 시 하단으로 이동
+  useEffect(() => {
+    scrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = async () => {
     const content = input.trim();
@@ -130,18 +154,37 @@ export function StudioChatPanel({
           <MessageSquare className="h-4 w-4" />
           {filterPlatform === "INTERNAL" ? "프라이빗채팅" : "채팅"}
         </span>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-            aria-label="닫기"
-          >
-            ✕
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* 오버레이 토글: 공개 채팅 전용 */}
+          {filterPlatform === null && onToggleChatOverlay && (
+            <button
+              type="button"
+              onClick={onToggleChatOverlay}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors",
+                chatOverlayVisible
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              )}
+              title={chatOverlayVisible ? "오버레이 끄기" : "오버레이 켜기"}
+            >
+              <MonitorPlay className="h-3.5 w-3.5" />
+              오버레이
+            </button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-400 hover:text-white"
+              aria-label="닫기"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
-      <div ref={listRef} className="flex-1 min-h-0 p-3">
+      <div ref={listRef} className="flex-1 min-h-0 p-3 overflow-y-auto">
         {loading ? (
           <div className="text-gray-400 text-sm">로딩 중...</div>
         ) : messages.length === 0 ? (
@@ -170,6 +213,9 @@ export function StudioChatPanel({
                   m.platform === "INTERNAL" && "bg-purple-900/30"
                 )}
               >
+                <span className="text-gray-500 text-[10px] tabular-nums mr-1">
+                  {formatChatTime(m.createdAt)}
+                </span>
                 <span className="text-gray-400 text-xs mr-2">
                   [{PLATFORM_LABEL[m.platform] ?? m.platform}]
                 </span>
@@ -177,6 +223,7 @@ export function StudioChatPanel({
                 <span className="text-gray-300">{m.content}</span>
               </div>
             ))}
+            <div ref={scrollAnchorRef} />
           </div>
         )}
       </div>
