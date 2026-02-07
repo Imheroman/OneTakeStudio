@@ -41,7 +41,7 @@ export default function MainLayout({
   const [apiNotifications, setApiNotifications] = useState<
     NotificationWithActions[]
   >([]);
-  const { notifications: shortsMsgs, openResultModal } = useShortsStore();
+  const { notifications: shortsMsgs, openResultModal, shorts, isPolling } = useShortsStore();
 
   useEffect(() => {
     if (!showNotifications) return;
@@ -207,13 +207,28 @@ export default function MainLayout({
     fetchNotifications();
   }, [fetchNotifications]);
 
-  const shortsNotifications = useMemo<NotificationWithActions[]>(
-    () =>
-      shortsMsgs.map((msg, index) => ({
-        id: `shorts-${index}-${typeof msg === "string" ? msg : index}`,
+  const shortsNotifications = useMemo<NotificationWithActions[]>(() => {
+    const notifs: NotificationWithActions[] = [];
+
+    // 쇼츠 생성 중이거나 결과가 있으면 항상 "결과 보기" 알림 표시
+    const hasActiveShorts = shorts.some(
+      (s) => s.status === "loading" || s.status === "completed" || s.status === "error"
+    );
+
+    if (isPolling || hasActiveShorts) {
+      const completedCount = shorts.filter((s) => s.status === "completed").length;
+      const allDone = shorts.every(
+        (s) => s.status === "completed" || s.status === "error" || s.status === "idle"
+      );
+      const isActive = shorts.some((s) => s.status === "loading");
+
+      notifs.push({
+        id: "shorts-progress",
         type: "ai_shorts",
-        title: "AI 쇼츠 생성 완료",
-        message: msg,
+        title: allDone && !isActive ? "AI 쇼츠 생성 완료" : "AI 쇼츠 생성 중",
+        message: isActive
+          ? `쇼츠를 생성하고 있습니다... (${completedCount}/${shorts.length}개 완료)`
+          : `${completedCount}/${shorts.length}개 쇼츠가 생성되었습니다`,
         time: "방금 전",
         isRead: false,
         actions: {
@@ -222,9 +237,23 @@ export default function MainLayout({
             closeNotifications();
           },
         },
-      })),
-    [shortsMsgs, openResultModal, closeNotifications]
-  );
+      });
+    }
+
+    // 개별 완료 알림도 유지
+    shortsMsgs.forEach((msg, index) => {
+      notifs.push({
+        id: `shorts-${index}-${typeof msg === "string" ? msg : index}`,
+        type: "ai_shorts",
+        title: "AI 쇼츠 생성 완료",
+        message: msg,
+        time: "방금 전",
+        isRead: false,
+      });
+    });
+
+    return notifs;
+  }, [shorts, isPolling, shortsMsgs, openResultModal, closeNotifications]);
 
   const allNotifications = useMemo(
     () => [...shortsNotifications, ...apiNotifications],

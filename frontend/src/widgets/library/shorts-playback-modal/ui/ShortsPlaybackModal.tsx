@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/shared/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
-import { Play, Pause, X } from "lucide-react";
+import { Play, Pause, X, Download } from "lucide-react";
 import type { Clip } from "@/entities/video/model";
 
 interface ShortsPlaybackModalProps {
@@ -67,16 +67,29 @@ export function ShortsPlaybackModal({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="w-fit max-w-[90vw] bg-black border-white/10 p-0 overflow-hidden">
+        <DialogTitle className="sr-only">쇼츠 재생</DialogTitle>
         <div className="relative">
-          {/* 닫기 버튼 */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-2 top-2 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white"
-            aria-label="닫기"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          {/* 상단 버튼 */}
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-2">
+            {clip.downloadUrl && (
+              <a
+                href={clip.downloadUrl}
+                download
+                className="p-2 rounded-full bg-black/40 hover:bg-black/60 text-white"
+                aria-label="다운로드"
+              >
+                <Download className="h-5 w-5" />
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-full bg-black/40 hover:bg-black/60 text-white"
+              aria-label="닫기"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
           {/* 재생 화면 */}
           <div className="relative aspect-9/16 h-[92vh] max-w-[90vw] bg-black flex items-center justify-center">

@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 import { apiClient } from "./client";
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 import {
   ApiResponseDataSchema,
   ApiResponseRecordingSchema,
@@ -96,76 +98,70 @@ export async function getRecordings(params: GetRecordingsParams = {}): Promise<{
   };
 }
 
+/** 저장된 숏츠 API 응답 스키마 */
+const SavedShortItemSchema = z.object({
+  jobId: z.string(),
+  videoId: z.string(),
+  durationSec: z.number().nullable().optional(),
+  titles: z.array(z.string()).nullable().optional(),
+  streamUrl: z.string(),
+  downloadUrl: z.string(),
+});
+
+const ApiResponseSavedShortsSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  data: z.array(SavedShortItemSchema),
+});
+
+/**
+ * 녹화별 저장된 숏츠 조회 — GET /api/ai/shorts/saved/{recordingId}
+ */
+async function getSavedShorts(recordingId: string): Promise<
+  Array<{
+    id: string;
+    title: string;
+    duration?: string;
+    url: string | null;
+    thumbnailUrl: string | null;
+    status?: string;
+  }>
+> {
+  try {
+    const response = await apiClient.get(
+      `/api/ai/shorts/saved/${recordingId}`,
+      ApiResponseSavedShortsSchema
+    );
+    return response.data.map((s, index) => ({
+      id: `${s.jobId}_${s.videoId}`,
+      title: s.titles?.[0] ?? `쇼츠 ${index + 1}`,
+      duration: s.durationSec != null ? formatDuration(s.durationSec) : undefined,
+      url: `${BASE_URL}${s.streamUrl}`,
+      downloadUrl: `${BASE_URL}${s.downloadUrl}`,
+      thumbnailUrl: null,
+      status: "READY",
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * 녹화 상세 조회 — GET /api/library/recordings/{recordingId}
  */
 export async function getRecordingDetail(
   recordingId: string
 ): Promise<VideoDetailFromApiDto> {
-  const response = await apiClient.get(
-    `/api/library/recordings/${recordingId}`,
-    ApiResponseRecordingSchema
-  );
-  const r = response.data;
+  const [recordingResponse, clips] = await Promise.all([
+    apiClient.get(
+      `/api/library/recordings/${recordingId}`,
+      ApiResponseRecordingSchema
+    ),
+    getSavedShorts(recordingId),
+  ]);
+  const r = recordingResponse.data;
   const date = r.createdAt != null ? r.createdAt.slice(0, 10) : "";
 
-  // 목업: 라이브러리 디테일에서 쇼츠(클립) 생성된 상태를 보여주기 위한 데이터
-  const mockClipsByRecordingId: Record<
-    string,
-    Array<{
-      id: string;
-      title: string;
-      duration: string;
-      url: string | null;
-      thumbnailUrl: string | null;
-      status?: string;
-    }>
-  > = {
-    "rec-1": [
-      {
-        id: "clip-1",
-        title: "하이라이트 1 (오프닝)",
-        duration: "0:27",
-        url: r.fileUrl ?? null,
-        thumbnailUrl: r.thumbnailUrl ?? null,
-        status: "READY",
-      },
-      {
-        id: "clip-2",
-        title: "하이라이트 2 (핵심 토크)",
-        duration: "0:35",
-        url: r.fileUrl ?? null,
-        thumbnailUrl: r.thumbnailUrl ?? null,
-        status: "READY",
-      },
-      {
-        id: "clip-3",
-        title: "하이라이트 3 (클로징)",
-        duration: "0:22",
-        url: r.fileUrl ?? null,
-        thumbnailUrl: r.thumbnailUrl ?? null,
-        status: "READY",
-      },
-    ],
-    "rec-2": [
-      {
-        id: "clip-1",
-        title: "Shorts 1",
-        duration: "0:20",
-        url: r.fileUrl ?? null,
-        thumbnailUrl: r.thumbnailUrl ?? null,
-        status: "READY",
-      },
-      {
-        id: "clip-2",
-        title: "Shorts 2",
-        duration: "0:18",
-        url: r.fileUrl ?? null,
-        thumbnailUrl: r.thumbnailUrl ?? null,
-        status: "READY",
-      },
-    ],
-  };
   return {
     id: r.recordingId,
     title: r.title || "제목 없음",
@@ -174,7 +170,7 @@ export async function getRecordingDetail(
     description: r.description ?? undefined,
     videoUrl: r.fileUrl ?? undefined,
     thumbnailUrl: r.thumbnailUrl ?? undefined,
-    clips: mockClipsByRecordingId[recordingId] ?? [],
+    clips,
   };
 }
 

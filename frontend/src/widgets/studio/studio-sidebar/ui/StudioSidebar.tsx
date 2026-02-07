@@ -58,6 +58,10 @@ interface StudioSidebarProps {
   className?: string;
   /** 스튜디오 내 연동 채널 목록 (StreamYard 스타일) */
   connectedDestinations?: ConnectedDestinationItem[];
+  /** 라이브 송출 시 선택된 채널 ID 목록 */
+  selectedDestinationIds?: number[];
+  /** 라이브 송출 중 여부 */
+  isLive?: boolean;
   activeBanner?: BannerItem | null;
   /** 타이머 설정된 배너의 남은 초 (배너 오버레이·리스트 표시용) */
   bannerRemainingSeconds?: number | null;
@@ -83,6 +87,8 @@ export function StudioSidebar({
   studioId,
   className,
   connectedDestinations = [],
+  selectedDestinationIds = [],
+  isLive = false,
   activeBanner = null,
   bannerRemainingSeconds = null,
   onSelectBanner,
@@ -241,6 +247,8 @@ export function StudioSidebar({
             {activeTab === "destinations" && (
               <StudioDestinationsPanel
                 destinations={connectedDestinations}
+                selectedDestinationIds={selectedDestinationIds}
+                isLive={isLive}
                 onClose={closePanel}
               />
             )}

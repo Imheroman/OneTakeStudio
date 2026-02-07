@@ -44,6 +44,7 @@ interface StudioHeaderProps {
   isPublishing?: boolean;
   isStreamConnected?: boolean;
   isAutoRecording?: boolean;
+  isRecordingCloud?: boolean;
   selectedDestinationIds?: number[];
   setSelectedDestinationIds?: (ids: number[]) => void;
   publishError?: string | null;
@@ -83,6 +84,7 @@ export function StudioHeader({
   isPublishing = false,
   isStreamConnected = false,
   isAutoRecording = false,
+  isRecordingCloud = false,
   selectedDestinationIds = [],
   setSelectedDestinationIds,
   publishError,
@@ -277,7 +279,7 @@ export function StudioHeader({
               LIVE
             </span>
           )}
-          {isAutoRecording && (
+          {(isAutoRecording || isRecordingCloud) && (
             <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-orange-600 rounded text-xs">
               <Circle className="h-3 w-3 fill-current" />
               REC

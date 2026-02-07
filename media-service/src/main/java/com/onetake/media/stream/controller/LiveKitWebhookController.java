@@ -38,7 +38,7 @@ public class LiveKitWebhookController {
     @Value("${recording.storage.base-url:http://localhost:8082/api/recordings/files}")
     private String baseUrl;
 
-    @Value("${recording.storage.base-path:/recordings}")
+    @Value("${livekit.egress.output-path:/recordings/}")
     private String basePath;
 
     /**
@@ -229,8 +229,10 @@ public class LiveKitWebhookController {
             log.info("Recording completed via webhook: egressId={}, fileName={}, size={}, duration={}s",
                     egressId, fileName, fileSize, durationSeconds);
 
-        } catch (Exception e) {
+        } catch (com.onetake.media.global.exception.BusinessException e) {
             log.debug("No recording session for egressId: {}", egressId);
+        } catch (Exception e) {
+            log.error("녹화 완료 처리 중 오류: egressId={}, error={}", egressId, e.getMessage(), e);
         }
     }
 

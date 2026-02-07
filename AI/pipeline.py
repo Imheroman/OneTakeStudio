@@ -260,19 +260,23 @@ def process_one_video(
     if on_progress:
         on_progress(1, TOTAL_STEPS, "AUDIO_EXTRACTION")
     Audio = extractAudio(input_video_path, wav_path)
-    if not Audio:
-        raise RuntimeError("Failed to extract audio (wav)")
+    has_audio = Audio is not None
 
     # 2) STT (wav only)
     if on_progress:
         on_progress(2, TOTAL_STEPS, "TRANSCRIPTION")
-    transcriptions = transcribeAudio(Audio, language=source_lang)
+    transcriptions = None
+    if has_audio:
+        transcriptions = transcribeAudio(Audio, language=source_lang)
+
     if not transcriptions:
-        # fallback: use first 90-120 seconds
+        # fallback: use first 90-120 seconds (오디오 없거나 STT 실패)
         video_clip = VideoFileClip(input_video_path)
         total_duration = video_clip.duration
         video_clip.close()
         start, stop = 0, min(120, total_duration)
+        if not has_audio:
+            print(f"[INFO] No audio track - using fallback segment: 0-{stop}s")
     else:
         # 3) Highlight selection
         if on_progress:
@@ -356,7 +360,7 @@ def process_one_video(
     # 5) Subtitles (optional)
     if on_progress:
         on_progress(5, TOTAL_STEPS, "SUBTITLE_PROCESSING")
-    if need_subtitles:
+    if need_subtitles and transcriptions:
         # 쇼츠 구간(start~stop)에 해당하는 자막만 필터링
         shorts_transcriptions = []
         shorts_duration = stop - start
@@ -399,6 +403,8 @@ def process_one_video(
     else:
         video_for_final = temp_cropped
         has_subtitles = False
+        if need_subtitles and not transcriptions:
+            print("[Subtitles] Skipped - no transcription available (no audio track)")
 
     # 6) Final output path
     clean_title = clean_filename(video_title or os.path.splitext(os.path.basename(input_video_path))[0])
@@ -407,11 +413,17 @@ def process_one_video(
     # 6) Combine audio
     if on_progress:
         on_progress(6, TOTAL_STEPS, "AUDIO_COMBINE")
-    #  IMPORTANT:
-    # - combine_videos()는 "오디오 있는 비디오"에서 audio를 꺼내 붙이므로,
-    #   temp_clip이 audio=False로 만들어졌다면 temp_clip에는 오디오가 없음.
-    # - 따라서 audio source는 input_video_path(원본)이어야 안전함.
-    combine_videos(input_video_path, video_for_final, final_path)
+    if has_audio:
+        #  IMPORTANT:
+        # - combine_videos()는 "오디오 있는 비디오"에서 audio를 꺼내 붙이므로,
+        #   temp_clip이 audio=False로 만들어졌다면 temp_clip에는 오디오가 없음.
+        # - 따라서 audio source는 input_video_path(원본)이어야 안전함.
+        combine_videos(input_video_path, video_for_final, final_path)
+    else:
+        # 오디오 없는 영상: 크롭된 영상을 그대로 최종 출력으로 복사
+        import shutil
+        print(f"[INFO] No audio - copying video directly: {video_for_final} -> {final_path}")
+        shutil.copy2(video_for_final, final_path)
 
     # 8) Meta
     with VideoFileClip(final_path) as v:
@@ -421,7 +433,7 @@ def process_one_video(
     # 7) Title generation
     if on_progress:
         on_progress(7, TOTAL_STEPS, "TITLE_GENERATION")
-    highlight_text = _extract_highlight_text(transcriptions, start, stop)
+    highlight_text = _extract_highlight_text(transcriptions, start, stop) if transcriptions else ""
     titles = generate_titles_stub(highlight_text, lang=subtitle_lang)
 
     # cleanup temp files

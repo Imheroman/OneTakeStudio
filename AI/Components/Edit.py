@@ -3,9 +3,14 @@ from moviepy.editor import VideoFileClip
 def extractAudio(video_path, audio_path="audio.wav"):
     """
     main.py에서 import 하는 함수명 고정: extractAudio
+    오디오 트랙이 없는 영상이면 None 반환
     """
     try:
         video_clip = VideoFileClip(video_path)
+        if video_clip.audio is None:
+            print(f"[WARN] No audio track in video: {video_path}")
+            video_clip.close()
+            return None
         video_clip.audio.write_audiofile(audio_path)
         video_clip.close()
         print(f"Extracted audio to: {audio_path}")

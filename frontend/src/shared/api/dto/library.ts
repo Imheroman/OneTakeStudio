@@ -109,6 +109,7 @@ export type VideoDetailFromApiDto = {
     title: string;
     duration?: string;
     url?: string | null;
+    downloadUrl?: string | null;
     thumbnailUrl?: string | null;
     status?: string;
   }>;

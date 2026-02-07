@@ -72,18 +72,25 @@ public class AiShortsController {
      * 숏츠 비디오 스트리밍
      * GET /api/ai/shorts/stream/{jobId}/{videoId}
      * (인증 없이 프론트엔드에서 video 태그로 재생)
+     * Spring이 Resource 타입에 대해 Range 요청을 자동 처리 (206 Partial Content)
      */
     @GetMapping("/shorts/stream/{jobId}/{videoId}")
     public ResponseEntity<Resource> streamShorts(
             @PathVariable String jobId,
             @PathVariable String videoId) {
 
-        Resource videoResource = aiShortsService.getVideoResource(jobId, videoId);
+        try {
+            Resource videoResource = aiShortsService.getVideoResource(jobId, videoId);
+            log.info("숏츠 스트리밍: jobId={}, videoId={}, exists={}", jobId, videoId, videoResource.exists());
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("video/mp4"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
-                .body(videoResource);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("video/mp4"))
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .body(videoResource);
+        } catch (Exception e) {
+            log.error("숏츠 스트리밍 실패: jobId={}, videoId={}, error={}", jobId, videoId, e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**

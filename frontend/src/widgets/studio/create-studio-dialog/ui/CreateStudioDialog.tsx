@@ -282,30 +282,18 @@ export function CreateStudioDialog({
 
               <button
                 type="button"
-                onClick={() => {
-                  setComingSoonMessage(
-                    "클라우드 저장은 준비 중입니다. 현재는 내 컴퓨터 저장만 지원됩니다."
-                  );
-                  setComingSoonOpen(true);
-                }}
+                onClick={() => setStorageLocation("cloud")}
                 className={cn(
-                  "p-4 border-2 rounded-lg transition-all text-left opacity-70",
-                  unselectedCardClass,
+                  "p-4 border-2 rounded-lg transition-all text-left",
+                  storageLocation === "cloud"
+                    ? selectedCardClass
+                    : unselectedCardClass,
                   isDark && "text-white/90"
                 )}
-                title="준비 중"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <Cloud className="h-5 w-5" />
                   <span className="font-semibold">클라우드</span>
-                  <span
-                    className={cn(
-                      "text-xs font-normal",
-                      isDark ? "text-amber-400" : "text-amber-600"
-                    )}
-                  >
-                    (준비 중)
-                  </span>
                 </div>
                 <p
                   className={cn(
@@ -313,7 +301,7 @@ export function CreateStudioDialog({
                     isDark ? "text-white/60" : "text-gray-500"
                   )}
                 >
-                  서버에 저장
+                  라이브 종료 시 서버에 자동 저장
                 </p>
               </button>
             </div>

@@ -29,12 +29,25 @@ public class RedisStreamConfig {
             StringRedisTemplate redisTemplate,
             RecordingEventListener listener) {
 
-        // Consumer group 생성 (이미 존재하면 무시)
+        // Stream이 존재하지 않으면 빈 stream 생성 후 consumer group 생성
         try {
+            if (!Boolean.TRUE.equals(redisTemplate.hasKey(STREAM_KEY))) {
+                // 빈 메시지를 추가하여 stream을 생성한 뒤 즉시 삭제
+                var emptyRecord = redisTemplate.opsForStream().add(STREAM_KEY, java.util.Map.of("_init", "1"));
+                if (emptyRecord != null) {
+                    redisTemplate.opsForStream().delete(STREAM_KEY, emptyRecord.getValue());
+                }
+                log.info("Redis Stream 생성됨: {}", STREAM_KEY);
+            }
+
             redisTemplate.opsForStream().createGroup(STREAM_KEY, ReadOffset.from("0"), CONSUMER_GROUP);
             log.info("Redis Stream consumer group created: {}", CONSUMER_GROUP);
         } catch (Exception e) {
-            log.debug("Consumer group already exists or stream not initialized: {}", e.getMessage());
+            if (e.getMessage() != null && e.getMessage().contains("BUSYGROUP")) {
+                log.info("Consumer group already exists: {}", CONSUMER_GROUP);
+            } else {
+                log.warn("Consumer group 생성 실패: {}", e.getMessage(), e);
+            }
         }
 
         StreamMessageListenerContainer.StreamMessageListenerContainerOptions<String, MapRecord<String, String, String>> options =

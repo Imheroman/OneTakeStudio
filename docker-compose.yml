@@ -62,7 +62,7 @@ services:
       - EGRESS_CONFIG_FILE=/egress.yaml
     volumes:
       - ./egress.yaml:/egress.yaml
-      - ./recordings:/recordings
+      - ${RECORDING_BASE_PATH:-C:/Users/SSAFY/Desktop/project/test/recordings}:/recordings
     networks:
       - onetakestudio-network
     depends_on:

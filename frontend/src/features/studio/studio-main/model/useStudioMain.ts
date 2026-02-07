@@ -857,6 +857,38 @@ export function useStudioMain(
     });
   }, []);
 
+  const handleStartCloudRecording = useCallback(async () => {
+    if (!studioId) return;
+    try {
+      const body: RecordingStartRequest = {
+        studioId: studioId,
+        outputFormat: "mp4",
+        quality: "1080p",
+      };
+      await apiClient.post(
+        "/api/recordings/start",
+        ApiResponseRecordingSchema,
+        body
+      );
+      setIsRecordingCloud(true);
+    } catch (err) {
+      console.error("클라우드 녹화 시작 실패:", err);
+    }
+  }, [studioId]);
+
+  const handleStopCloudRecording = useCallback(async () => {
+    if (!studioId) return;
+    try {
+      await apiClient.post(
+        `/api/recordings/${studioId}/stop`,
+        ApiResponseRecordingSchema
+      );
+      setIsRecordingCloud(false);
+    } catch (err) {
+      console.error("클라우드 녹화 중지 실패:", err);
+    }
+  }, [studioId]);
+
   const handleGoLive = useCallback(
     async (destinationIds?: number[]) => {
       if (!studioId) return;
@@ -1102,12 +1134,15 @@ export function useStudioMain(
         setIsEditMode(false);
         console.log("Publishing started to destinations:", destIds);
 
-        // 4. 자동 녹화 시작 (recordingStorage가 LOCAL인 경우)
+        // 4. 자동 녹화 시작
         if (studio?.recordingStorage === "LOCAL") {
-          // 약간의 딜레이 후 녹화 시작 (스트림 안정화)
+          // 약간의 딜레이 후 로컬 녹화 시작 (스트림 안정화)
           setTimeout(() => {
             startAutoRecording();
           }, 500);
+        } else if (studio?.recordingStorage === "CLOUD") {
+          // 클라우드 녹화: 서버 측 Egress 시작
+          handleStartCloudRecording();
         }
       } catch (error) {
         console.error("Go live failed:", error);
@@ -1133,6 +1168,7 @@ export function useStudioMain(
       requestCaptureDrawRef,
       studio?.recordingStorage,
       startAutoRecording,
+      handleStartCloudRecording,
       getRoom,
       sources,
       onStageSourceIds,
@@ -1152,9 +1188,12 @@ export function useStudioMain(
     endLiveInProgressRef.current = true;
 
     try {
-      // 0. 자동 녹화 중지 (가장 먼저 실행하여 녹화 데이터 손실 방지)
+      // 0. 녹화 중지 (가장 먼저 실행하여 녹화 데이터 손실 방지)
       if (isAutoRecording) {
         stopAutoRecording();
+      }
+      if (isRecordingCloud) {
+        await handleStopCloudRecording();
       }
 
       // 1. RTMP 송출 중지
@@ -1192,7 +1231,7 @@ export function useStudioMain(
     } finally {
       endLiveInProgressRef.current = false;
     }
-  }, [studioId, isPublishing, isAutoRecording, stopAutoRecording]);
+  }, [studioId, isPublishing, isAutoRecording, stopAutoRecording, isRecordingCloud, handleStopCloudRecording]);
 
   // 채널 선택 토글
   const handleToggleDestination = useCallback((destinationId: number) => {
@@ -1669,38 +1708,6 @@ export function useStudioMain(
     }
     setIsRecordingLocal(false);
   }, []);
-
-  const handleStartCloudRecording = useCallback(async () => {
-    if (!studioId) return;
-    try {
-      const body: RecordingStartRequest = {
-        studioId: studioId,
-        outputFormat: "mp4",
-        quality: "1080p",
-      };
-      await apiClient.post(
-        "/api/recordings/start",
-        ApiResponseRecordingSchema,
-        body
-      );
-      setIsRecordingCloud(true);
-    } catch (err) {
-      console.error("클라우드 녹화 시작 실패:", err);
-    }
-  }, [studioId]);
-
-  const handleStopCloudRecording = useCallback(async () => {
-    if (!studioId) return;
-    try {
-      await apiClient.post(
-        `/api/recordings/${studioId}/stop`,
-        ApiResponseRecordingSchema
-      );
-      setIsRecordingCloud(false);
-    } catch (err) {
-      console.error("클라우드 녹화 중지 실패:", err);
-    }
-  }, [studioId]);
 
   // 레이아웃 변경 (브로드캐스트 포함)
   const setCurrentLayoutWithBroadcast = useCallback(

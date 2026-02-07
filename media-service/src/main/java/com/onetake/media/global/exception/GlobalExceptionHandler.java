@@ -7,6 +7,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 import java.util.List;
 
@@ -62,6 +63,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ErrorCode.STREAM_ALREADY_ACTIVE.getStatus())
                 .body(ErrorResponse.of(ErrorCode.STREAM_ALREADY_ACTIVE, message));
+    }
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    protected void handleAsyncRequestNotUsable(AsyncRequestNotUsableException e) {
+        // 클라이언트가 비디오 스트리밍 중 연결을 끊은 경우 (정상적인 브라우저 동작)
+        log.debug("Client disconnected during async request: {}", e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

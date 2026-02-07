@@ -12,6 +12,8 @@ export interface ConnectedDestinationItem {
 
 interface StudioDestinationsPanelProps {
   destinations: ConnectedDestinationItem[];
+  selectedDestinationIds?: number[];
+  isLive?: boolean;
   onClose?: () => void;
 }
 
@@ -69,6 +71,8 @@ function PlatformIcon({ platform }: { platform: string }) {
 
 export function StudioDestinationsPanel({
   destinations,
+  selectedDestinationIds = [],
+  isLive = false,
   onClose,
 }: StudioDestinationsPanelProps) {
   return (
@@ -97,25 +101,46 @@ export function StudioDestinationsPanel({
             채널 관리에서 송출할 채널을 추가해 주세요.
           </p>
         ) : (
-          destinations.map((d) => (
-            <div
-              key={d.id}
-              className={cn(
-                "flex items-center gap-3 rounded-md border border-gray-600 px-3 py-2",
-                "bg-gray-700/50 hover:bg-gray-700 transition-colors",
-              )}
-            >
-              <PlatformIcon platform={d.platform} />
-              <div className="min-w-0 flex-1">
-                <span className="text-sm font-medium text-white">
-                  {platformLabel(d.platform)}
-                </span>
-                <p className="text-xs text-gray-400 truncate">
-                  {d.channelName ?? "-"}
-                </p>
+          destinations.map((d) => {
+            const isSelected = isLive && selectedDestinationIds.includes(d.id);
+            return (
+              <div
+                key={d.id}
+                className={cn(
+                  "flex items-center gap-3 rounded-md border px-3 py-2 transition-colors",
+                  isSelected
+                    ? "border-green-500/60 bg-green-500/10"
+                    : "border-gray-600 bg-gray-700/50 hover:bg-gray-700",
+                )}
+              >
+                <PlatformIcon platform={d.platform} />
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm font-medium text-white">
+                    {platformLabel(d.platform)}
+                  </span>
+                  <p className="text-xs text-gray-400 truncate">
+                    {d.channelName ?? "-"}
+                  </p>
+                </div>
+                <div
+                  className={cn(
+                    "flex items-center gap-1.5 shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+                    isSelected
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-gray-600/50 text-gray-500",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block w-2 h-2 rounded-full",
+                      isSelected ? "bg-green-400" : "bg-gray-500",
+                    )}
+                  />
+                  {isSelected ? "ON" : "OFF"}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
       <div className="p-3 border-t border-gray-700">

@@ -97,7 +97,7 @@ ffmpeg:
 
 # Storage
 storage:
-  base-path: ${STORAGE_BASE_PATH:C:/Users/SSAFY/Desktop/project/test}
+  base-path: ${STORAGE_BASE_PATH:C:/Users/SSAFY/Desktop/project/test/recordings}
 
 management:
   health:

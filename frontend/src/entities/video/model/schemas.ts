@@ -45,6 +45,7 @@ export const ClipSchema = z.object({
   title: z.string(),
   duration: z.string().optional(),
   url: z.string().optional().nullable(),
+  downloadUrl: z.string().optional().nullable(),
   thumbnailUrl: z.string().optional().nullable(),
   status: z.string().optional(),
 });

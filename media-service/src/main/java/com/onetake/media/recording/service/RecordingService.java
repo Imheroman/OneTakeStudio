@@ -24,12 +24,17 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import livekit.LivekitEgress;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
@@ -45,9 +50,13 @@ public class RecordingService {
     private final ChunkedUploadService chunkedUploadService;
     private final LocalStorageService localStorageService;
     private final RestTemplate restTemplate;
+    private final PlatformTransactionManager transactionManager;
 
     @Value("${core.service.url:http://localhost:8080}")
     private String coreServiceUrl;
+
+    @Value("${livekit.egress.output-path:/recordings/}")
+    private String egressOutputPath;
 
     @Transactional
     public RecordingResponse startRecording(String odUserId, String studioId, RecordingStartRequest request) {
@@ -104,6 +113,12 @@ public class RecordingService {
 
         log.info("Recording stopped: studioId={}, recordingId={}", studioId, recordingSession.getRecordingId());
 
+        // Webhook 미수신 대비: 비동기로 egress 완료 상태를 폴링하여 녹화 완료 처리
+        final Long recordingId = recordingSession.getId();
+        final String egressId = recordingSession.getEgressId();
+        CompletableFuture.runAsync(() ->
+                pollAndCompleteRecording(recordingId, egressId));
+
         return RecordingResponse.from(recordingSession);
     }
 
@@ -146,6 +161,12 @@ public class RecordingService {
         RecordingSession recordingSession = recordingSessionRepository.findById(recordingId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RECORDING_NOT_FOUND));
 
+        // 이미 완료된 녹화는 중복 처리 방지
+        if (recordingSession.getStatus() == RecordingStatus.COMPLETED) {
+            log.info("Recording already completed, skipping: recordingId={}", recordingId);
+            return;
+        }
+
         // 스토리지 용량 체크 (10GB 제한)
         checkStorageQuota(recordingSession.getOdUserId(), fileSize);
 
@@ -161,7 +182,10 @@ public class RecordingService {
         // 분당 댓글 수 저장 (AI 하이라이트 추출용)
         commentCounterService.saveAndStopCounting(recordingSession.getStudioId(), recordingId);
 
-        // Core 서비스에 이벤트 발행 (Redis Streams 사용)
+        // Core 서비스에 알림 (HTTP 우선, 실패 시 Redis fallback)
+        String recordingName = "스트리밍 녹화 - " + LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+
         RecordingStoppedEvent event = RecordingStoppedEvent.builder()
                 .recordingId(recordingId)
                 .studioId(recordingSession.getStudioId())
@@ -170,10 +194,14 @@ public class RecordingService {
                 .fileUrl(fileUrl)
                 .fileSize(fileSize)
                 .durationSeconds(durationSeconds)
+                .recordingName(recordingName)
                 .stoppedAt(LocalDateTime.now())
                 .build();
 
-        publishRecordingStoppedEvent(event);
+        if (!notifyCoreServiceRecordingCompleted(event)) {
+            // HTTP 실패 시에만 Redis Stream fallback
+            publishRecordingStoppedEvent(event);
+        }
 
         // 외부 EC2 서버로 비동기 업로드 시작
         if (chunkedUploadService.isUploadEnabled()) {
@@ -248,7 +276,9 @@ public class RecordingService {
                 .stoppedAt(LocalDateTime.now())
                 .build();
 
-        publishRecordingStoppedEvent(event);
+        if (!notifyCoreServiceRecordingCompleted(event)) {
+            publishRecordingStoppedEvent(event);
+        }
 
         log.info("영상 업로드 완료: recordingId={}, studioId={}, fileName={}",
                 recordingSession.getRecordingId(), studioId, baseFileName);
@@ -288,6 +318,132 @@ public class RecordingService {
         redisTemplate.opsForStream().add(RedisStreamConfig.STREAM_KEY, message);
 
         log.info("Recording stopped event published to Redis Stream: recordingId={}", event.getRecordingId());
+    }
+
+    /**
+     * Core Service 내부 API를 직접 호출하여 Recording 엔티티 생성
+     * @return 성공 시 true, 실패 시 false
+     */
+    private boolean notifyCoreServiceRecordingCompleted(RecordingStoppedEvent event) {
+        try {
+            Map<String, Object> body = new HashMap<>();
+            body.put("mediaRecordingId", event.getRecordingId());
+            body.put("userId", event.getOdUserId());
+            body.put("studioId", event.getStudioId());
+            body.put("title", event.getRecordingName());
+            body.put("filePath", event.getFilePath());
+            body.put("fileUrl", event.getFileUrl());
+            body.put("fileSize", event.getFileSize());
+            body.put("durationSeconds", event.getDurationSeconds());
+
+            String url = coreServiceUrl + "/api/internal/library/recordings";
+            restTemplate.postForObject(url, body, String.class);
+
+            log.info("Core Service 내부 API로 녹화 등록 완료: mediaRecordingId={}", event.getRecordingId());
+            return true;
+        } catch (Exception e) {
+            log.warn("Core Service 내부 API 호출 실패 (Redis Stream fallback): mediaRecordingId={}, error={}",
+                    event.getRecordingId(), e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Webhook 미수신 대비: egress 완료 상태를 폴링하여 녹화 완료 처리
+     */
+    private void pollAndCompleteRecording(Long recordingId, String egressId) {
+        try {
+            for (int attempt = 0; attempt < 10; attempt++) {
+                Thread.sleep(3000); // 3초 간격 폴링
+
+                // webhook이 먼저 처리했는지 확인
+                RecordingSession session = recordingSessionRepository.findById(recordingId).orElse(null);
+                if (session == null || session.getStatus() == RecordingStatus.COMPLETED) {
+                    log.info("녹화 이미 완료됨 (webhook 처리): recordingId={}", recordingId);
+                    return;
+                }
+
+                try {
+                    LivekitEgress.EgressInfo egressInfo = liveKitEgressService.getEgressInfo(egressId);
+                    LivekitEgress.EgressStatus status = egressInfo.getStatus();
+
+                    if (status == LivekitEgress.EgressStatus.EGRESS_COMPLETE) {
+                        log.info("Egress 완료 확인 (폴링 fallback): egressId={}", egressId);
+                        completeRecordingFromEgress(recordingId, egressInfo);
+                        return;
+                    } else if (status == LivekitEgress.EgressStatus.EGRESS_FAILED ||
+                               status == LivekitEgress.EgressStatus.EGRESS_ABORTED) {
+                        log.error("Egress 실패/중단: egressId={}, error={}", egressId, egressInfo.getError());
+                        return;
+                    }
+
+                    log.debug("Egress 진행 중: egressId={}, status={}, attempt={}/10", egressId, status, attempt + 1);
+                } catch (Exception e) {
+                    log.warn("Egress 상태 조회 실패: egressId={}, attempt={}/10, error={}", egressId, attempt + 1, e.getMessage());
+                }
+            }
+            log.warn("Egress 폴링 타임아웃 (30초): egressId={}, recordingId={}", egressId, recordingId);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Egress 폴링 인터럽트: recordingId={}", recordingId);
+        }
+    }
+
+    /**
+     * Egress 정보로부터 녹화 완료 처리 (폴링 fallback용)
+     */
+    private void completeRecordingFromEgress(Long recordingId, LivekitEgress.EgressInfo egressInfo) {
+        String filePath = null;
+        long fileSize = 0;
+        long durationSeconds = 0;
+
+        if (egressInfo.hasFile()) {
+            LivekitEgress.FileInfo fileInfo = egressInfo.getFile();
+            filePath = fileInfo.getFilename();
+            fileSize = fileInfo.getSize();
+            durationSeconds = fileInfo.getDuration() / 1_000_000_000;
+        } else if (egressInfo.getFileResultsCount() > 0) {
+            LivekitEgress.FileInfo fileInfo = egressInfo.getFileResults(0);
+            filePath = fileInfo.getFilename();
+            fileSize = fileInfo.getSize();
+            durationSeconds = fileInfo.getDuration() / 1_000_000_000;
+        }
+
+        if (filePath == null) {
+            log.warn("Egress 결과에 파일 정보 없음: egressId={}", egressInfo.getEgressId());
+            return;
+        }
+
+        String fileName = extractRelativePathFromEgress(filePath);
+        String fileUrl = localStorageService.getFileUrl(fileName);
+
+        final String fp = fileName;
+        final String fu = fileUrl;
+        final long fs = fileSize;
+        final long ds = durationSeconds;
+
+        try {
+            new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                    completeRecording(recordingId, fp, fu, fs, ds)
+            );
+            log.info("녹화 완료 처리 성공 (폴링 fallback): recordingId={}", recordingId);
+        } catch (Exception e) {
+            log.error("녹화 완료 처리 실패 (폴링 fallback): recordingId={}, error={}", recordingId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Egress 파일 경로에서 상대 경로 추출
+     * 예: /recordings/user-123/file.mp4 -> user-123/file.mp4
+     */
+    private String extractRelativePathFromEgress(String absolutePath) {
+        if (absolutePath == null) return null;
+        String normalizedPath = egressOutputPath.endsWith("/") ? egressOutputPath : egressOutputPath + "/";
+        if (absolutePath.startsWith(normalizedPath)) {
+            return absolutePath.substring(normalizedPath.length());
+        }
+        int lastSlash = Math.max(absolutePath.lastIndexOf('/'), absolutePath.lastIndexOf('\\'));
+        return lastSlash >= 0 ? absolutePath.substring(lastSlash + 1) : absolutePath;
     }
 
     public RecordingResponse getRecordingByUuid(String recordingId) {

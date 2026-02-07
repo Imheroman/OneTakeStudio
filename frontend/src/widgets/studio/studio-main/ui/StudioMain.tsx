@@ -364,6 +364,7 @@ export function StudioMain({ studioId }: StudioMainProps) {
             isPublishing={isPublishing}
             isStreamConnected={isStreamConnected}
             isAutoRecording={isAutoRecording}
+            isRecordingCloud={isRecordingCloud}
             selectedDestinationIds={selectedDestinationIds}
             setSelectedDestinationIds={setSelectedDestinationIds}
             publishError={publishError}
@@ -596,6 +597,8 @@ export function StudioMain({ studioId }: StudioMainProps) {
         <StudioSidebar
           studioId={studioId}
           connectedDestinations={destinations}
+          selectedDestinationIds={selectedDestinationIds}
+          isLive={isLive}
           activeBanner={activeBanner}
           bannerRemainingSeconds={bannerRemainingSeconds}
           onSelectBanner={setActiveBanner}
