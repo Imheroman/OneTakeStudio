@@ -28,6 +28,9 @@ public class StreamSession extends BaseTimeEntity {
     @Column(name = "od_user_id", nullable = false, length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     @Column(name = "room_name", nullable = false, unique = true)
     private String roomName;
 
@@ -73,6 +76,7 @@ public class StreamSession extends BaseTimeEntity {
      */
     public void reuseForNewParticipant(String odUserId, String participantIdentity, String metadata) {
         this.odUserId = odUserId;
+        this.userId = odUserId;
         this.participantIdentity = participantIdentity;
         this.metadata = metadata;
         this.status = SessionStatus.CONNECTING;
@@ -83,6 +87,9 @@ public class StreamSession extends BaseTimeEntity {
     public void prePersist() {
         if (this.sessionId == null) {
             this.sessionId = UUID.randomUUID().toString();
+        }
+        if (this.userId == null && this.odUserId != null) {
+            this.userId = this.odUserId;
         }
     }
 }

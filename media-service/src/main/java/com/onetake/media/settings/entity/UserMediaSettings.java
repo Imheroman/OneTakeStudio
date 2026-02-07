@@ -24,6 +24,9 @@ public class UserMediaSettings extends BaseTimeEntity {
     @Column(name = "od_user_id", unique = true, nullable = false, length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     @Column(name = "default_video_device_id")
     private String defaultVideoDeviceId;
 
@@ -73,6 +76,9 @@ public class UserMediaSettings extends BaseTimeEntity {
     public void prePersist() {
         if (this.settingsId == null) {
             this.settingsId = UUID.randomUUID().toString();
+        }
+        if (this.userId == null && this.odUserId != null) {
+            this.userId = this.odUserId;
         }
     }
 }

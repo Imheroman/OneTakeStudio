@@ -55,6 +55,18 @@ export function VideoCard({
             alt={video.title}
             className="w-full h-full object-cover"
           />
+        ) : video.videoUrl ? (
+          <video
+            src={video.videoUrl}
+            muted
+            preload="metadata"
+            className="w-full h-full object-cover"
+            onLoadedData={(e) => {
+              // 첫 프레임을 보여주기 위해 시작점으로 이동
+              const v = e.currentTarget;
+              if (v.currentTime === 0) v.currentTime = 0.1;
+            }}
+          />
         ) : (
           <div
             className={cn(

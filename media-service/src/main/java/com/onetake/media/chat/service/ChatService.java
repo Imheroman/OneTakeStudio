@@ -74,35 +74,11 @@ public class ChatService {
 
     /**
      * 외부 플랫폼(YouTube, Chzzk 등)에서 수신한 메시지 처리
-     * DB 저장 없이 WebSocket 브로드캐스트 + 분당 댓글 수 카운팅
+     * DB 저장 + WebSocket 브로드캐스트 + 분당 댓글 수 카운팅
      */
+    @Transactional
     public void receiveExternalMessage(String studioId, ChatMessageRequest request) {
-        ChatMessageResponse response = ChatMessageResponse.builder()
-                .messageId(request.getExternalMessageId() != null
-                        ? request.getExternalMessageId()
-                        : java.util.UUID.randomUUID().toString())
-                .studioId(studioId)
-                .platform(request.getPlatform())
-                .messageType(request.getMessageType())
-                .senderName(request.getSenderName())
-                .senderProfileUrl(request.getSenderProfileUrl())
-                .content(request.getContent())
-                .donationAmount(request.getDonationAmount())
-                .donationCurrency(request.getDonationCurrency())
-                .isHighlighted(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        // WebSocket 브로드캐스트
-        broadcastMessage(studioId, response);
-
-        // 분당 댓글 수 카운팅 (AI 하이라이트 추출 기준)
-        if (commentCounterService.isCountingActive(studioId)) {
-            commentCounterService.incrementCount(studioId);
-        }
-
-        log.info("[ExternalChat] Broadcasted to /topic/chat/{}: platform={}, sender={}, msgId={}",
-                studioId, request.getPlatform(), request.getSenderName(), response.getMessageId());
+        sendMessage(null, studioId, request);
     }
 
     public List<ChatMessageResponse> getMessages(String studioId, int limit) {

@@ -22,11 +22,14 @@ public class RecordingSession extends BaseTimeEntity {
     @Column(name = "recording_id", unique = true, nullable = false, updatable = false, length = 36)
     private String recordingId;
 
-    @Column(name = "studio_id", nullable = false)
+    @Column(name = "studio_id")
     private String studioId;
 
     @Column(name = "od_user_id", nullable = false, length = 36)
     private String odUserId;
+
+    @Column(name = "user_id", length = 36)
+    private String userId;
 
     @Column(name = "stream_session_id")
     private Long streamSessionId;
@@ -134,6 +137,9 @@ public class RecordingSession extends BaseTimeEntity {
     public void prePersist() {
         if (this.recordingId == null) {
             this.recordingId = UUID.randomUUID().toString();
+        }
+        if (this.userId == null && this.odUserId != null) {
+            this.userId = this.odUserId;
         }
     }
 }

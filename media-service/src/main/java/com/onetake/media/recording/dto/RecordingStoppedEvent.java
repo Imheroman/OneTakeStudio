@@ -16,5 +16,6 @@ public class RecordingStoppedEvent {
     private String fileUrl;
     private Long fileSize;
     private Long durationSeconds;
+    private String recordingName;
     private LocalDateTime stoppedAt;
 }

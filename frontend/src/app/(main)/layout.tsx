@@ -27,8 +27,6 @@ const MessageResponseSchema = z.object({
   message: z.string().optional(),
 });
 
-const noop = () => {};
-
 export default function MainLayout({
   children,
 }: {
@@ -57,10 +55,50 @@ export default function MainLayout({
   useShortsPolling();
   const isStudioPage = pathname?.startsWith("/studio");
 
-  // 알림 삭제 헬퍼
+  // 알림 UI에서 제거 (로컬 상태)
   const removeNotification = useCallback((notifId: string) => {
     setApiNotifications((prev) => prev.filter((n) => n.id !== notifId));
   }, []);
+
+  // 개별 알림 삭제 (백엔드 + 로컬)
+  const handleDeleteNotification = useCallback(
+    async (notifId: string) => {
+      try {
+        await apiClient.delete(
+          `/api/notifications/${notifId}`,
+          MessageResponseSchema
+        );
+      } catch (error) {
+        console.error("알림 삭제 실패:", error);
+      }
+      removeNotification(notifId);
+    },
+    [removeNotification]
+  );
+
+  // 패널 열 때 unread 알림 읽음 처리
+  const markAllAsRead = useCallback(async () => {
+    const unread = apiNotifications.filter((n) => !n.read);
+    if (unread.length === 0) return;
+
+    await Promise.allSettled(
+      unread.map((n) =>
+        apiClient.patch(`/api/notifications/${n.id}/read`, MessageResponseSchema)
+      )
+    );
+    // 로컬 상태 업데이트
+    setApiNotifications((prev) =>
+      prev.map((n) => (n.read ? n : { ...n, read: true }))
+    );
+  }, [apiNotifications]);
+
+  // 패널 열릴 때 읽음 처리
+  useEffect(() => {
+    if (showNotifications && apiNotifications.length > 0) {
+      markAllAsRead();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNotifications]);
 
   // 알림 목록 조회
   const fetchNotifications = useCallback(async () => {
@@ -249,8 +287,7 @@ export default function MainLayout({
               <NotificationPanel
                 notifications={allNotifications}
                 onClose={closeNotifications}
-                onAccept={noop}
-                onDecline={noop}
+                onDelete={handleDeleteNotification}
               />
             </div>
           )}

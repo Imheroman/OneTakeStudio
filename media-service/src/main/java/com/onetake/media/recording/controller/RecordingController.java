@@ -5,6 +5,7 @@ import com.onetake.media.recording.dto.RecordingResponse;
 import com.onetake.media.recording.dto.RecordingStartRequest;
 import com.onetake.media.recording.service.LocalStorageService;
 import com.onetake.media.recording.service.RecordingService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -75,11 +76,15 @@ public class RecordingController {
     }
 
     /**
-     * 녹화 파일 다운로드/스트리밍
+     * 녹화 파일 다운로드/스트리밍 (user-{userId}/filename.mp4 등 서브디렉토리 경로 지원)
      */
-    @GetMapping("/files/{fileName}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable String fileName) {
-        Resource resource = localStorageService.loadFileAsResource(fileName);
+    @GetMapping("/files/**")
+    public ResponseEntity<Resource> downloadFile(HttpServletRequest request) {
+        String prefix = "/api/media/record/files/";
+        String filePath = request.getRequestURI().substring(prefix.length());
+
+        Resource resource = localStorageService.loadFileAsResource(filePath);
+        String fileName = filePath.contains("/") ? filePath.substring(filePath.lastIndexOf('/') + 1) : filePath;
         String contentType = localStorageService.getContentType(fileName);
 
         return ResponseEntity.ok()

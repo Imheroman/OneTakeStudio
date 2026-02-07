@@ -26,7 +26,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { getStorage, getStorageFiles } from "@/shared/api/library";
+import { getStorage, getStorageFiles, deleteRecording } from "@/shared/api/library";
 import type { StorageData, StorageFile } from "@/entities/storage/model";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 
@@ -212,9 +212,18 @@ export default function StoragePage() {
     });
   }, [files, sortKey, sortOrder]);
 
-  const handleDelete = (fileId: string | number) => {
-    if (confirm("이 파일을 삭제하시겠습니까?")) {
+  const handleDelete = async (fileId: string | number) => {
+    if (!confirm("이 파일을 삭제하시겠습니까?")) return;
+    try {
+      await deleteRecording(String(fileId));
       setFiles((prev) => prev.filter((f) => String(f.id) !== String(fileId)));
+      setStorageData((prev) => ({
+        ...prev,
+        videoCount: Math.max(0, (prev.videoCount ?? 0) - 1),
+      }));
+    } catch (error) {
+      console.error("파일 삭제 실패:", error);
+      alert("파일 삭제에 실패했습니다.");
     }
   };
 

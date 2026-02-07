@@ -28,6 +28,9 @@ public class SessionMediaState extends BaseTimeEntity {
     @Column(name = "od_user_id", nullable = false, length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     @Column(name = "studio_id", nullable = false)
     private String studioId;
 
@@ -92,6 +95,9 @@ public class SessionMediaState extends BaseTimeEntity {
     public void prePersist() {
         if (this.stateId == null) {
             this.stateId = UUID.randomUUID().toString();
+        }
+        if (this.userId == null && this.odUserId != null) {
+            this.userId = this.odUserId;
         }
     }
 }

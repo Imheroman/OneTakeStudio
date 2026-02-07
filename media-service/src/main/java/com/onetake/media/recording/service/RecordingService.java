@@ -22,7 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -187,6 +189,74 @@ public class RecordingService {
     }
 
     /**
+     * 사용자 영상 파일 수동 업로드
+     */
+    @Transactional
+    public RecordingResponse uploadRecording(String odUserId, String studioId, String title, Long durationSeconds, MultipartFile file) {
+        long fileSize = file.getSize();
+
+        // 스토리지 용량 체크
+        checkStorageQuota(odUserId, fileSize);
+
+        // 사용자 디렉토리 생성
+        localStorageService.getUserStoragePath(odUserId);
+
+        // 파일 저장
+        String originalName = file.getOriginalFilename();
+        String extension = "mp4";
+        if (originalName != null && originalName.contains(".")) {
+            extension = originalName.substring(originalName.lastIndexOf('.') + 1);
+        }
+        String baseFileName = generateFileName(studioId, extension);
+        String userFilePath = localStorageService.getUserFilePath(odUserId, baseFileName);
+
+        try {
+            localStorageService.saveFile(userFilePath, file.getInputStream());
+        } catch (IOException e) {
+            log.error("파일 업로드 실패: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.FILE_STORAGE_ERROR);
+        }
+
+        String fileUrl = localStorageService.getFileUrl(userFilePath);
+
+        // RecordingSession 생성 (COMPLETED 상태)
+        RecordingSession recordingSession = RecordingSession.builder()
+                .studioId(studioId)
+                .odUserId(odUserId)
+                .status(RecordingStatus.COMPLETED)
+                .fileName(userFilePath)
+                .filePath(userFilePath)
+                .fileUrl(fileUrl)
+                .fileSize(fileSize)
+                .durationSeconds(durationSeconds)
+                .startedAt(LocalDateTime.now())
+                .endedAt(LocalDateTime.now())
+                .build();
+
+        recordingSessionRepository.save(recordingSession);
+
+        // Core Service에 이벤트 발행 (라이브러리에 표시)
+        RecordingStoppedEvent event = RecordingStoppedEvent.builder()
+                .recordingId(recordingSession.getId())
+                .studioId(studioId)
+                .odUserId(odUserId)
+                .filePath(userFilePath)
+                .fileUrl(fileUrl)
+                .fileSize(fileSize)
+                .durationSeconds(durationSeconds)
+                .recordingName(title)
+                .stoppedAt(LocalDateTime.now())
+                .build();
+
+        publishRecordingStoppedEvent(event);
+
+        log.info("영상 업로드 완료: recordingId={}, studioId={}, fileName={}",
+                recordingSession.getRecordingId(), studioId, baseFileName);
+
+        return RecordingResponse.from(recordingSession);
+    }
+
+    /**
      * egressId로 녹화 세션 조회
      */
     public RecordingSession findByEgressId(String egressId) {
@@ -201,12 +271,18 @@ public class RecordingService {
         Map<String, String> message = new HashMap<>();
         message.put("type", "RECORDING_STOPPED");
         message.put("recordingId", String.valueOf(event.getRecordingId()));
-        message.put("studioId", String.valueOf(event.getStudioId()));
+        if (event.getStudioId() != null) {
+            message.put("studioId", event.getStudioId());
+        }
         message.put("odUserId", String.valueOf(event.getOdUserId()));
+        message.put("userId", String.valueOf(event.getOdUserId()));
         message.put("filePath", event.getFilePath());
         message.put("fileUrl", event.getFileUrl());
         message.put("fileSize", String.valueOf(event.getFileSize()));
         message.put("durationSeconds", String.valueOf(event.getDurationSeconds()));
+        if (event.getRecordingName() != null) {
+            message.put("recordingName", event.getRecordingName());
+        }
         message.put("stoppedAt", event.getStoppedAt().toString());
 
         redisTemplate.opsForStream().add(RedisStreamConfig.STREAM_KEY, message);
@@ -236,7 +312,8 @@ public class RecordingService {
     private String generateFileName(String studioId, String format) {
         String timestamp = LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
         String extension = format != null ? format : "mp4";
-        return String.format("studio_%s_%s_%s.%s", studioId, timestamp, UUID.randomUUID().toString().substring(0, 8), extension);
+        String prefix = (studioId != null && !studioId.isBlank()) ? "studio_" + studioId : "upload";
+        return String.format("%s_%s_%s.%s", prefix, timestamp, UUID.randomUUID().toString().substring(0, 8), extension);
     }
 
     /**
@@ -258,9 +335,14 @@ public class RecordingService {
             log.debug("Storage quota check passed: userId={}, fileSize={}bytes ({}GB)",
                     userId, fileSize, fileSize / (1024.0 * 1024.0 * 1024.0));
         } catch (HttpClientErrorException e) {
-            log.error("Storage quota exceeded: userId={}, fileSize={}bytes, error={}",
-                    userId, fileSize, e.getMessage());
-            throw new BusinessException(ErrorCode.STORAGE_QUOTA_EXCEEDED);
+            if (e.getStatusCode().value() == 409) {
+                // 409 Conflict = 실제 용량 초과
+                log.error("Storage quota exceeded: userId={}, fileSize={}bytes, error={}",
+                        userId, fileSize, e.getMessage());
+                throw new BusinessException(ErrorCode.STORAGE_QUOTA_EXCEEDED);
+            }
+            // 401, 403 등 인증/권한 오류는 관대하게 허용
+            log.warn("Quota check returned {}, allowing upload: userId={}", e.getStatusCode(), userId);
         } catch (Exception e) {
             log.error("Failed to check storage quota: userId={}, fileSize={}", userId, fileSize, e);
             // 네트워크 오류 등의 경우 일단 허용 (관대한 정책)

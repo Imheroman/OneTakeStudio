@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { apiClient, axiosInstance } from "@/shared/api/client";
+import { getYouTubeAuthUrl, getOAuthStatus, revokeOAuthToken, type TokenStatus } from "@/shared/api/oauth";
+import { useAuthStore } from "@/stores/useAuthStore";
 import {
   ApiResponseDestinationListSchema,
   ApiResponseDestinationSchema,
@@ -16,9 +18,11 @@ import {
 
 export function useChannelManagement() {
   const searchParams = useSearchParams();
+  const { user } = useAuthStore();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [youtubeOAuthStatus, setYoutubeOAuthStatus] = useState<TokenStatus | null>(null);
 
   const fetchChannels = async () => {
     try {
@@ -41,10 +45,25 @@ export function useChannelManagement() {
     }
   };
 
+  const fetchOAuthStatus = async () => {
+    if (!user?.userId) return;
+    try {
+      const statuses = await getOAuthStatus(user.userId);
+      const youtube = statuses.find((s) => s.platform === "YOUTUBE") ?? null;
+      setYoutubeOAuthStatus(youtube);
+    } catch {
+      // 조회 실패 시 무시
+    }
+  };
+
   useEffect(() => {
     fetchChannels();
-    if (searchParams.get("success") === "true") fetchChannels();
-  }, [searchParams]);
+    fetchOAuthStatus();
+    if (searchParams.get("success") === "true") {
+      fetchChannels();
+      fetchOAuthStatus();
+    }
+  }, [searchParams, user?.userId]);
 
   const handleCreateDestination = async (payload: CreateDestinationRequest) => {
     try {
@@ -78,6 +97,32 @@ export function useChannelManagement() {
     }
   };
 
+  const handleYouTubeOAuth = async () => {
+    if (!user?.userId) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+    try {
+      const authUrl = await getYouTubeAuthUrl(user.userId);
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error("YouTube OAuth URL 요청 실패:", error);
+      alert("YouTube 인증 URL을 가져오는데 실패했습니다.");
+    }
+  };
+
+  const handleYouTubeOAuthRevoke = async () => {
+    if (!user?.userId) return;
+    if (!confirm("YouTube 채팅 연동을 해제하시겠습니까?")) return;
+    try {
+      await revokeOAuthToken("youtube", user.userId);
+      setYoutubeOAuthStatus(null);
+    } catch (error) {
+      console.error("YouTube OAuth 해제 실패:", error);
+      alert("연동 해제에 실패했습니다.");
+    }
+  };
+
   return {
     channels,
     isLoading,
@@ -86,5 +131,8 @@ export function useChannelManagement() {
     fetchChannels,
     handleCreateDestination,
     handleDisconnect,
+    handleYouTubeOAuth,
+    youtubeOAuthStatus,
+    handleYouTubeOAuthRevoke,
   };
 }

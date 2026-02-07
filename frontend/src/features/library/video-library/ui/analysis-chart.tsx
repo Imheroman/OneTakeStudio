@@ -65,9 +65,9 @@ export function AnalysisChart({
     Promise.all([getCommentAnalysis(recordingId), getMarkers(recordingId)])
       .then(([commentRes, markersList]) => {
         if (!cancelled) {
-          setData(commentRes.buckets ?? []);
+          setData(commentRes?.buckets ?? []);
           setMarkers(markersList ?? []);
-          setDurationSeconds(commentRes.durationSeconds ?? 0);
+          setDurationSeconds(commentRes?.durationSeconds ?? 0);
         }
       })
       .catch((err) => {

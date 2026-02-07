@@ -39,6 +39,9 @@ public class ChatMessage extends BaseTimeEntity {
     @Column(name = "od_user_id", length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     @Column(name = "sender_name", nullable = false, length = 100)
     private String senderName;
 
@@ -77,6 +80,9 @@ public class ChatMessage extends BaseTimeEntity {
     public void prePersist() {
         if (this.messageId == null) {
             this.messageId = UUID.randomUUID().toString();
+        }
+        if (this.userId == null) {
+            this.userId = this.odUserId != null ? this.odUserId : "external";
         }
     }
 }

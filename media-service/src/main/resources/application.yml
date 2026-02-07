@@ -1,9 +1,16 @@
 server:
   port: 8082
+  tomcat:
+    max-swallow-size: -1
 
 spring:
   application:
     name: media-service
+
+  servlet:
+    multipart:
+      max-file-size: 5GB
+      max-request-size: 5GB
 
   # MySQL Database
   datasource:
@@ -33,15 +40,12 @@ spring:
 jwt:
   secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
 
-# Eureka Client
+# Eureka Client (로컬에서는 비활성화)
 eureka:
   client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    prefer-ip-address: true
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
 
 # LiveKit
 livekit:

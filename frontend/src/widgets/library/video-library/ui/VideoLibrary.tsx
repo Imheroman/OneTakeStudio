@@ -86,9 +86,14 @@ export function VideoLibrary({ studioId }: VideoLibraryProps = {}) {
     return () => ro.disconnect();
   }, []);
 
-  const handleUploadSuccess = () => {
+  const handleUploadSuccess = async () => {
     setUploadModalOpen(false);
-    refetch();
+    const prevCount = videos.length;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      const result = await refetch();
+      if (result.length > prevCount) break;
+    }
   };
 
   const useVirtualList = !isLoading && videos.length > VIRTUAL_THRESHOLD;

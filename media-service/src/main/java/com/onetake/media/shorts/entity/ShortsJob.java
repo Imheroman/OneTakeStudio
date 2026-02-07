@@ -47,6 +47,9 @@ public class ShortsJob {
     @Column(nullable = false, length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     /**
      * 작업 상태
      */
@@ -128,6 +131,9 @@ public class ShortsJob {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (this.userId == null && this.odUserId != null) {
+            this.userId = this.odUserId;
+        }
     }
 
     /**

@@ -11,17 +11,38 @@ import {
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
-import { apiClient } from "@/shared/api/client";
+import { axiosInstance } from "@/shared/api/client";
 import { CloudUpload } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+
+const MEDIA_UPLOAD_URL =
+  process.env.NEXT_PUBLIC_MEDIA_URL || "http://localhost:8082";
 
 const ACCEPT =
   "video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,.mp4,.mov,.avi,.mkv";
 
+function getVideoDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      const dur = video.duration;
+      resolve(Number.isFinite(dur) ? Math.round(dur) : null);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    video.src = url;
+  });
+}
+
 interface UploadVideoModalProps {
   open: boolean;
   onClose: () => void;
-  studioId: string;
+  studioId?: string;
   onSuccess?: () => void;
 }
 
@@ -79,12 +100,6 @@ export function UploadVideoModal({
   };
 
   const handleSubmit = async () => {
-    if (!studioId) {
-      setError(
-        "업로드를 하려면 URL에 ?studioId=스튜디오ID 를 넣어 접속해 주세요.",
-      );
-      return;
-    }
     if (!file) {
       setError("파일을 선택해 주세요.");
       return;
@@ -92,11 +107,22 @@ export function UploadVideoModal({
     setUploading(true);
     setError(null);
     try {
+      const durationSeconds = await getVideoDuration(file);
       const formData = new FormData();
-      formData.append("studioId", studioId);
+      if (studioId) formData.append("studioId", studioId);
       formData.append("title", title || file.name);
       formData.append("file", file);
-      await apiClient.postForm("/api/v1/media/upload", formData);
+      if (durationSeconds != null) {
+        formData.append("durationSeconds", String(durationSeconds));
+      }
+      await axiosInstance.post(
+        `${MEDIA_UPLOAD_URL}/api/media/upload`,
+        formData,
+        {
+          timeout: 600000,
+          headers: { "Content-Type": undefined },
+        },
+      );
       onSuccess?.();
       handleClose();
     } catch (err: unknown) {
@@ -181,15 +207,6 @@ export function UploadVideoModal({
           )}
         </div>
 
-        {!studioId && (
-          <p className="text-sm text-amber-600 bg-amber-50 rounded px-3 py-2">
-            업로드를 하려면 URL에{" "}
-            <code className="bg-amber-100 px-1 rounded">
-              ?studioId=스튜디오ID
-            </code>{" "}
-            를 넣어 접속해 주세요.
-          </p>
-        )}
         <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="outline" onClick={handleClose}>
             취소
@@ -197,7 +214,7 @@ export function UploadVideoModal({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={!file || uploading || !studioId}
+            disabled={!file || uploading}
             className="bg-blue-600 hover:bg-blue-700"
           >
             {uploading ? "업로드 중..." : "업로드"}

@@ -24,6 +24,7 @@ export const VideoSchema = z.object({
   type: VideoTypeSchema,
   status: VideoStatusSchema,
   thumbnailUrl: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
+  videoUrl: z.string().optional(),
 });
 
 // 비디오 목록 응답 (data 내부)

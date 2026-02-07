@@ -41,16 +41,21 @@ public class JwtUserIdFilter implements GlobalFilter, Ordered {
 
                 ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate();
 
-                // 내부 BIGINT ID (iid claim)
-                Object iid = claims.get("iid");
-                if (iid != null) {
-                    requestBuilder.header("X-User-Id", String.valueOf(((Number) iid).longValue()));
-                }
-
-                // UUID (subject)
+                // UUID (subject) → X-User-Id (media-service 등에서 odUserId로 사용)
                 String userId = claims.getSubject();
                 if (userId != null) {
+                    requestBuilder.header("X-User-Id", userId);
+                }
+
+                // 하위 호환용 UUID 별칭
+                if (userId != null) {
                     requestBuilder.header("X-User-Uuid", userId);
+                }
+
+                // 내부 BIGINT ID (iid claim) → X-User-Internal-Id
+                Object iid = claims.get("iid");
+                if (iid != null) {
+                    requestBuilder.header("X-User-Internal-Id", String.valueOf(((Number) iid).longValue()));
                 }
 
                 // 이메일

@@ -2,6 +2,7 @@ package com.onetake.media.global.config;
 
 import com.onetake.media.global.security.JwtAuthenticationEntryPoint;
 import com.onetake.media.global.security.JwtAuthenticationFilter;
+import com.onetake.media.global.security.UserIdHeaderFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final UserIdHeaderFilter userIdHeaderFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Bean
@@ -40,11 +42,14 @@ public class SecurityConfig {
                                 "/actuator/health", // Health check
                                 "/error",
                                 "/api/media/record/files/**",  // 녹화 파일 서빙
+                                "/api/media/internal/**",      // Core Service 내부 호출
+                                "/api/oauth/*/authorize",      // OAuth 인증 URL 요청
                                 "/api/oauth/*/callback"        // OAuth 콜백 (Google/Chzzk → JWT 없음)
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(userIdHeaderFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

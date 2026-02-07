@@ -28,6 +28,9 @@ public class PublishSession extends BaseTimeEntity {
     @Column(name = "od_user_id", nullable = false, length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     @Column(name = "stream_session_id")
     private Long streamSessionId;
 
@@ -77,6 +80,9 @@ public class PublishSession extends BaseTimeEntity {
     public void prePersist() {
         if (this.publishSessionId == null) {
             this.publishSessionId = UUID.randomUUID().toString();
+        }
+        if (this.userId == null && this.odUserId != null) {
+            this.userId = this.odUserId;
         }
     }
 }

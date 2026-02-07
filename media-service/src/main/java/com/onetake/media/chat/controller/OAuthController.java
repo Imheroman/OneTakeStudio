@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.onetake.media.chat.service.OAuthService.YouTubeChannelInfo;
+
 import java.net.URI;
 import java.util.List;
 
@@ -55,6 +57,14 @@ public class OAuthController {
         try {
             PlatformToken token = oAuthService.exchangeCodeForToken(ChatPlatform.YOUTUBE, code, state);
             log.info("[YouTube] OAuth completed for userId: {}", token.getOdUserId());
+
+            // YouTube Data API로 채널 정보 조회 + PlatformToken에 channelId 저장
+            YouTubeChannelInfo channelInfo = oAuthService.fetchYouTubeChannelInfo(token.getAccessToken());
+            if (channelInfo != null) {
+                oAuthService.updateChannelId(token.getOdUserId(), ChatPlatform.YOUTUBE, channelInfo.channelId());
+                return redirectToFrontendWithChannel("success", "youtube",
+                        channelInfo.channelId(), channelInfo.channelName());
+            }
             return redirectToFrontend("success", "youtube");
         } catch (Exception e) {
             log.error("[YouTube] OAuth callback failed: {}", e.getMessage());
@@ -149,7 +159,23 @@ public class OAuthController {
             @RequestParam String odUserId) {
 
         List<PlatformToken> tokens = oAuthService.getTokensByOdUserId(odUserId);
-        List<TokenStatusResponse> statuses = tokens.stream()
+
+        // 만료된 토큰은 자동 갱신 시도
+        List<PlatformToken> refreshedTokens = tokens.stream()
+                .map(token -> {
+                    if (token.isExpired() && token.getRefreshToken() != null) {
+                        try {
+                            return oAuthService.refreshToken(token.getPlatform(), odUserId);
+                        } catch (Exception e) {
+                            log.warn("[{}] Auto-refresh failed on status check: {}", token.getPlatform(), e.getMessage());
+                            return token;
+                        }
+                    }
+                    return token;
+                })
+                .toList();
+
+        List<TokenStatusResponse> statuses = refreshedTokens.stream()
                 .map(TokenStatusResponse::from)
                 .toList();
 
@@ -199,6 +225,21 @@ public class OAuthController {
         String safeMessage = (message != null) ? message : "unknown_error";
         String encodedMessage = java.net.URLEncoder.encode(safeMessage, java.nio.charset.StandardCharsets.UTF_8);
         String redirectUrl = frontendUri + "?status=" + status + "&message=" + encodedMessage;
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(redirectUrl))
+                .build();
+    }
+
+    private ResponseEntity<Void> redirectToFrontendWithChannel(String status, String message,
+                                                                String channelId, String channelName) {
+        String frontendUri = oAuthService.getFrontendRedirectUri();
+        String encodedMessage = java.net.URLEncoder.encode(message, java.nio.charset.StandardCharsets.UTF_8);
+        String encodedChannelId = java.net.URLEncoder.encode(channelId, java.nio.charset.StandardCharsets.UTF_8);
+        String encodedChannelName = java.net.URLEncoder.encode(channelName, java.nio.charset.StandardCharsets.UTF_8);
+        String redirectUrl = frontendUri + "?status=" + status
+                + "&message=" + encodedMessage
+                + "&channelId=" + encodedChannelId
+                + "&channelName=" + encodedChannelName;
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(redirectUrl))
                 .build();

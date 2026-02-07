@@ -16,12 +16,12 @@ export const RecordingStatusSchema = z.enum([
 
 export const RecordingSchema = z.object({
   recordingId: z.string(),
-  studioId: z.string(),
+  studioId: z.string().nullable().optional(),
   userId: z.string(),
   title: z.string(),
   description: z.string().nullable().optional(),
   thumbnailUrl: z.string().nullable().optional(),
-  s3Url: z.string().nullable().optional(),
+  fileUrl: z.string().nullable().optional(),
   fileSize: z.number().nullable().optional(),
   durationSeconds: z.number().nullable().optional(),
   status: RecordingStatusSchema,
@@ -72,6 +72,7 @@ export interface LibraryVideoDto {
   type: "original";
   status: LibraryVideoStatusDto;
   thumbnailUrl?: string;
+  videoUrl?: string;
 }
 
 // --- 녹화 상세·다운로드 ---

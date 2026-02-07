@@ -48,7 +48,9 @@ function WorkspaceTopNavInner() {
         "/api/notifications",
         NotificationListResponseSchema
       );
-      setNotificationCount(response.notifications.length);
+      setNotificationCount(
+        response.notifications.filter((n) => !n.read).length
+      );
     } catch (error) {
       console.error("알림 개수 조회 실패:", error);
     }

@@ -272,7 +272,10 @@ public class OAuthService {
 
         token.setStudioId(studioId);
         token.setAccessToken(accessToken);
-        token.setRefreshToken(refreshToken);
+        // refreshToken이 null이면 기존 값 유지 (Google은 재인증 시 refresh_token을 안 줄 수 있음)
+        if (refreshToken != null) {
+            token.setRefreshToken(refreshToken);
+        }
         token.setExpiresAt(expiresAt);
 
         log.info("Token saved: odUserId={}, platform={}", odUserId, platform);
@@ -294,8 +297,14 @@ public class OAuthService {
         PlatformToken token = platformTokenRepository.findByOdUserIdAndPlatform(odUserId, platform)
                 .orElseThrow(() -> new RuntimeException("Token not found"));
 
-        if (token.isExpiringSoon() && token.getRefreshToken() != null) {
-            return refreshToken(platform, odUserId);
+        // 만료됐거나 곧 만료될 토큰은 자동 갱신
+        if ((token.isExpired() || token.isExpiringSoon()) && token.getRefreshToken() != null) {
+            try {
+                return refreshToken(platform, odUserId);
+            } catch (Exception e) {
+                log.warn("[{}] Auto-refresh failed for userId={}: {}", platform, odUserId, e.getMessage());
+                return token;
+            }
         }
 
         return token;
@@ -345,9 +354,44 @@ public class OAuthService {
         return platformTokenRepository.save(token);
     }
 
+    /**
+     * YouTube Data API v3로 인증된 사용자의 채널 정보를 가져옴
+     */
+    public YouTubeChannelInfo fetchYouTubeChannelInfo(String accessToken) {
+        String url = "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode items = root.get("items");
+
+                if (items != null && items.isArray() && !items.isEmpty()) {
+                    JsonNode channel = items.get(0);
+                    String channelId = channel.get("id").asText();
+                    String channelName = channel.get("snippet").get("title").asText();
+                    return new YouTubeChannelInfo(channelId, channelName);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[YouTube] Failed to fetch channel info: {}", e.getMessage());
+        }
+
+        return null;
+    }
+
     public String getFrontendRedirectUri() {
         return oAuthConfig.getOauth().getFrontendRedirectUri();
     }
+
+    public record YouTubeChannelInfo(String channelId, String channelName) {}
 
     // State 인코딩/디코딩 (odUserId:studioId:uuid)
     private String encodeState(String odUserId, String studioId) {

@@ -35,6 +35,9 @@ public class Marker extends BaseTimeEntity {
     @Column(name = "od_user_id", length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     /**
      * 마커 시간 (녹화 시작 기준, 초 단위)
      * 예: 930.5 = 15분 30.5초
@@ -68,6 +71,9 @@ public class Marker extends BaseTimeEntity {
     public void prePersist() {
         if (this.markerId == null) {
             this.markerId = UUID.randomUUID().toString();
+        }
+        if (this.userId == null) {
+            this.userId = this.odUserId != null ? this.odUserId : "system";
         }
     }
 }

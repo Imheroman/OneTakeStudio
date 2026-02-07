@@ -22,6 +22,9 @@ public class PlatformToken {
     @Column(name = "od_user_id", nullable = false, length = 36)
     private String odUserId;
 
+    @Column(name = "user_id", length = 36)
+    private String userId;
+
     @Column(name = "studio_id")
     private String studioId;
 
@@ -59,6 +62,9 @@ public class PlatformToken {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (this.userId == null && this.odUserId != null) {
+            this.userId = this.odUserId;
+        }
     }
 
     @PreUpdate

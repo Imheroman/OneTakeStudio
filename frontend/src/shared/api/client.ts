@@ -201,6 +201,7 @@ export const apiClient = {
     return axiosInstance
       .post(url, formData, {
         ...config,
+        timeout: 600000, // 파일 업로드: 10분
         headers: {
           ...config?.headers,
           "Content-Type": undefined, // 브라우저가 boundary 포함 multipart/form-data 설정

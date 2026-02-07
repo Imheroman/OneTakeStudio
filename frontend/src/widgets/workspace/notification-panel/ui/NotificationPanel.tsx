@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { X, Bell } from "lucide-react";
+import { X, Bell, Trash2 } from "lucide-react";
 import { List } from "react-window";
 import { Button } from "@/shared/ui/button";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
@@ -21,8 +21,7 @@ const VIRTUAL_THRESHOLD = 15;
 interface NotificationPanelProps {
   notifications: NotificationWithActions[];
   onClose: () => void;
-  onAccept?: (id: string) => void;
-  onDecline?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 function NotificationRow({
@@ -30,22 +29,20 @@ function NotificationRow({
   style,
   notifications: list,
   isDark,
-  onAccept,
-  onDecline,
+  onDelete,
 }: {
   index: number;
   style: React.CSSProperties;
   notifications: NotificationWithActions[];
   isDark: boolean;
-  onAccept?: (id: string) => void;
-  onDecline?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const notification = list[index];
   return (
     <div style={{ ...style, paddingLeft: 16, paddingRight: 16, paddingBottom: 12 }}>
       <div
         className={cn(
-          "rounded-lg p-4 space-y-3 transition-colors h-full min-h-[100px]",
+          "rounded-lg p-4 space-y-3 transition-colors h-full min-h-[100px] group relative",
           isDark
             ? "bg-gray-800/50 border border-gray-700"
             : "border border-gray-200 bg-gray-50/50"
@@ -61,7 +58,7 @@ function NotificationRow({
           <div className="flex-1 min-w-0 space-y-1">
             <h3
               className={cn(
-                "font-semibold text-sm truncate",
+                "font-semibold text-sm truncate pr-6",
                 isDark ? "text-gray-100" : "text-gray-900"
               )}
             >
@@ -81,6 +78,21 @@ function NotificationRow({
               </p>
             )}
           </div>
+          {onDelete && !notification.id.startsWith("shorts-") && (
+            <button
+              type="button"
+              onClick={() => onDelete(notification.id)}
+              className={cn(
+                "absolute top-3 right-3 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity",
+                isDark
+                  ? "hover:bg-gray-700 text-gray-500 hover:text-gray-300"
+                  : "hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+              )}
+              aria-label="알림 삭제"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         {(notification.actions?.accept || notification.actions?.decline) && (
@@ -89,10 +101,7 @@ function NotificationRow({
               <Button
                 size="sm"
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
-                onClick={() => {
-                  notification.actions?.accept?.();
-                  onAccept?.(notification.id);
-                }}
+                onClick={() => notification.actions?.accept?.()}
               >
                 {notification.type === "ai_shorts" ? "결과 보기" : "수락"}
               </Button>
@@ -105,10 +114,7 @@ function NotificationRow({
                   "flex-1",
                   isDark ? "border-gray-600 text-gray-300 hover:bg-gray-700" : ""
                 )}
-                onClick={() => {
-                  notification.actions?.decline?.();
-                  onDecline?.(notification.id);
-                }}
+                onClick={() => notification.actions?.decline?.()}
               >
                 거절
               </Button>
@@ -123,8 +129,7 @@ function NotificationRow({
 export function NotificationPanel({
   notifications,
   onClose,
-  onAccept,
-  onDecline,
+  onDelete,
 }: NotificationPanelProps) {
   const resolved = useResolvedTheme();
   const isDark = resolved === "dark";
@@ -205,8 +210,7 @@ export function NotificationPanel({
           <List<{
             notifications: NotificationWithActions[];
             isDark: boolean;
-            onAccept?: (id: string) => void;
-            onDecline?: (id: string) => void;
+            onDelete?: (id: string) => void;
           }>
             rowCount={notifications.length}
             rowHeight={NOTIFICATION_ROW_HEIGHT}
@@ -214,8 +218,7 @@ export function NotificationPanel({
             rowProps={{
               notifications,
               isDark,
-              onAccept,
-              onDecline,
+              onDelete,
             }}
             style={{ height: listHeight, width: "100%" }}
             overscanCount={3}
@@ -226,7 +229,7 @@ export function NotificationPanel({
             <div
               key={notification.id}
               className={cn(
-                "rounded-lg p-4 space-y-3 transition-colors",
+                "rounded-lg p-4 space-y-3 transition-colors group relative",
                 isDark
                   ? "bg-gray-800/50 border border-gray-700"
                   : "border border-gray-200 bg-gray-50/50"
@@ -242,7 +245,7 @@ export function NotificationPanel({
                 <div className="flex-1 min-w-0 space-y-1">
                   <h3
                     className={cn(
-                      "font-semibold text-sm truncate",
+                      "font-semibold text-sm truncate pr-6",
                       isDark ? "text-gray-100" : "text-gray-900"
                     )}
                   >
@@ -262,6 +265,21 @@ export function NotificationPanel({
                     </p>
                   )}
                 </div>
+                {onDelete && !notification.id.startsWith("shorts-") && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(notification.id)}
+                    className={cn(
+                      "absolute top-3 right-3 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity",
+                      isDark
+                        ? "hover:bg-gray-700 text-gray-500 hover:text-gray-300"
+                        : "hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                    )}
+                    aria-label="알림 삭제"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
 
               {(notification.actions?.accept ||
@@ -271,10 +289,7 @@ export function NotificationPanel({
                     <Button
                       size="sm"
                       className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
-                      onClick={() => {
-                        notification.actions?.accept?.();
-                        onAccept?.(notification.id);
-                      }}
+                      onClick={() => notification.actions?.accept?.()}
                     >
                       {notification.type === "ai_shorts" ? "결과 보기" : "수락"}
                     </Button>
@@ -289,10 +304,7 @@ export function NotificationPanel({
                           ? "border-gray-600 text-gray-300 hover:bg-gray-700"
                           : ""
                       )}
-                      onClick={() => {
-                        notification.actions?.decline?.();
-                        onDecline?.(notification.id);
-                      }}
+                      onClick={() => notification.actions?.decline?.()}
                     >
                       거절
                     </Button>

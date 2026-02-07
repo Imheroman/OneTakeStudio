@@ -18,11 +18,15 @@ import com.onetake.core.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -41,9 +45,13 @@ public class LibraryService {
     private final StudioRepository studioRepository;
     private final ShortsResultRepository shortsResultRepository;
     private final UserRepository userRepository;
+    private final RestTemplate restTemplate;
 
     @Value("${library.storage.limit-bytes:10737418240}")
     private Long storageLimitBytes; // 기본 10GB
+
+    @Value("${media.service.url:http://localhost:8082}")
+    private String mediaServiceUrl;
 
     public RecordingListResponse getRecordings(String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -52,7 +60,8 @@ public class LibraryService {
 
         Map<Long, String> uuidMap = resolveStudioUuids(
                 recordings.getContent().stream().map(Recording::getStudioId).collect(Collectors.toList()));
-        Page<RecordingResponse> responsePage = recordings.map(r -> RecordingResponse.from(r, uuidMap.get(r.getStudioId())));
+        Page<RecordingResponse> responsePage = recordings.map(r -> RecordingResponse.from(r,
+                r.getStudioId() != null ? uuidMap.get(r.getStudioId()) : null));
         return RecordingListResponse.from(responsePage);
     }
 
@@ -282,14 +291,80 @@ public class LibraryService {
     // ==================== Studio UUID Helpers ====================
 
     private String resolveStudioUuid(Long internalStudioId) {
+        if (internalStudioId == null) return null;
         return studioRepository.findById(internalStudioId)
                 .map(Studio::getStudioId)
                 .orElse(null);
     }
 
     private Map<Long, String> resolveStudioUuids(List<Long> internalIds) {
-        List<Long> distinct = internalIds.stream().distinct().collect(Collectors.toList());
+        List<Long> distinct = internalIds.stream().filter(id -> id != null).distinct().collect(Collectors.toList());
+        if (distinct.isEmpty()) return Map.of();
         return studioRepository.findAllById(distinct).stream()
                 .collect(Collectors.toMap(Studio::getId, Studio::getStudioId));
+    }
+
+    // ==================== Comment Analysis & Markers (Media Service Proxy) ====================
+
+    /**
+     * 댓글 분석 데이터 조회 (Media Service에서 가져옴)
+     */
+    public Map<String, Object> getCommentAnalysis(String userId, String recordingId) {
+        Recording recording = recordingRepository.findByRecordingIdAndStatusNot(recordingId, RecordingStatus.DELETED)
+                .orElseThrow(() -> new RecordingNotFoundException(recordingId));
+        validateAccess(userId, recording);
+
+        Long mediaRecordingId = recording.getMediaRecordingId();
+        if (mediaRecordingId == null) {
+            return Map.of("recordingId", recordingId, "durationSeconds", 0, "buckets", List.of());
+        }
+
+        try {
+            String url = mediaServiceUrl + "/api/media/internal/recordings/" + mediaRecordingId + "/comment-stats";
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, null,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            Map<String, Object> body = response.getBody();
+            if (body != null) {
+                // recordingId를 Core Service의 UUID로 교체
+                body.put("recordingId", recordingId);
+                return body;
+            }
+        } catch (Exception e) {
+            log.error("Media Service 댓글 분석 조회 실패: recordingId={}, mediaRecordingId={}", recordingId, mediaRecordingId, e);
+        }
+
+        return Map.of("recordingId", recordingId, "durationSeconds", 0, "buckets", List.of());
+    }
+
+    /**
+     * 마커(북마크) 목록 조회 (Media Service에서 가져옴)
+     */
+    public Map<String, Object> getMarkers(String userId, String recordingId) {
+        Recording recording = recordingRepository.findByRecordingIdAndStatusNot(recordingId, RecordingStatus.DELETED)
+                .orElseThrow(() -> new RecordingNotFoundException(recordingId));
+        validateAccess(userId, recording);
+
+        Long mediaRecordingId = recording.getMediaRecordingId();
+        if (mediaRecordingId == null) {
+            return Map.of("markers", List.of());
+        }
+
+        try {
+            String url = mediaServiceUrl + "/api/media/internal/recordings/" + mediaRecordingId + "/markers";
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, null,
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+
+            Map<String, Object> body = response.getBody();
+            if (body != null) {
+                return body;
+            }
+        } catch (Exception e) {
+            log.error("Media Service 마커 조회 실패: recordingId={}, mediaRecordingId={}", recordingId, mediaRecordingId, e);
+        }
+
+        return Map.of("markers", List.of());
     }
 }

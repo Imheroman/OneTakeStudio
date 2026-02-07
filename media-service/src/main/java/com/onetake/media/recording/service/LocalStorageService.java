@@ -11,10 +11,12 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 /**
  * EC2 로컬 파일 저장소 서비스
@@ -63,7 +65,7 @@ public class LocalStorageService {
      * 사용자별 파일 경로 생성
      */
     public String getUserFilePath(String userId, String fileName) {
-        return Paths.get("user-" + userId, fileName).toString();
+        return Paths.get("user-" + userId, fileName).toString().replace('\\', '/');
     }
 
     /**
@@ -110,6 +112,21 @@ public class LocalStorageService {
         } catch (MalformedURLException e) {
             log.error("Failed to load file: {}", fileName, e);
             throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        }
+    }
+
+    /**
+     * InputStream으로부터 파일 저장 (업로드용)
+     */
+    public void saveFile(String relativeFilePath, InputStream inputStream) {
+        try {
+            Path targetPath = Paths.get(basePath, relativeFilePath);
+            Files.createDirectories(targetPath.getParent());
+            Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            log.info("File saved: {}", targetPath);
+        } catch (IOException e) {
+            log.error("Failed to save file: {}", relativeFilePath, e);
+            throw new BusinessException(ErrorCode.FILE_STORAGE_ERROR);
         }
     }
 

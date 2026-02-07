@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/library")
@@ -99,6 +101,34 @@ public class LibraryController {
                 userDetails.getUserId(), recordingId);
 
         return ResponseEntity.ok(ApiResponse.success("다운로드 URL 생성 성공", response));
+    }
+
+    // ==================== Comment Analysis & Markers ====================
+
+    @GetMapping("/recordings/{recordingId}/comment-analysis")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCommentAnalysis(
+            @CurrentUser CustomUserDetails userDetails,
+            @PathVariable String recordingId) {
+
+        log.debug("댓글 분석 조회 요청: recordingId={}", recordingId);
+
+        Map<String, Object> response = libraryService.getCommentAnalysis(
+                userDetails.getUserId(), recordingId);
+
+        return ResponseEntity.ok(ApiResponse.success("댓글 분석 조회 성공", response));
+    }
+
+    @GetMapping("/recordings/{recordingId}/markers")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getMarkers(
+            @CurrentUser CustomUserDetails userDetails,
+            @PathVariable String recordingId) {
+
+        log.debug("마커 조회 요청: recordingId={}", recordingId);
+
+        Map<String, Object> response = libraryService.getMarkers(
+                userDetails.getUserId(), recordingId);
+
+        return ResponseEntity.ok(ApiResponse.success("마커 조회 성공", response));
     }
 
     // ==================== Clips ====================

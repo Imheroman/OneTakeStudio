@@ -48,6 +48,13 @@ spring:
           filters:
             - StripPrefix=0
 
+        - id: media-service-oauth
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/oauth/**
+          filters:
+            - StripPrefix=0
+
         - id: media-service-recording
           uri: http://localhost:8082
           predicates:
