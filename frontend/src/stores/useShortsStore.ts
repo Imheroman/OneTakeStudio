@@ -28,7 +28,8 @@ interface ShortsStore {
       currentStepKey?: string | null;
       error?: string | null;
     }> | null,
-    completedCount: number
+    completedCount: number,
+    totalCount?: number
   ) => void;
   markSaved: (videoId: string) => void;
   setShortsStatus: (count: number) => void;
@@ -77,13 +78,18 @@ export const useShortsStore = create<ShortsStore>((set) => ({
     }),
   stopPolling: () => set({ isPolling: false }),
 
-  updateShortsFromServer: (jobId, serverShorts, completedCount) =>
+  updateShortsFromServer: (jobId, serverShorts, completedCount, totalCount) =>
     set((state) => {
+      // totalCount가 있으면 서버가 알려준 실제 쇼츠 수 사용, 없으면 3
+      const expectedCount = totalCount ?? 3;
+
       if (!serverShorts || serverShorts.length === 0) {
-        const newShorts = state.shorts.map((item, index) => ({
-          ...item,
-          status: (index < completedCount ? "completed" : "loading") as ShortStatus,
-        }));
+        const newShorts = state.shorts
+          .slice(0, expectedCount)
+          .map((item, index) => ({
+            ...item,
+            status: (index < completedCount ? "completed" : "loading") as ShortStatus,
+          }));
         return { jobId: jobId ?? state.jobId, shorts: newShorts };
       }
 
@@ -109,7 +115,8 @@ export const useShortsStore = create<ShortsStore>((set) => ({
         };
       });
 
-      while (newShorts.length < 3) {
+      // 서버가 알려준 총 개수만큼만 슬롯 유지 (초과분은 추가하지 않음)
+      while (newShorts.length < expectedCount) {
         newShorts.push(makeDefaultShort(newShorts.length + 1, "loading"));
       }
 

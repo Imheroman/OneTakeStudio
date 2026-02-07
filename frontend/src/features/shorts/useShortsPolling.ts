@@ -45,11 +45,11 @@ export const useShortsPolling = () => {
 
         hasLoggedErrorRef.current = false;
 
-        const { jobId, status, completedCount, shorts } = response.data;
+        const { jobId, status, totalCount, completedCount, shorts } = response.data;
 
         if (status === "processing" || status === "completed" || status === "error") {
-          // 서버 shorts 상세 데이터로 업데이트 (단계 정보 포함)
-          updateShortsFromServer(jobId ?? null, shorts ?? null, completedCount);
+          // 서버 shorts 상세 데이터로 업데이트 (단계 정보 포함, totalCount로 실제 슬롯 수 결정)
+          updateShortsFromServer(jobId ?? null, shorts ?? null, completedCount, totalCount);
 
           if (completedCount > prevCountRef.current) {
             addNotification(
