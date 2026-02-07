@@ -290,10 +290,16 @@ export function useStudioMain(
             onStageSourceIds: remoteOnStageIds,
             sourceTransforms: remoteTransforms,
             currentLayout: remoteLayout,
+            broadcastSceneId: remoteBroadcastSceneId,
+            previewResolution: remoteResolution,
+            isEditMode: remoteIsEditMode,
           } = message.payload as {
             onStageSourceIds?: string[];
             sourceTransforms?: Record<string, SourceTransform>;
             currentLayout?: LayoutType;
+            broadcastSceneId?: string;
+            previewResolution?: "720p" | "1080p";
+            isEditMode?: boolean;
           };
           if (remoteOnStageIds) {
             setOnStageSourceIds(remoteOnStageIds);
@@ -303,6 +309,16 @@ export function useStudioMain(
           }
           if (remoteLayout) {
             setCurrentLayout(remoteLayout);
+          }
+          if (remoteBroadcastSceneId) {
+            setBroadcastSceneId(remoteBroadcastSceneId);
+            setPreviewSceneId(remoteBroadcastSceneId);
+          }
+          if (remoteResolution) {
+            setPreviewResolution(remoteResolution);
+          }
+          if (remoteIsEditMode !== undefined) {
+            setIsEditMode(remoteIsEditMode);
           }
         }
         break;
@@ -476,10 +492,16 @@ export function useStudioMain(
   const onStageSourceIdsRef = useRef(onStageSourceIds);
   const sourceTransformsRef = useRef(sourceTransforms);
   const currentLayoutRef = useRef(currentLayout);
+  const broadcastSceneIdRef = useRef(broadcastSceneId);
+  const previewResolutionRef = useRef(previewResolution);
+  const isEditModeRef = useRef(isEditMode);
   const prevOnlineMembersCountRef = useRef(0);
   onStageSourceIdsRef.current = onStageSourceIds;
   sourceTransformsRef.current = sourceTransforms;
   currentLayoutRef.current = currentLayout;
+  broadcastSceneIdRef.current = broadcastSceneId;
+  previewResolutionRef.current = previewResolution;
+  isEditModeRef.current = isEditMode;
 
   useEffect(() => {
     // 새 멤버가 입장했을 때 (멤버 수 증가)
@@ -492,11 +514,17 @@ export function useStudioMain(
         onStageSourceIds: onStageSourceIdsRef.current,
         sourceTransformsKeys: Object.keys(sourceTransformsRef.current),
         currentLayout: currentLayoutRef.current,
+        broadcastSceneId: broadcastSceneIdRef.current,
+        previewResolution: previewResolutionRef.current,
+        isEditMode: isEditModeRef.current,
       });
       broadcastState("FULL_STATE_SYNC", {
         onStageSourceIds: onStageSourceIdsRef.current,
         sourceTransforms: sourceTransformsRef.current,
         currentLayout: currentLayoutRef.current,
+        broadcastSceneId: broadcastSceneIdRef.current,
+        previewResolution: previewResolutionRef.current,
+        isEditMode: isEditModeRef.current,
       });
     }
 
