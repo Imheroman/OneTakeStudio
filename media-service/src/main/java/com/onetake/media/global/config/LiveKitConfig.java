@@ -5,10 +5,13 @@ import io.livekit.server.EgressServiceClient;
 import io.livekit.server.IngressServiceClient;
 import io.livekit.server.RoomServiceClient;
 import io.livekit.server.WebhookReceiver;
+import io.livekit.server.okhttp.OkHttpFactory;
 import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 @Getter
@@ -33,7 +36,13 @@ public class LiveKitConfig {
 
     @Bean
     public EgressServiceClient egressServiceClient() {
-        return EgressServiceClient.createClient(host, apiKey, apiSecret);
+        return EgressServiceClient.createClient(host, apiKey, apiSecret,
+                new OkHttpFactory(false, builder -> {
+                    builder.connectTimeout(30, TimeUnit.SECONDS);
+                    builder.readTimeout(30, TimeUnit.SECONDS);
+                    builder.writeTimeout(30, TimeUnit.SECONDS);
+                })
+        );
     }
 
     @Bean
