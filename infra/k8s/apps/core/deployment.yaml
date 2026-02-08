@@ -162,10 +162,17 @@ spec:
                 configMapKeyRef:
                   name: core-config
                   key: STORAGE_BASE_PATH
+            - name: RECORDING_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: RECORDING_BASE_PATH
 
           volumeMounts:
             - name: storage
               mountPath: /data/storage
+            - name: recordings
+              mountPath: /data/recordings
           resources:
             requests:
               memory: "512Mi"
@@ -190,4 +197,8 @@ spec:
         - name: storage
           hostPath:
             path: /data/storage
+            type: DirectoryOrCreate
+        - name: recordings
+          hostPath:
+            path: /data/recordings
             type: DirectoryOrCreate

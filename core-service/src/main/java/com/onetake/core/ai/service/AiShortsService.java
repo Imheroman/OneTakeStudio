@@ -56,6 +56,9 @@ public class AiShortsService {
     @Value("${storage.base-path:/mnt/storage}")
     private String storageBasePath;
 
+    @Value("${recording.base-path:${storage.base-path:/mnt/storage}}")
+    private String recordingBasePath;
+
     @Value("${ffmpeg.path:ffmpeg}")
     private String ffmpegPath;
 
@@ -72,12 +75,12 @@ public class AiShortsService {
      * 공유 스토리지(NFS) 기준 절대 경로 반환
      */
     private String resolveFilePath(Recording recording) {
-        // filePath가 절대 경로면 그대로 사용, 아니면 storageBasePath 기준으로 조합
+        // filePath가 절대 경로면 그대로 사용, 아니면 recordingBasePath 기준으로 조합
         String filePath = recording.getFilePath();
         if (filePath != null && filePath.startsWith("/")) {
             return filePath;
         }
-        return storageBasePath + "/" + (filePath != null ? filePath : recording.getFileName());
+        return recordingBasePath + "/" + (filePath != null ? filePath : recording.getFileName());
     }
 
     /**

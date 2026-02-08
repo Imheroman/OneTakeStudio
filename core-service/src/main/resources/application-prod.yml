@@ -72,6 +72,10 @@ ffmpeg:
 storage:
   base-path: ${STORAGE_BASE_PATH:/data/storage}
 
+# Recording files (Media Service에서 저장한 녹화 파일 경로)
+recording:
+  base-path: ${RECORDING_BASE_PATH:/data/recordings}
+
 logging:
   level:
     com.onetake: INFO
