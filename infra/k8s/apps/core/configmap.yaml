@@ -11,7 +11,11 @@ data:
   OAUTH_GOOGLE_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
   OAUTH_KAKAO_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
   OAUTH_NAVER_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/oauth/callback"
-  AI_SERVICE_URL: "http://localhost:8000"
-  AI_WEBHOOK_URL: "http://api-server.core.svc.cluster.local:8080/api/ai/webhook"
+  # AI 서비스: ngrok 터널 (로컬 FastAPI:8000)
+  # ngrok URL이 변경되면 이 값도 업데이트 필요
+  AI_SERVICE_URL: "https://damion-unsoaked-karina.ngrok-free.dev"
+  # Webhook: AI(외부)가 Core(K8s)를 호출하므로 외부 도메인 사용
+  AI_WEBHOOK_URL: "https://i14c206.p.ssafy.io/api/ai/webhook"
   MEDIA_SERVICE_URL: "http://media-server.media.svc.cluster.local:8081"
   STORAGE_BASE_PATH: "/data/storage"
+  CORE_EXTERNAL_URL: "https://i14c206.p.ssafy.io"

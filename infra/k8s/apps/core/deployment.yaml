@@ -150,6 +150,12 @@ spec:
                 configMapKeyRef:
                   name: core-config
                   key: MEDIA_SERVICE_URL
+            # Core External URL (AI 서비스가 파일 다운로드/업로드 시 사용)
+            - name: CORE_EXTERNAL_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: core-config
+                  key: CORE_EXTERNAL_URL
             # Storage
             - name: STORAGE_BASE_PATH
               valueFrom:
@@ -157,6 +163,9 @@ spec:
                   name: core-config
                   key: STORAGE_BASE_PATH
 
+          volumeMounts:
+            - name: storage
+              mountPath: /data/storage
           resources:
             requests:
               memory: "512Mi"
@@ -177,3 +186,8 @@ spec:
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 30
+      volumes:
+        - name: storage
+          hostPath:
+            path: /data/storage
+            type: DirectoryOrCreate

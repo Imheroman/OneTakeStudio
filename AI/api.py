@@ -18,15 +18,44 @@ app = FastAPI(title="AI Shorts Generator API")
 # ---------------------------------------------------------
 class VideoItem(BaseModel):
     video_id: str
-    video_path: str
+    video_path: str = ""
+    video_url: Optional[str] = None  # HTTP 다운로드 URL
 
 class ShortsRequest(BaseModel):
     job_id: Optional[str] = None
     videos: List[VideoItem]
     need_subtitles: bool = True
     subtitle_lang: str = "ko"
-    output_dir: str  # 예: /mnt/output/abc123
+    output_dir: str = "./outputs"
     webhook_url: str # 결과 보고용 백엔드 주소
+    upload_url: Optional[str] = None  # 결과 업로드 URL
+
+
+def download_video(url: str, dest_path: str) -> str:
+    """URL에서 비디오 파일 다운로드"""
+    print(f"[INFO] Downloading video from {url} -> {dest_path}")
+    with httpx.Client(timeout=300.0, follow_redirects=True) as client:
+        with client.stream("GET", url) as resp:
+            resp.raise_for_status()
+            with open(dest_path, "wb") as f:
+                for chunk in resp.iter_bytes(chunk_size=8192):
+                    f.write(chunk)
+    file_size = os.path.getsize(dest_path)
+    print(f"[INFO] Download complete: {dest_path} ({file_size / 1024 / 1024:.1f} MB)")
+    return dest_path
+
+
+def upload_result(upload_url: str, video_id: str, file_path: str) -> Optional[str]:
+    """처리 결과를 Core 서버에 업로드, 서버 경로 반환"""
+    url = f"{upload_url}/{video_id}"
+    print(f"[INFO] Uploading result: {file_path} -> {url}")
+    with httpx.Client(timeout=300.0) as client:
+        with open(file_path, "rb") as f:
+            resp = client.post(url, files={"file": (os.path.basename(file_path), f, "video/mp4")})
+            resp.raise_for_status()
+            server_path = resp.json().get("file_path")
+            print(f"[INFO] Upload complete, server path: {server_path}")
+            return server_path
 
 # ---------------------------------------------------------
 # ⚙️ 백그라운드 처리 로직
@@ -39,6 +68,30 @@ async def background_process_job(req: ShortsRequest):
     async with httpx.AsyncClient(timeout=60.0) as client:
         for video in req.videos:
             v_start = datetime.now(timezone.utc)
+
+            # 1. video_url이 있으면 HTTP로 다운로드
+            actual_path = video.video_path
+            if video.video_url:
+                try:
+                    temp_dir = os.path.join("./work", job_id, video.video_id)
+                    os.makedirs(temp_dir, exist_ok=True)
+                    temp_download = os.path.join(temp_dir, "input.mp4")
+                    download_video(video.video_url, temp_download)
+                    actual_path = temp_download
+                except Exception as e:
+                    print(f"[ERROR] Video download failed for {video.video_id}: {e}")
+                    webhook_payload = {
+                        "job_id": job_id,
+                        "video_id": video.video_id,
+                        "status": "error",
+                        "error": f"Download failed: {str(e)}",
+                        "processing_time_sec": round((datetime.now(timezone.utc) - v_start).total_seconds(), 3)
+                    }
+                    try:
+                        await client.post(req.webhook_url, json=webhook_payload)
+                    except Exception as err:
+                        print(f"[ERROR] Webhook failed: {err}")
+                    continue
 
             # progress webhook을 보내는 동기 콜백 (run_in_executor 내 thread에서 호출됨)
             def make_progress_callback(vid_id, wh_url):
@@ -66,9 +119,9 @@ async def background_process_job(req: ShortsRequest):
                 loop = asyncio.get_event_loop()
                 result_data = await loop.run_in_executor(
                     None,
-                    lambda: process_one_video(
-                        input_video_path=video.video_path,
-                        video_id=video.video_id,
+                    lambda v=actual_path, vid=video.video_id: process_one_video(
+                        input_video_path=v,
+                        video_id=vid,
                         job_id=job_id,
                         need_subtitles=req.need_subtitles,
                         subtitle_lang=req.subtitle_lang,
@@ -78,6 +131,16 @@ async def background_process_job(req: ShortsRequest):
                         on_progress=progress_cb,
                     )
                 )
+
+                # 2. upload_url이 있으면 결과를 Core 서버에 업로드
+                if req.upload_url and result_data.get("short", {}).get("file_path"):
+                    try:
+                        local_output = result_data["short"]["file_path"]
+                        server_path = upload_result(req.upload_url, video.video_id, local_output)
+                        if server_path:
+                            result_data["short"]["file_path"] = server_path
+                    except Exception as e:
+                        print(f"[WARN] Upload failed for {video.video_id}, keeping local path: {e}")
 
                 v_end = datetime.now(timezone.utc)
                 processing_time = round((v_end - v_start).total_seconds(), 3)
@@ -127,12 +190,15 @@ async def background_process_job(req: ShortsRequest):
 # ---------------------------------------------------------
 @app.post("/shorts/process")
 async def shorts_process(req: ShortsRequest, background_tasks: BackgroundTasks):
-    # 1. 파일 존재 여부 간단 체크 (선택)
+    # 1. 파일 존재 여부 체크 (video_url이 있으면 스킵 - HTTP로 다운로드할 예정)
     for video in req.videos:
-        print(f"[INFO] File check: {video.video_path}")
-        print(f"[INFO] Exists: {os.path.exists(video.video_path)}")
-        if not os.path.exists(video.video_path):
-            raise HTTPException(status_code=400, detail=f"File not found: {video.video_path}")
+        if video.video_url:
+            print(f"[INFO] File will be downloaded via URL: {video.video_url}")
+        else:
+            print(f"[INFO] File check: {video.video_path}")
+            print(f"[INFO] Exists: {os.path.exists(video.video_path)}")
+            if not os.path.exists(video.video_path):
+                raise HTTPException(status_code=400, detail=f"File not found: {video.video_path}")
 
     # 2. 백그라운드 태스크 등록 (즉시 리턴하기 위함)
     background_tasks.add_task(background_process_job, req)

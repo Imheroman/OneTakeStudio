@@ -8,12 +8,17 @@ import com.onetake.core.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +29,9 @@ import java.util.Map;
 public class AiShortsController {
 
     private final AiShortsService aiShortsService;
+
+    @Value("${storage.base-path:/mnt/storage}")
+    private String storageBasePath;
 
     /**
      * 쇼츠 생성 요청
@@ -134,6 +142,51 @@ public class AiShortsController {
                 .contentType(MediaType.parseMediaType("video/mp4"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .body(videoResource);
+    }
+
+    /**
+     * AI 서비스용 세그먼트 파일 다운로드
+     * GET /api/ai/files/{jobId}/{filename}
+     */
+    @GetMapping("/files/{jobId}/{filename}")
+    public ResponseEntity<Resource> downloadSegmentFile(
+            @PathVariable String jobId,
+            @PathVariable String filename) {
+
+        if (filename.contains("..")) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        File file = new File(storageBasePath + "/temp/segments/" + jobId + "/" + filename);
+        if (!file.exists()) {
+            log.warn("세그먼트 파일 없음: {}", file.getAbsolutePath());
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = new FileSystemResource(file);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("video/mp4"))
+                .contentLength(file.length())
+                .body(resource);
+    }
+
+    /**
+     * AI 서비스 처리 결과 업로드
+     * POST /api/ai/upload/{jobId}/{videoId}
+     */
+    @PostMapping("/upload/{jobId}/{videoId}")
+    public ResponseEntity<Map<String, String>> uploadResultFile(
+            @PathVariable String jobId,
+            @PathVariable String videoId,
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        String dir = storageBasePath + "/shorts/" + jobId;
+        new File(dir).mkdirs();
+        String savedPath = dir + "/" + videoId + "_short.mp4";
+        file.transferTo(new File(savedPath));
+
+        log.info("AI 결과 업로드 완료: jobId={}, videoId={}, path={}", jobId, videoId, savedPath);
+        return ResponseEntity.ok(Map.of("file_path", savedPath));
     }
 
     /**

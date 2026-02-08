@@ -44,6 +44,8 @@ public class SecurityConfig {
                                 "/api/destinations/internal/**",
                                 "/api/destinations/*/internal",  // Media Service → Core 내부 조회
                                 "/api/ai/webhook",  // AI 서비스 Webhook (인증 없이)
+                                "/api/ai/files/**",  // AI 서비스 세그먼트 파일 다운로드
+                                "/api/ai/upload/**",  // AI 서비스 결과 업로드
                                 "/api/ai/shorts/stream/**",  // 숏츠 비디오 스트리밍 (video 태그 재생)
                                 "/api/ai/shorts/download/**",  // 숏츠 다운로드
                                 "/actuator/health",

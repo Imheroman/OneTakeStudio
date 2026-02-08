@@ -24,6 +24,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -55,6 +58,9 @@ public class AiShortsService {
 
     @Value("${ffmpeg.path:ffmpeg}")
     private String ffmpegPath;
+
+    @Value("${core.external-url:http://localhost:8080}")
+    private String coreExternalUrl;
 
     // 마커 기반 분할 설정
     private static final double SEGMENT_HALF_DURATION = 300.0;  // 마커 기준 앞뒤 5분씩 = 10분 구간
@@ -436,7 +442,10 @@ public class AiShortsService {
                     );
 
                     if (cutPath != null) {
-                        video.put("video_path", cutPath);  // 잘린 파일 경로
+                        video.put("video_path", cutPath);  // 잘린 파일 경로 (하위호환)
+                        // HTTP 다운로드 URL 추가
+                        String filename = seg.getVideoId() + ".mp4";
+                        video.put("video_url", coreExternalUrl + "/api/ai/files/" + job.getJobId() + "/" + filename);
                         log.info("분할 영상 생성: {} ({}s ~ {}s) -> {}",
                                 seg.getVideoId(), seg.getStartSec(), seg.getEndSec(), cutPath);
                     } else {
@@ -445,7 +454,15 @@ public class AiShortsService {
                         log.warn("분할 실패, 원본 사용: {}", seg.getVideoId());
                     }
                 } else {
-                    // AI 자동 모드: 전체 영상 경로
+                    // 비분할: 원본을 segment 디렉토리에 복사하여 HTTP 다운로드 가능하게 함
+                    try {
+                        String segmentPath = segmentDir + "/" + seg.getVideoId() + ".mp4";
+                        Files.copy(Path.of(seg.getVideoPath()), Path.of(segmentPath), StandardCopyOption.REPLACE_EXISTING);
+                        video.put("video_url", coreExternalUrl + "/api/ai/files/" + job.getJobId() + "/" + seg.getVideoId() + ".mp4");
+                        log.info("비분할 영상 복사: {} -> {}", seg.getVideoPath(), segmentPath);
+                    } catch (Exception e) {
+                        log.warn("비분할 영상 복사 실패, 원본 경로 사용: {}", e.getMessage());
+                    }
                     video.put("video_path", seg.getVideoPath());
                 }
 
@@ -458,7 +475,8 @@ public class AiShortsService {
             payload.put("videos", videos);
             payload.put("need_subtitles", job.getNeedSubtitles());
             payload.put("subtitle_lang", job.getSubtitleLang());
-            payload.put("output_dir", storageBasePath + "/shorts/" + job.getJobId());
+            payload.put("upload_url", coreExternalUrl + "/api/ai/upload/" + job.getJobId());
+            payload.put("output_dir", "./outputs/" + job.getJobId());  // AI 로컬 임시 경로
             payload.put("webhook_url", webhookUrl);
 
             log.info("AI 서비스 요청: jobId={}, mode={}, 영상 수={}",
