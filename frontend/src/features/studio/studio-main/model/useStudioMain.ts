@@ -902,7 +902,8 @@ export function useStudioMain(
       await apiClient.post(
         "/api/recordings/start",
         ApiResponseRecordingSchema,
-        body
+        body,
+        { timeout: 30000 }
       );
       setIsRecordingCloud(true);
     } catch (err) {
@@ -915,7 +916,9 @@ export function useStudioMain(
     try {
       await apiClient.post(
         `/api/recordings/${studioId}/stop`,
-        ApiResponseRecordingSchema
+        ApiResponseRecordingSchema,
+        undefined,
+        { timeout: 30000 }
       );
       setIsRecordingCloud(false);
     } catch (err) {
