@@ -230,7 +230,7 @@ export default function MainLayout({
           ? `쇼츠를 생성하고 있습니다... (${completedCount}/${shorts.length}개 완료)`
           : `${completedCount}/${shorts.length}개 쇼츠가 생성되었습니다`,
         time: "방금 전",
-        isRead: false,
+        read: false,
         actions: {
           accept: () => {
             openResultModal();
@@ -248,7 +248,7 @@ export default function MainLayout({
         title: "AI 쇼츠 생성 완료",
         message: msg,
         time: "방금 전",
-        isRead: false,
+        read: false,
       });
     });
 

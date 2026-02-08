@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
@@ -16,6 +16,14 @@ import svgPaths from "@/imports/svg-pm6qk27wb4";
 import { cn } from "@/shared/lib/utils";
 
 export default function LandingPage() {
+  return (
+    <Suspense>
+      <LandingPageContent />
+    </Suspense>
+  );
+}
+
+function LandingPageContent() {
   const { isLoggedIn, user, hasHydrated } = useAuthStore();
   const { openSignupModal, openLoginModal } = useAuthModal();
   const router = useRouter();
