@@ -84,6 +84,10 @@ external:
     max-retries: ${EXTERNAL_UPLOAD_MAX_RETRIES:3}
     retry-delay: ${EXTERNAL_UPLOAD_RETRY_DELAY:1000}
 
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:/usr/bin/ffmpeg}
+
 logging:
   level:
     com.onetake.media: INFO

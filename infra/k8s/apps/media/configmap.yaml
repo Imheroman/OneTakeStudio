@@ -14,7 +14,7 @@ data:
   # AI 서비스: ngrok 터널 (로컬 FastAPI:8000)
   AI_SERVICE_URL: "https://damion-unsoaked-karina.ngrok-free.dev"
   RECORDING_BASE_PATH: "/recordings"
-  RECORDING_BASE_URL: "https://www.onetakestudio.duckdns.org/recordings"
+  RECORDING_BASE_URL: "https://i14c206.p.ssafy.io/api/recordings/files"
   YOUTUBE_REDIRECT_URI: "https://i14c206.p.ssafy.io/api/oauth/youtube/callback"
   CHZZK_REDIRECT_URI: "https://i14c206.p.ssafy.io/api/oauth/chzzk/callback"
   OAUTH_FRONTEND_REDIRECT_URI: "https://www.onetakestudio.duckdns.org/channels/oauth/callback"

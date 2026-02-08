@@ -88,6 +88,10 @@ recording:
     base-path: ${RECORDING_BASE_PATH:C:/Users/SSAFY/Desktop/project/test/recordings}
     base-url: ${RECORDING_BASE_URL:http://localhost:8082/api/media/record/files}
 
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:C:/Users/SSAFY/Desktop/project/backend/onetakestudio-backend/AI/venv/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe}
+
 # Logging
 logging:
   level:

@@ -49,6 +49,7 @@ public class RecordingService {
     private final CommentCounterService commentCounterService;
     private final ChunkedUploadService chunkedUploadService;
     private final LocalStorageService localStorageService;
+    private final ThumbnailService thumbnailService;
     private final RestTemplate restTemplate;
     private final PlatformTransactionManager transactionManager;
 
@@ -182,6 +183,13 @@ public class RecordingService {
         // 분당 댓글 수 저장 (AI 하이라이트 추출용)
         commentCounterService.saveAndStopCounting(recordingSession.getStudioId(), recordingId);
 
+        // 썸네일 생성
+        String thumbnailUrl = null;
+        String thumbPath = thumbnailService.generateThumbnail(filePath);
+        if (thumbPath != null) {
+            thumbnailUrl = localStorageService.getFileUrl(thumbPath);
+        }
+
         // Core 서비스에 알림 (HTTP 우선, 실패 시 Redis fallback)
         String recordingName = "스트리밍 녹화 - " + LocalDateTime.now().format(
                 java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
@@ -195,6 +203,7 @@ public class RecordingService {
                 .fileSize(fileSize)
                 .durationSeconds(durationSeconds)
                 .recordingName(recordingName)
+                .thumbnailUrl(thumbnailUrl)
                 .stoppedAt(LocalDateTime.now())
                 .build();
 
@@ -263,6 +272,13 @@ public class RecordingService {
 
         recordingSessionRepository.save(recordingSession);
 
+        // 썸네일 생성
+        String thumbnailUrl = null;
+        String thumbPath = thumbnailService.generateThumbnail(userFilePath);
+        if (thumbPath != null) {
+            thumbnailUrl = localStorageService.getFileUrl(thumbPath);
+        }
+
         // Core Service에 이벤트 발행 (라이브러리에 표시)
         RecordingStoppedEvent event = RecordingStoppedEvent.builder()
                 .recordingId(recordingSession.getId())
@@ -273,6 +289,7 @@ public class RecordingService {
                 .fileSize(fileSize)
                 .durationSeconds(durationSeconds)
                 .recordingName(title)
+                .thumbnailUrl(thumbnailUrl)
                 .stoppedAt(LocalDateTime.now())
                 .build();
 
@@ -313,6 +330,9 @@ public class RecordingService {
         if (event.getRecordingName() != null) {
             message.put("recordingName", event.getRecordingName());
         }
+        if (event.getThumbnailUrl() != null) {
+            message.put("thumbnailUrl", event.getThumbnailUrl());
+        }
         message.put("stoppedAt", event.getStoppedAt().toString());
 
         redisTemplate.opsForStream().add(RedisStreamConfig.STREAM_KEY, message);
@@ -335,6 +355,9 @@ public class RecordingService {
             body.put("fileUrl", event.getFileUrl());
             body.put("fileSize", event.getFileSize());
             body.put("durationSeconds", event.getDurationSeconds());
+            if (event.getThumbnailUrl() != null) {
+                body.put("thumbnailUrl", event.getThumbnailUrl());
+            }
 
             String url = coreServiceUrl + "/api/internal/library/recordings";
             restTemplate.postForObject(url, body, String.class);

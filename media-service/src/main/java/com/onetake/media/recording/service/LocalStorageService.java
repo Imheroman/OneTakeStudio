@@ -160,6 +160,10 @@ public class LocalStorageService {
             return "video/webm";
         } else if (fileName.endsWith(".mkv")) {
             return "video/x-matroska";
+        } else if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+            return "image/jpeg";
+        } else if (fileName.endsWith(".png")) {
+            return "image/png";
         }
         return "application/octet-stream";
     }

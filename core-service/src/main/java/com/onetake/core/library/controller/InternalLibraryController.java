@@ -39,6 +39,7 @@ public class InternalLibraryController {
             String fileUrl = toString(request.get("fileUrl"));
             Long fileSize = toLong(request.get("fileSize"));
             Integer durationSeconds = toInt(request.get("durationSeconds"));
+            String thumbnailUrl = toString(request.get("thumbnailUrl"));
 
             if (mediaRecordingId == null || userId == null) {
                 log.warn("내부 API 녹화 등록 요청에 필수 필드 누락: mediaRecordingId={}, userId={}",
@@ -79,6 +80,7 @@ public class InternalLibraryController {
                     .fileUrl(fileUrl)
                     .fileSize(fileSize)
                     .durationSeconds(durationSeconds)
+                    .thumbnailUrl(thumbnailUrl)
                     .status(RecordingStatus.READY)
                     .mediaRecordingId(mediaRecordingId)
                     .build();
