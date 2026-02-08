@@ -15,6 +15,8 @@ spec:
       labels:
         app: livekit-server
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: livekit-server
           image: livekit/livekit-server:latest
