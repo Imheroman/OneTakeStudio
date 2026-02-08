@@ -9,8 +9,6 @@ import { cn } from "@/shared/lib/utils";
 import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
 import { apiClient } from "@/shared/api/client";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
 const SaveResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
@@ -71,10 +69,7 @@ function ShortCard({
   onSave: (videoId: string) => void;
   saving: string | null;
 }) {
-  const streamUrl =
-    jobId && short.videoId
-      ? `${BASE_URL}/api/ai/shorts/stream/${jobId}/${short.videoId}`
-      : null;
+  const streamUrl = short.streamUrl || null;
 
   const isSaving = saving === short.videoId;
 

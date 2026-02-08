@@ -555,8 +555,8 @@ public class AiShortsService {
                 }
             }
 
-            item.put("streamUrl", "/api/ai/shorts/stream/" + r.getJob().getJobId() + "/" + r.getVideoId());
-            item.put("downloadUrl", "/api/ai/shorts/download/" + r.getJob().getJobId() + "/" + r.getVideoId());
+            item.put("streamUrl", coreExternalUrl + "/api/ai/shorts/stream/" + r.getJob().getJobId() + "/" + r.getVideoId());
+            item.put("downloadUrl", coreExternalUrl + "/api/ai/shorts/download/" + r.getJob().getJobId() + "/" + r.getVideoId());
             return item;
         }).collect(Collectors.toList());
     }
@@ -648,6 +648,8 @@ public class AiShortsService {
                             .status(r.getStatus().name().toLowerCase())
                             .outputPath(r.getOutputPath())
                             .thumbnailPath(r.getThumbnailPath())
+                            .streamUrl(coreExternalUrl + "/api/ai/shorts/stream/" + job.getJobId() + "/" + r.getVideoId())
+                            .downloadUrl(coreExternalUrl + "/api/ai/shorts/download/" + job.getJobId() + "/" + r.getVideoId())
                             .durationSec(r.getDurationSec())
                             .resolution(r.getResolution())
                             .hasSubtitles(r.getHasSubtitles())

@@ -16,6 +16,7 @@ const AiShortsStatusApiSchema = z.object({
         z.object({
           videoId: z.string(),
           status: z.string(),
+          streamUrl: z.string().optional().nullable(),
           currentStep: z.number().optional().nullable(),
           totalSteps: z.number().optional().nullable(),
           currentStepKey: z.string().optional().nullable(),

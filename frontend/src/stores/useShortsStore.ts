@@ -5,6 +5,7 @@ export interface ShortItem {
   id: number;
   videoId: string | null;
   status: ShortStatus;
+  streamUrl: string | null;
   currentStep: number | null;
   totalSteps: number | null;
   currentStepKey: string | null;
@@ -23,6 +24,7 @@ interface ShortsStore {
     serverShorts: Array<{
       videoId: string;
       status: string;
+      streamUrl?: string | null;
       currentStep?: number | null;
       totalSteps?: number | null;
       currentStepKey?: string | null;
@@ -45,6 +47,7 @@ const makeDefaultShort = (id: number, status: ShortStatus = "idle"): ShortItem =
   id,
   videoId: null,
   status,
+  streamUrl: null,
   currentStep: null,
   totalSteps: null,
   currentStepKey: null,
@@ -108,6 +111,7 @@ export const useShortsStore = create<ShortsStore>((set) => ({
           id: index + 1,
           videoId: s.videoId,
           status,
+          streamUrl: s.streamUrl ?? null,
           currentStep: s.currentStep ?? null,
           totalSteps: s.totalSteps ?? null,
           currentStepKey: s.currentStepKey ?? null,

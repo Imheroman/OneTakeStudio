@@ -89,10 +89,13 @@ public class AiShortsController {
 
         try {
             Resource videoResource = aiShortsService.getVideoResource(jobId, videoId);
-            log.info("숏츠 스트리밍: jobId={}, videoId={}, exists={}", jobId, videoId, videoResource.exists());
+            long contentLength = videoResource.contentLength();
+            log.info("숏츠 스트리밍: jobId={}, videoId={}, exists={}, size={}MB",
+                    jobId, videoId, videoResource.exists(), contentLength / 1024 / 1024);
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("video/mp4"))
+                    .contentLength(contentLength)
                     .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                     .body(videoResource);
         } catch (Exception e) {

@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { apiClient } from "./client";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
 import {
   ApiResponseDataSchema,
   ApiResponseRecordingSchema,
@@ -136,8 +136,8 @@ async function getSavedShorts(recordingId: string): Promise<
       id: `${s.jobId}_${s.videoId}`,
       title: s.titles?.[0] ?? `쇼츠 ${index + 1}`,
       duration: s.durationSec != null ? formatDuration(s.durationSec) : undefined,
-      url: `${BASE_URL}${s.streamUrl}`,
-      downloadUrl: `${BASE_URL}${s.downloadUrl}`,
+      url: s.streamUrl,
+      downloadUrl: s.downloadUrl,
       thumbnailUrl: null,
       status: "READY",
     }));

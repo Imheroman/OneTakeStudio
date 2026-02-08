@@ -28,6 +28,8 @@ public class ShortsStatusResponse {
         private String status;
         private String outputPath;
         private String thumbnailPath;
+        private String streamUrl;
+        private String downloadUrl;
         private Double durationSec;
         private String resolution;
         private Boolean hasSubtitles;
