@@ -1,5 +1,7 @@
 FROM eclipse-temurin:21-jre-alpine
 
+RUN apk add --no-cache ffmpeg
+
 WORKDIR /app
 
 COPY target/*.jar app.jar

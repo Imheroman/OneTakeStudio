@@ -44,6 +44,11 @@ core:
   service:
     url: ${CORE_SERVICE_URL}
 
+# AI Service
+ai:
+  service:
+    url: ${AI_SERVICE_URL}
+
 # YouTube API (채팅 연동)
 youtube:
   oauth:

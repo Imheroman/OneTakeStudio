@@ -82,6 +82,11 @@ spec:
                 configMapKeyRef:
                   name: media-config
                   key: CORE_SERVICE_URL
+            - name: AI_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: AI_SERVICE_URL
             - name: RECORDING_BASE_PATH
               valueFrom:
                 configMapKeyRef:

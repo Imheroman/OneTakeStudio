@@ -108,32 +108,32 @@ setup-secrets:
 # ─────────────────────────────────────────────
 # Stage 1-b: ECR Pull Secret 갱신 (12시간 유효)
 # ─────────────────────────────────────────────
-setup-ecr-secret:
-  stage: setup
-  image: amazon/aws-cli:latest
-  before_script:
-    - yum install -y tar gzip
-    - curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    - chmod +x kubectl && mv kubectl /usr/local/bin/
-    - mkdir -p ~/.kube
-    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
-  script:
-    - |
-      ECR_TOKEN=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
-      for NS in core media; do
-        kubectl create secret docker-registry ecr-secret \
-          --namespace=$NS \
-          --docker-server=$ECR_REGISTRY \
-          --docker-username=AWS \
-          --docker-password="$ECR_TOKEN" \
-          --dry-run=client -o yaml | kubectl apply -f -
-      done
-    - echo "=== ECR Secret 갱신 완료 ==="
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
-#      changes:
-#        - infra/apps/**
-      when: manual
+#setup-ecr-secret:
+#  stage: setup
+#  image: amazon/aws-cli:latest
+#  before_script:
+#    - yum install -y tar gzip
+#    - curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+#    - chmod +x kubectl && mv kubectl /usr/local/bin/
+#    - mkdir -p ~/.kube
+#    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+#  script:
+#    - |
+#      ECR_TOKEN=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
+#      for NS in core media; do
+#        kubectl create secret docker-registry ecr-secret \
+#          --namespace=$NS \
+#          --docker-server=$ECR_REGISTRY \
+#          --docker-username=AWS \
+#          --docker-password="$ECR_TOKEN" \
+#          --dry-run=client -o yaml | kubectl apply -f -
+#      done
+#    - echo "=== ECR Secret 갱신 완료 ==="
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+##      changes:
+##        - infra/apps/**
+#      when: manual
 
 # ─────────────────────────────────────────────
 # Stage 2: Maven 빌드
