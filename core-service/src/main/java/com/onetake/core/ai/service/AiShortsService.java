@@ -85,11 +85,51 @@ public class AiShortsService {
 
     /**
      * Recording에서 영상 길이(초) 추출
+     * DB에 값이 없으면 ffprobe로 실제 파일에서 읽어옴
      */
     private double resolveRecordingDuration(Recording recording) {
-        return recording.getDurationSeconds() != null
-                ? recording.getDurationSeconds().doubleValue()
-                : 3600.0;  // 기본 1시간
+        if (recording.getDurationSeconds() != null) {
+            return recording.getDurationSeconds().doubleValue();
+        }
+
+        // DB에 duration 없음 → ffprobe로 실제 파일에서 읽기
+        String filePath = resolveFilePath(recording);
+        double probed = probeDuration(filePath);
+        if (probed > 0) {
+            log.info("ffprobe로 영상 길이 확인: {}초 ({})", probed, filePath);
+            return probed;
+        }
+
+        log.warn("영상 길이를 알 수 없음, 기본값 사용: 3600초 ({})", filePath);
+        return 3600.0;
+    }
+
+    /**
+     * ffprobe로 영상 파일의 실제 길이(초) 조회
+     */
+    private double probeDuration(String filePath) {
+        try {
+            String ffprobePath = ffmpegPath.replace("ffmpeg", "ffprobe");
+            ProcessBuilder pb = new ProcessBuilder(
+                    ffprobePath,
+                    "-v", "error",
+                    "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    filePath
+            );
+            pb.redirectErrorStream(true);
+
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes()).trim();
+            int exitCode = process.waitFor();
+
+            if (exitCode == 0 && !output.isEmpty()) {
+                return Double.parseDouble(output);
+            }
+        } catch (Exception e) {
+            log.warn("ffprobe 실행 실패: {}", e.getMessage());
+        }
+        return -1;
     }
 
     /**

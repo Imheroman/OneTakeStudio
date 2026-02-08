@@ -49,7 +49,8 @@ export function ShortsConfigurator({ videoId }: ShortsConfiguratorProps) {
           bgColor,
           needSubtitles: useSubtitles,
           subtitleLang: language,
-        }
+        },
+        { timeout: 120000 }
       );
 
       // 폴링 시작 + 결과 모달 열기

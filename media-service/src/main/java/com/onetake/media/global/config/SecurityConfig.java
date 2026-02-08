@@ -42,7 +42,9 @@ public class SecurityConfig {
                                 "/actuator/health", // Health check
                                 "/error",
                                 "/api/media/record/files/**",  // 녹화 파일 서빙
-                                "/api/media/internal/**",      // Core Service 내부 호출
+                                "/api/media/internal/**",      // Core Service 내부 호출 (녹화 데이터)
+                                "/api/internal/**",            // Core Service 내부 호출 (락 브로드캐스트 등)
+                                "/api/media/markers/**",       // Core Service 마커 조회 (AI 쇼츠)
                                 "/api/oauth/*/authorize",      // OAuth 인증 URL 요청
                                 "/api/oauth/*/callback"        // OAuth 콜백 (Google/Chzzk → JWT 없음)
                         ).permitAll()
