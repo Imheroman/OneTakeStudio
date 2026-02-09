@@ -15,6 +15,13 @@ spec:
       labels:
         app: livekit-egress
     spec:
+      initContainers:
+        - name: fix-recording-permissions
+          image: busybox
+          command: ['sh', '-c', 'chmod -R 777 /recordings']
+          volumeMounts:
+            - name: recordings
+              mountPath: /recordings
       containers:
         - name: livekit-egress
           image: livekit/egress:latest

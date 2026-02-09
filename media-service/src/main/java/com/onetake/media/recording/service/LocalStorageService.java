@@ -17,6 +17,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Set;
 
 /**
  * EC2 로컬 파일 저장소 서비스
@@ -39,6 +42,7 @@ public class LocalStorageService {
                 Files.createDirectories(storagePath);
                 log.info("Recording storage directory created: {}", basePath);
             }
+            setDirectoryPermissions(storagePath);
         } catch (IOException e) {
             log.error("Failed to create recording storage directory: {}", basePath, e);
         }
@@ -54,10 +58,25 @@ public class LocalStorageService {
                 Files.createDirectories(userPath);
                 log.info("User storage directory created: {}", userPath);
             }
+            setDirectoryPermissions(userPath);
             return userPath.toString();
         } catch (IOException e) {
             log.error("Failed to create user storage directory for userId: {}", userId, e);
             throw new BusinessException(ErrorCode.STORAGE_ERROR);
+        }
+    }
+
+    /**
+     * 디렉토리에 rwxrwxrwx 권한 설정 (LiveKit Egress 컨테이너 쓰기 허용)
+     */
+    private void setDirectoryPermissions(Path path) {
+        try {
+            Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxrwxrwx");
+            Files.setPosixFilePermissions(path, permissions);
+        } catch (UnsupportedOperationException e) {
+            // Windows 등 POSIX 미지원 환경에서는 무시
+        } catch (IOException e) {
+            log.warn("Failed to set directory permissions: {}", path, e);
         }
     }
 
