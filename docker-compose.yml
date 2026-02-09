@@ -1,0 +1,99 @@
+services:
+  # MySQL (Core Service + Media Service 통합)
+  mysql:
+    image: mysql:8.0
+    container_name: onetakestudio-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: core_db
+      MYSQL_USER: core_user
+      MYSQL_PASSWORD: core_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - onetakestudio-network
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "core_user", "-pcore_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (캐시 + Streams 메시지 브로커)
+  redis:
+    image: redis:7-alpine
+    container_name: onetakestudio-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - onetakestudio-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LiveKit (WebRTC 서버)
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: onetakestudio-livekit
+    command: --config /livekit.yaml
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50200-50250:50200-50250/udp"
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
+    networks:
+      - onetakestudio-network
+    depends_on:
+      - redis
+
+  # LiveKit Egress (녹화/송출 서비스)
+  livekit-egress:
+    image: livekit/egress:latest
+    container_name: onetakestudio-egress
+    environment:
+      - EGRESS_CONFIG_FILE=/egress.yaml
+    volumes:
+      - ./egress.yaml:/egress.yaml
+      - ${RECORDING_BASE_PATH:-C:/Users/SSAFY/Desktop/project/test/recordings}:/recordings
+    networks:
+      - onetakestudio-network
+    depends_on:
+      - livekit
+      - redis
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined
+
+  # LiveKit Ingress (RTMP 수신 서비스)
+  livekit-ingress:
+    image: livekit/ingress:latest
+    container_name: onetakestudio-ingress
+    environment:
+      - INGRESS_CONFIG_FILE=/ingress.yaml
+    ports:
+      - "1935:1935"      # RTMP
+      - "8088:8088"      # WHIP (WebRTC HTTP Ingress)
+    volumes:
+      - ./ingress.yaml:/ingress.yaml
+    networks:
+      - onetakestudio-network
+    depends_on:
+      - livekit
+      - redis
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  onetakestudio-network:
+    driver: bridge

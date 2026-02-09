@@ -1,0 +1,74 @@
+package com.onetake.media.global.exception;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+
+    // Common
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C001", "서버 내부 오류가 발생했습니다"),
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C002", "잘못된 입력값입니다"),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "C003", "인증이 필요합니다"),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "C004", "접근 권한이 없습니다"),
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "C005", "리소스를 찾을 수 없습니다"),
+
+    // Studio
+    STUDIO_NOT_FOUND(HttpStatus.NOT_FOUND, "ST001", "스튜디오를 찾을 수 없습니다"),
+
+    // Stream
+    STREAM_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "스트림 세션을 찾을 수 없습니다"),
+    STREAM_ALREADY_ACTIVE(HttpStatus.CONFLICT, "S002", "이미 활성화된 스트림이 있습니다"),
+    STREAM_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S003", "스트림 연결에 실패했습니다"),
+    LIVEKIT_TOKEN_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "S004", "LiveKit 토큰 생성에 실패했습니다"),
+    LIVEKIT_ROOM_NOT_FOUND(HttpStatus.BAD_REQUEST, "S005", "LiveKit room이 존재하지 않습니다. 스튜디오에 먼저 입장해주세요"),
+
+    // Recording
+    RECORDING_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "녹화를 찾을 수 없습니다"),
+    RECORDING_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "R002", "이미 녹화가 진행 중입니다"),
+    RECORDING_NOT_IN_PROGRESS(HttpStatus.BAD_REQUEST, "R003", "진행 중인 녹화가 없습니다"),
+    RECORDING_NOT_PAUSED(HttpStatus.BAD_REQUEST, "R004", "일시정지된 녹화가 없습니다"),
+    RECORDING_START_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "R005", "녹화 시작에 실패했습니다"),
+    RECORDING_STOP_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "R006", "녹화 종료에 실패했습니다"),
+
+    // Publish
+    PUBLISH_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "송출 세션을 찾을 수 없습니다"),
+    PUBLISH_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "P002", "이미 송출이 진행 중입니다"),
+    PUBLISH_NOT_IN_PROGRESS(HttpStatus.BAD_REQUEST, "P003", "진행 중인 송출이 없습니다"),
+    PUBLISH_DESTINATION_INVALID(HttpStatus.BAD_REQUEST, "P004", "잘못된 송출 대상입니다"),
+    RTMP_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "P005", "RTMP 연결에 실패했습니다"),
+
+    // ScreenShare
+    SCREEN_SHARE_NOT_FOUND(HttpStatus.NOT_FOUND, "SS001", "화면 공유를 찾을 수 없습니다"),
+    SCREEN_SHARE_ALREADY_ACTIVE(HttpStatus.CONFLICT, "SS002", "이미 화면 공유가 진행 중입니다"),
+    SCREEN_SHARE_NOT_ACTIVE(HttpStatus.BAD_REQUEST, "SS003", "활성화된 화면 공유가 없습니다"),
+
+    // File Storage
+    FILE_STORAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 저장에 실패했습니다"),
+    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "F002", "파일을 찾을 수 없습니다"),
+    FILE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "F003", "파일 접근이 거부되었습니다"),
+    STORAGE_QUOTA_EXCEEDED(HttpStatus.PAYLOAD_TOO_LARGE, "F004", "스토리지 용량이 부족합니다 (10GB 제한)"),
+    STORAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F005", "스토리지 오류가 발생했습니다"),
+
+    // Media Settings
+    MEDIA_SETTINGS_NOT_FOUND(HttpStatus.NOT_FOUND, "MS001", "미디어 설정을 찾을 수 없습니다"),
+    MEDIA_STATE_NOT_FOUND(HttpStatus.NOT_FOUND, "MS002", "미디어 상태를 찾을 수 없습니다"),
+    MEDIA_STATE_ALREADY_EXISTS(HttpStatus.CONFLICT, "MS003", "이미 활성화된 미디어 상태가 있습니다"),
+    MEDIA_DEVICE_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "MS004", "사용할 수 없는 미디어 장치입니다"),
+
+    // Viewer Metrics
+    VIEWER_METRICS_NOT_FOUND(HttpStatus.NOT_FOUND, "V001", "시청 지표를 찾을 수 없습니다"),
+    VIEWER_COLLECTION_ALREADY_ACTIVE(HttpStatus.CONFLICT, "V002", "이미 시청자 수집이 진행 중입니다"),
+    VIEWER_COLLECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "V003", "시청자 수집에 실패했습니다"),
+
+    // Shorts
+    SHORTS_ALREADY_IN_PROGRESS(HttpStatus.CONFLICT, "SH001", "이미 숏츠 생성이 진행 중입니다"),
+    SHORTS_JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "SH002", "숏츠 작업을 찾을 수 없습니다"),
+    SHORTS_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SH003", "숏츠 생성에 실패했습니다");
+
+    private final HttpStatus status;
+    private final String code;
+    private final String message;
+}

@@ -1,0 +1,94 @@
+# =====================================================
+# Production Configuration - media-service
+# 운영 환경에서 환경변수로 오버라이드
+# =====================================================
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 5GB
+      max-request-size: 5GB
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+eureka:
+  client:
+    enabled: false
+
+livekit:
+  host: ${LIVEKIT_HOST}
+  public-url: ${LIVEKIT_PUBLIC_URL}
+  api:
+    key: ${LIVEKIT_API_KEY}
+    secret: ${LIVEKIT_API_SECRET}
+  egress:
+    output-path: ${LIVEKIT_EGRESS_OUTPUT_PATH:/recordings/}
+
+core:
+  service:
+    url: ${CORE_SERVICE_URL}
+
+# AI Service
+ai:
+  service:
+    url: ${AI_SERVICE_URL}
+
+# YouTube API (채팅 연동)
+youtube:
+  oauth:
+    client-id: ${YOUTUBE_CLIENT_ID}
+    client-secret: ${YOUTUBE_CLIENT_SECRET}
+    redirect-uri: ${YOUTUBE_REDIRECT_URI}
+    scope: https://www.googleapis.com/auth/youtube.readonly
+
+# 치지직 OAuth (채팅 연동)
+chzzk:
+  oauth:
+    client-id: ${CHZZK_CLIENT_ID}
+    client-secret: ${CHZZK_CLIENT_SECRET}
+    redirect-uri: ${CHZZK_REDIRECT_URI}
+
+# OAuth 공통 설정
+oauth:
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI}
+
+recording:
+  storage:
+    base-path: ${RECORDING_BASE_PATH}
+    base-url: ${RECORDING_BASE_URL}
+
+# External EC2 Upload (청크 업로드)
+external:
+  upload:
+    enabled: ${EXTERNAL_UPLOAD_ENABLED:false}
+    server-url: ${EXTERNAL_UPLOAD_URL}
+    api-key: ${EXTERNAL_UPLOAD_API_KEY}
+    timeout: ${EXTERNAL_UPLOAD_TIMEOUT:300000}
+    chunk-size: ${EXTERNAL_UPLOAD_CHUNK_SIZE:52428800}
+    max-retries: ${EXTERNAL_UPLOAD_MAX_RETRIES:3}
+    retry-delay: ${EXTERNAL_UPLOAD_RETRY_DELAY:1000}
+
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:/usr/bin/ffmpeg}
+
+logging:
+  level:
+    com.onetake.media: INFO
+    org.hibernate.SQL: WARN

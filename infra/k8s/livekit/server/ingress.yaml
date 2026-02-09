@@ -1,0 +1,60 @@
+# LiveKit Server Ingress - /livekit/** 경로 처리
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: livekit-server-ingress
+  namespace: livekit
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: livekit-livekit-cors@kubernetescrd,livekit-livekit-strip-prefix@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - i14c206.p.ssafy.io
+  rules:
+    - host: i14c206.p.ssafy.io
+      http:
+        paths:
+          - path: /livekit
+            pathType: Prefix
+            backend:
+              service:
+                name: livekit-server
+                port:
+                  number: 7880
+---
+# CORS 미들웨어
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: livekit-cors
+  namespace: livekit
+spec:
+  headers:
+    accessControlAllowMethods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "PATCH"
+      - "OPTIONS"
+    accessControlAllowHeaders:
+      - "*"
+    accessControlAllowOriginListRegex:
+      - "https://www\\.onetakestudio\\.duckdns\\.org"
+      - "https://i14c206\\.p\\.ssafy\\.io"
+    accessControlAllowCredentials: true
+    accessControlMaxAge: 3600
+---
+# StripPrefix 미들웨어
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: livekit-strip-prefix
+  namespace: livekit
+spec:
+  stripPrefix:
+    prefixes:
+      - /livekit

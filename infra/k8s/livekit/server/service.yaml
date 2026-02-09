@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: livekit-server
+  namespace: livekit
+spec:
+  selector:
+    app: livekit-server
+  ports:
+    - name: http
+      port: 7880
+      targetPort: 7880
+    - name: rtc-tcp
+      port: 7881
+      targetPort: 7881
+  type: ClusterIP

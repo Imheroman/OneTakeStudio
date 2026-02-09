@@ -1,0 +1,381 @@
+"use client";
+
+import { useState } from "react";
+import { Radio, Video, HardDrive, Cloud, ArrowRight } from "lucide-react";
+import { useResolvedTheme } from "@/stores/useWorkspaceThemeStore";
+import { ComingSoonModal } from "@/shared/ui/coming-soon-modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
+import { Textarea } from "@/shared/ui/textarea";
+import { cn } from "@/shared/lib/utils";
+import type {
+  TransmissionType,
+  StorageLocation,
+  Platform,
+} from "@/entities/studio/model";
+
+interface CreateStudioDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (data: {
+    title: string;
+    description?: string;
+    transmissionType: TransmissionType;
+    storageLocation: StorageLocation;
+    platforms: Platform[];
+  }) => void;
+  initialType?: "live" | "recording";
+}
+
+export function CreateStudioDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  initialType = "live",
+}: CreateStudioDialogProps) {
+  const [transmissionType, setTransmissionType] = useState<TransmissionType>(
+    initialType === "live" ? "live" : "saved_video"
+  );
+  const [storageLocation, setStorageLocation] =
+    useState<StorageLocation>("local");
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [comingSoonOpen, setComingSoonOpen] = useState(false);
+  const [comingSoonMessage, setComingSoonMessage] = useState("");
+  const isDark = useResolvedTheme() === "dark";
+
+  const handlePlatformToggle = (platform: Platform) => {
+    if (platform === "chzzk" || platform === "twitch") {
+      setComingSoonMessage(
+        "치지직/트위치 송출은 준비 중입니다. 현재는 YouTube만 지원됩니다."
+      );
+      setComingSoonOpen(true);
+      return;
+    }
+    setPlatforms((prev) =>
+      prev.includes(platform)
+        ? prev.filter((p) => p !== platform)
+        : [...prev, platform]
+    );
+  };
+
+  const handleSubmit = () => {
+    if (!title.trim()) {
+      alert("제목을 입력해주세요.");
+      return;
+    }
+
+    if (transmissionType === "live" && platforms.length === 0) {
+      alert("최소 하나의 송출 플랫폼을 선택해주세요.");
+      return;
+    }
+
+    onSubmit({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      transmissionType,
+      storageLocation,
+      platforms,
+    });
+
+    // 폼 초기화
+    setTitle("");
+    setDescription("");
+    setPlatforms([]);
+    onOpenChange(false);
+  };
+
+  const platformIcons: Record<Platform, string> = {
+    youtube: "▶️",
+    chzzk: "ㅊ",
+    twitch: "💜",
+  };
+
+  const platformNames: Record<Platform, string> = {
+    youtube: "유튜브",
+    chzzk: "치지직",
+    twitch: "트위치",
+  };
+
+  const selectedCardClass = isDark
+    ? "border-indigo-500 bg-indigo-500/20"
+    : "border-indigo-500 bg-indigo-50";
+  const unselectedCardClass = isDark
+    ? "border-white/20 hover:border-white/30 hover:bg-white/5"
+    : "border-gray-200 hover:border-gray-300";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          "sm:max-w-[600px] max-h-[90vh] overflow-y-auto",
+          isDark && "bg-[#0c0c0f] border-white/10 text-white"
+        )}
+      >
+        <DialogHeader>
+          <DialogTitle className={cn(isDark && "text-white/90")}>
+            스튜디오 생성
+          </DialogTitle>
+          <DialogDescription className={cn(isDark && "text-white/70")}>
+            새로운 스튜디오를 생성하여 라이브 스트리밍이나 녹화를 시작하세요.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* 송출 타입 */}
+          <div className="space-y-3">
+            <Label
+              className={cn(
+                "text-base font-semibold",
+                isDark && "text-white/90"
+              )}
+            >
+              송출 타입
+            </Label>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setTransmissionType("live")}
+                className={cn(
+                  "p-4 border-2 rounded-lg transition-all text-left",
+                  transmissionType === "live"
+                    ? selectedCardClass
+                    : unselectedCardClass,
+                  isDark && "text-white/90"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Radio className="h-5 w-5" />
+                  <span className="font-semibold">라이브 송출</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTransmissionType("saved_video")}
+                className={cn(
+                  "p-4 border-2 rounded-lg transition-all text-left",
+                  transmissionType === "saved_video"
+                    ? selectedCardClass
+                    : unselectedCardClass,
+                  isDark && "text-white/90"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Video className="h-5 w-5" />
+                  <span className="font-semibold">저장된 영상</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* 송출 플랫폼 (라이브 송출일 때만) */}
+          {transmissionType === "live" && (
+            <div className="space-y-3">
+              <Label
+                className={cn(
+                  "text-base font-semibold",
+                  isDark && "text-white/90"
+                )}
+              >
+                송출 플랫폼
+              </Label>
+              <div className="grid grid-cols-3 gap-3">
+                {(["youtube", "chzzk", "twitch"] as Platform[]).map(
+                  (platform) => {
+                    const isComingSoon =
+                      platform === "chzzk" || platform === "twitch";
+                    return (
+                      <button
+                        key={platform}
+                        type="button"
+                        onClick={() => handlePlatformToggle(platform)}
+                        className={cn(
+                          "p-4 border-2 rounded-lg transition-all text-center relative",
+                          platforms.includes(platform)
+                            ? selectedCardClass
+                            : unselectedCardClass,
+                          isComingSoon &&
+                            !platforms.includes(platform) &&
+                            "opacity-75",
+                          isDark && "text-white/90"
+                        )}
+                        title={isComingSoon ? "준비 중" : undefined}
+                      >
+                        <div className="text-2xl mb-2">
+                          {platformIcons[platform]}
+                        </div>
+                        <div className="text-sm font-medium">
+                          {platformNames[platform]}
+                          {isComingSoon && (
+                            <span
+                              className={cn(
+                                "block text-xs font-normal mt-0.5",
+                                isDark ? "text-amber-400" : "text-amber-600"
+                              )}
+                            >
+                              준비 중
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 녹화 저장 위치 (라이브/저장 모두 표시) */}
+          <div className="space-y-3">
+            <Label
+              className={cn(
+                "text-base font-semibold",
+                isDark && "text-white/90"
+              )}
+            >
+              녹화 저장 위치
+            </Label>
+            <p
+              className={cn(
+                "text-sm",
+                isDark ? "text-white/60" : "text-gray-500"
+              )}
+            >
+              라이브 종료 후 저장 및 수동 녹화 시 파일이 저장될 위치입니다.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setStorageLocation("local")}
+                className={cn(
+                  "p-4 border-2 rounded-lg transition-all text-left",
+                  storageLocation === "local"
+                    ? selectedCardClass
+                    : unselectedCardClass,
+                  isDark && "text-white/90"
+                )}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <HardDrive className="h-5 w-5" />
+                  <span className="font-semibold">내 컴퓨터</span>
+                </div>
+                <p
+                  className={cn(
+                    "text-xs",
+                    isDark ? "text-white/60" : "text-gray-500"
+                  )}
+                >
+                  녹화 완료 시 자동으로 다운로드
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStorageLocation("cloud")}
+                className={cn(
+                  "p-4 border-2 rounded-lg transition-all text-left",
+                  storageLocation === "cloud"
+                    ? selectedCardClass
+                    : unselectedCardClass,
+                  isDark && "text-white/90"
+                )}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Cloud className="h-5 w-5" />
+                  <span className="font-semibold">클라우드</span>
+                </div>
+                <p
+                  className={cn(
+                    "text-xs",
+                    isDark ? "text-white/60" : "text-gray-500"
+                  )}
+                >
+                  라이브 종료 시 서버에 자동 저장
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* 제목 */}
+          <div className="space-y-2">
+            <Label htmlFor="title" className={cn(isDark && "text-white/90")}>
+              제목
+            </Label>
+            <Input
+              id="title"
+              placeholder="스트리밍 제목을 입력하세요..."
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={cn(
+                isDark &&
+                  "bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:ring-white/20"
+              )}
+            />
+          </div>
+
+          {/* 설명 */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="description"
+              className={cn(isDark && "text-white/90")}
+            >
+              설명
+            </Label>
+            <Textarea
+              id="description"
+              placeholder="스트리밍 설명을 입력하세요..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              className={cn(
+                isDark &&
+                  "bg-white/5 border-white/10 text-white placeholder:text-white/50 focus-visible:ring-white/20"
+              )}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className={cn(
+              isDark &&
+                "border-white/10 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white"
+            )}
+          >
+            취소
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={
+              !title.trim() ||
+              (transmissionType === "live" && platforms.length === 0)
+            }
+            className="bg-indigo-600 hover:bg-indigo-700"
+          >
+            다음
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+
+      <ComingSoonModal
+        open={comingSoonOpen}
+        onOpenChange={setComingSoonOpen}
+        message={comingSoonMessage}
+      />
+    </Dialog>
+  );
+}

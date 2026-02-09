@@ -1,0 +1,100 @@
+server:
+  port: 8082
+  tomcat:
+    max-swallow-size: -1
+
+spring:
+  application:
+    name: media-service
+
+  servlet:
+    multipart:
+      max-file-size: 5GB
+      max-request-size: 5GB
+
+  # MySQL Database
+  datasource:
+    url: jdbc:mysql://localhost:3306/media_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: media_user
+    password: media_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
+
+  # Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# JWT
+jwt:
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
+
+# Eureka Client (로컬에서는 비활성화)
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+# LiveKit
+livekit:
+  host: http://localhost:7880
+  api:
+    key: devkey
+    secret: devkey-secret-for-livekit-min-32-chars
+  egress:
+    output-path: /recordings/
+
+# Core Service
+core:
+  service:
+    url: http://localhost:8080
+
+# YouTube API
+youtube:
+  oauth:
+    client-id: ${YOUTUBE_CLIENT_ID:51683382309-340jprf00qpfjggfv5jphuifk5jk1np0.apps.googleusercontent.com}
+    client-secret: ${YOUTUBE_CLIENT_SECRET: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}
+    redirect-uri: ${YOUTUBE_REDIRECT_URI:http://localhost:8082/api/oauth/youtube/callback}
+    scope: https://www.googleapis.com/auth/youtube.readonly
+
+# 치지직 OAuth
+chzzk:
+  oauth:
+    client-id: 0c2b66b0-f5ae-400b-9056-0bb9289954d1
+    client-secret: NOJIPyg5MK2KqVhLb-OEPsKGxMyfm-P0OdeHQ3eWDng
+    redirect-uri: ${CHZZK_REDIRECT_URI:http://localhost:60000/api/oauth/chzzk/callback}
+
+# OAuth 공통 설정
+oauth:
+  frontend-redirect-uri: ${OAUTH_FRONTEND_REDIRECT_URI:http://localhost:3000/channels/oauth/callback}
+
+# Recording Storage
+# 클라우드 환경: /recordings (k8s volume mount)
+# 로컬 개발 환경: 절대 경로 사용
+recording:
+  storage:
+    base-path: ${RECORDING_BASE_PATH:C:/Users/SSAFY/Desktop/project/test/recordings}
+    base-url: ${RECORDING_BASE_URL:http://localhost:8082/api/media/record/files}
+
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:C:/Users/SSAFY/Desktop/project/backend/onetakestudio-backend/AI/venv/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe}
+
+# Logging
+logging:
+  level:
+    com.onetake.media: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG

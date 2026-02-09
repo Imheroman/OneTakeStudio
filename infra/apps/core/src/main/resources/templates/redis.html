@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redis Test</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; text-align: center; }
+        .nav { text-align: center; margin-bottom: 20px; }
+        .nav a { color: #007bff; text-decoration: none; font-size: 14px; }
+        .nav a:hover { text-decoration: underline; }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card h2 { margin-top: 0; color: #555; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn:hover { opacity: 0.9; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th { background: #f8f9fa; font-weight: bold; }
+        tr:hover { background: #f5f5f5; }
+        #result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status { padding: 3px 8px; border-radius: 3px; font-size: 12px; }
+        .status-success { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Redis Test Dashboard</h1>
+    <div class="nav"><a href="/test-api">&larr; Item API Test</a></div>
+
+    <div class="card">
+        <h2>Set Key-Value</h2>
+        <div class="form-group">
+            <label for="setKey">Key</label>
+            <input type="text" id="setKey" placeholder="Key name">
+        </div>
+        <div class="form-group">
+            <label for="setValue">Value</label>
+            <input type="text" id="setValue" placeholder="Value">
+        </div>
+        <button class="btn btn-success" onclick="redisSet()">SET</button>
+    </div>
+
+    <div class="card">
+        <h2>Get Value by Key</h2>
+        <div class="form-group">
+            <label for="getKey">Key</label>
+            <input type="text" id="getKey" placeholder="Key name">
+        </div>
+        <button class="btn btn-primary" onclick="redisGet()">GET</button>
+    </div>
+
+    <div class="card">
+        <h2>Stored Keys</h2>
+        <button class="btn btn-info" onclick="redisList()">Refresh Keys</button>
+        <table>
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="keyList">
+                <tr><td colspan="2" style="text-align:center;">Click 'Refresh Keys' to load</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>API Response</h2>
+        <div id="result">Response will appear here...</div>
+    </div>
+
+    <script>
+        const REDIS_URL = '/test-api/redis';
+
+        function showResult(data, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<span class="status ${isError ? 'status-error' : 'status-success'}">${isError ? 'ERROR' : 'SUCCESS'}</span>\n\n${JSON.stringify(data, null, 2)}`;
+        }
+
+        async function redisSet() {
+            const key = document.getElementById('setKey').value.trim();
+            const value = document.getElementById('setValue').value.trim();
+            if (!key || !value) {
+                alert('Key and Value are required');
+                return;
+            }
+            try {
+                const res = await fetch(REDIS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key, value })
+                });
+                const data = await res.json();
+                showResult(data, !res.ok);
+                if (res.ok) {
+                    document.getElementById('setKey').value = '';
+                    document.getElementById('setValue').value = '';
+                    redisList();
+                }
+            } catch (e) {
+                showResult({ error: e.message }, true);
+            }
+        }
+
+        async function redisGet() {
+            const key = document.getElementById('getKey').value.trim();
+            if (!key) {
+                alert('Key is required');
+                return;
+            }
+            try {
+                const res = await fetch(`${REDIS_URL}/${encodeURIComponent(key)}`);
+                const data = await res.json();
+                showResult(data, !res.ok);
+            } catch (e) {
+                showResult({ error: e.message }, true);
+            }
+        }
+
+        async function redisDelete(key) {
+            if (!confirm(`Delete key "${key}"?`)) return;
+            try {
+                const res = await fetch(`${REDIS_URL}/${encodeURIComponent(key)}`, { method: 'DELETE' });
+                const data = await res.json();
+                showResult(data, !res.ok);
+                redisList();
+            } catch (e) {
+                showResult({ error: e.message }, true);
+            }
+        }
+
+        async function redisList() {
+            try {
+                const res = await fetch(REDIS_URL);
+                const data = await res.json();
+                showResult(data, !res.ok);
+                renderKeys(data.keys || []);
+            } catch (e) {
+                showResult({ error: e.message }, true);
+            }
+        }
+
+        function renderKeys(keys) {
+            const tbody = document.getElementById('keyList');
+            if (keys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">No keys found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = keys.map(k => {
+                const short = k.replace(/^test:/, '');
+                return `<tr>
+                    <td>${k}</td>
+                    <td>
+                        <button class="btn btn-primary" style="padding:5px 10px;" onclick="redisGetByKey('${short}')">GET</button>
+                        <button class="btn btn-danger" style="padding:5px 10px;" onclick="redisDelete('${short}')">DELETE</button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function redisGetByKey(key) {
+            document.getElementById('getKey').value = key;
+            redisGet();
+        }
+
+        document.addEventListener('DOMContentLoaded', redisList);
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# 모든 텍스트 파일은 Git이 자동으로 줄바꿈을 관리하도록 설정
+* text=auto eol=lf
+
+# 특정 확장자들에 대해 명시적으로 LF(리눅스 방식) 강제
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+
+# 이미지가 깨지는 것을 방지하기 위해 바이너리 파일 처리
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg text eol=lf

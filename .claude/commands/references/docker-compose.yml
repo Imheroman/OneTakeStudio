@@ -1,0 +1,73 @@
+# Docker Compose for OneTakeStudio Development
+# 실제 프로젝트에서 사용하는 docker-compose.yml (최신 버전)
+
+services:
+  # MySQL (Core Service + Media Service 통합)
+  mysql:
+    image: mysql:8.0
+    container_name: onetakestudio-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: core_db
+      MYSQL_USER: core_user
+      MYSQL_PASSWORD: core_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - onetakestudio-network
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "core_user", "-pcore_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (캐시 + Streams 메시지 브로커)
+  redis:
+    image: redis:7-alpine
+    container_name: onetakestudio-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - onetakestudio-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # LiveKit (WebRTC 서버)
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: onetakestudio-livekit
+    command: --config /livekit.yaml
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
+    networks:
+      - onetakestudio-network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  onetakestudio-network:
+    driver: bridge
+
+# 참고: 서비스 포트 정리
+# - MySQL: 3306 (core_db, media_db 통합)
+# - Redis: 6379
+# - LiveKit: 7880 (HTTP), 7881, 50000-50100 (UDP)
+# - Eureka Server: 8761 (별도 실행)
+# - Core Service: 8080 (별도 실행)
+# - Media Service: 8082 (별도 실행)
+# - API Gateway: 60000 (별도 실행)

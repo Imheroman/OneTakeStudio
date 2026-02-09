@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneTakeStudio - 인증 테스트 (이메일 + OAuth)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d9ff;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #0f3460;
+        }
+        .card h2 {
+            color: #00d9ff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 .step {
+            background: #00d9ff;
+            color: #1a1a2e;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #aaa;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 14px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button.primary {
+            background: #00d9ff;
+            color: #1a1a2e;
+        }
+        button.primary:hover {
+            background: #00b8d9;
+        }
+        button.secondary {
+            background: #0f3460;
+            color: #fff;
+        }
+        button.secondary:hover {
+            background: #1a4a7a;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            word-break: break-all;
+            display: none;
+        }
+        .result.success {
+            background: #0f3d0f;
+            border: 1px solid #1a5c1a;
+            color: #4ade80;
+            display: block;
+        }
+        .result.error {
+            background: #3d0f0f;
+            border: 1px solid #5c1a1a;
+            color: #f87171;
+            display: block;
+        }
+        .token-display {
+            margin-top: 20px;
+            padding: 16px;
+            background: #0f3460;
+            border-radius: 8px;
+        }
+        .token-display h3 {
+            font-size: 14px;
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+        .token-display pre {
+            font-size: 11px;
+            color: #aaa;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .flow-info {
+            background: #0f3460;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .flow-info h3 {
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+        .flow-info ol {
+            padding-left: 20px;
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .status-badge.pending {
+            background: #3d3d0f;
+            color: #fbbf24;
+        }
+        .status-badge.done {
+            background: #0f3d0f;
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OneTakeStudio 인증 테스트</h1>
+
+        <div class="flow-info">
+            <h3>회원가입 흐름</h3>
+            <ol>
+                <li>이메일 중복 확인 (선택)</li>
+                <li>인증 코드 발송 요청</li>
+                <li>이메일로 받은 인증 코드 입력</li>
+                <li>회원가입 완료</li>
+                <li>로그인 테스트</li>
+            </ol>
+        </div>
+
+        <div class="grid">
+            <!-- Step 1: 이메일 중복 확인 -->
+            <div class="card">
+                <h2><span class="step">1</span> 이메일 중복 확인</h2>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="checkEmail" placeholder="test@example.com">
+                </div>
+                <button class="secondary" onclick="checkEmail()">중복 확인</button>
+                <div id="checkEmailResult" class="result"></div>
+            </div>
+
+            <!-- Step 2: 인증 코드 발송 -->
+            <div class="card">
+                <h2><span class="step">2</span> 인증 코드 발송</h2>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="verifyEmail" placeholder="test@example.com">
+                </div>
+                <button class="primary" onclick="sendVerification()">인증 코드 발송</button>
+                <div id="sendVerifyResult" class="result"></div>
+            </div>
+
+            <!-- Step 3: 인증 코드 확인 -->
+            <div class="card">
+                <h2><span class="step">3</span> 인증 코드 확인</h2>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="verifyEmailConfirm" placeholder="test@example.com">
+                </div>
+                <div class="form-group">
+                    <label>인증 코드 (6자리)</label>
+                    <input type="text" id="verifyCode" placeholder="123456" maxlength="6">
+                </div>
+                <button class="primary" onclick="verifyEmail()">인증 확인</button>
+                <div id="verifyEmailResult" class="result"></div>
+            </div>
+
+            <!-- Step 4: 회원가입 -->
+            <div class="card">
+                <h2><span class="step">4</span> 회원가입</h2>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="registerEmail" placeholder="test@example.com">
+                </div>
+                <div class="form-group">
+                    <label>인증 코드</label>
+                    <input type="text" id="registerCode" placeholder="123456" maxlength="6">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호 (8자 이상)</label>
+                    <input type="password" id="registerPassword" placeholder="********">
+                </div>
+                <div class="form-group">
+                    <label>닉네임 (2-20자)</label>
+                    <input type="text" id="registerNickname" placeholder="닉네임">
+                </div>
+                <button class="primary" onclick="register()">회원가입</button>
+                <div id="registerResult" class="result"></div>
+            </div>
+
+            <!-- Step 5: 로그인 -->
+            <div class="card">
+                <h2><span class="step">5</span> 로그인</h2>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="loginEmail" placeholder="test@example.com">
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="loginPassword" placeholder="********">
+                </div>
+                <button class="primary" onclick="login()">로그인</button>
+                <div id="loginResult" class="result"></div>
+                <div id="tokenDisplay" class="token-display" style="display: none;">
+                    <h3>Access Token</h3>
+                    <pre id="accessToken"></pre>
+                    <h3 style="margin-top: 12px;">User Info</h3>
+                    <pre id="userInfo"></pre>
+                </div>
+            </div>
+
+            <!-- 비밀번호 재설정 요청 -->
+            <div class="card">
+                <h2><span class="step">+</span> 비밀번호 재설정 요청</h2>
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="resetEmail" placeholder="test@example.com">
+                </div>
+                <button class="secondary" onclick="requestPasswordReset()">재설정 이메일 발송</button>
+                <div id="resetResult" class="result"></div>
+            </div>
+
+            <!-- 비밀번호 재설정 확인 -->
+            <div class="card">
+                <h2><span class="step">+</span> 비밀번호 재설정 확인</h2>
+                <div class="form-group">
+                    <label>재설정 토큰</label>
+                    <input type="text" id="resetToken" placeholder="이메일로 받은 토큰">
+                </div>
+                <div class="form-group">
+                    <label>새 비밀번호</label>
+                    <input type="password" id="newPassword" placeholder="********">
+                </div>
+                <button class="secondary" onclick="confirmPasswordReset()">비밀번호 변경</button>
+                <div id="confirmResetResult" class="result"></div>
+            </div>
+
+            <!-- 토큰 갱신 -->
+            <div class="card">
+                <h2><span class="step">+</span> 토큰 갱신</h2>
+                <div class="form-group">
+                    <label>Refresh Token</label>
+                    <input type="text" id="refreshToken" placeholder="로그인 후 자동 입력됨">
+                </div>
+                <button class="secondary" onclick="refreshToken()">토큰 갱신</button>
+                <div id="refreshResult" class="result"></div>
+            </div>
+
+            <!-- Google OAuth 로그인 -->
+            <div class="card">
+                <h2><span class="step" style="background: #4285F4;">G</span> Google 로그인</h2>
+                <div class="form-group">
+                    <label>Google Access Token</label>
+                    <input type="text" id="googleAccessToken" placeholder="프론트엔드에서 받은 Access Token">
+                </div>
+                <button class="primary" style="background: #4285F4;" onclick="oauthGoogle()">Google 로그인</button>
+                <div id="googleResult" class="result"></div>
+            </div>
+
+            <!-- Kakao OAuth 로그인 -->
+            <div class="card">
+                <h2><span class="step" style="background: #FEE500; color: #000;">K</span> Kakao 로그인</h2>
+                <div class="form-group">
+                    <label>Kakao Access Token</label>
+                    <input type="text" id="kakaoAccessToken" placeholder="프론트엔드에서 받은 Access Token">
+                </div>
+                <button class="primary" style="background: #FEE500; color: #000;" onclick="oauthKakao()">Kakao 로그인</button>
+                <div id="kakaoResult" class="result"></div>
+            </div>
+
+            <!-- Naver OAuth 로그인 -->
+            <div class="card">
+                <h2><span class="step" style="background: #03C75A;">N</span> Naver 로그인</h2>
+                <div class="form-group">
+                    <label>Naver Access Token</label>
+                    <input type="text" id="naverAccessToken" placeholder="프론트엔드에서 받은 Access Token">
+                </div>
+                <button class="primary" style="background: #03C75A;" onclick="oauthNaver()">Naver 로그인</button>
+                <div id="naverResult" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/auth';
+
+        async function apiCall(endpoint, method, body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const response = await fetch(API_BASE + endpoint, options);
+            const data = await response.json();
+            return { ok: response.ok, data };
+        }
+
+        function showResult(elementId, success, message) {
+            const el = document.getElementById(elementId);
+            el.className = 'result ' + (success ? 'success' : 'error');
+            el.textContent = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
+        }
+
+        // 1. 이메일 중복 확인
+        async function checkEmail() {
+            const email = document.getElementById('checkEmail').value;
+            if (!email) {
+                showResult('checkEmailResult', false, '이메일을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall(`/check-email?email=${encodeURIComponent(email)}`, 'GET');
+                showResult('checkEmailResult', data.data?.available, data.message || JSON.stringify(data));
+            } catch (e) {
+                showResult('checkEmailResult', false, e.message);
+            }
+        }
+
+        // 2. 인증 코드 발송
+        async function sendVerification() {
+            const email = document.getElementById('verifyEmail').value;
+            if (!email) {
+                showResult('sendVerifyResult', false, '이메일을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/send-verification', 'POST', { email });
+                showResult('sendVerifyResult', ok, data.message || JSON.stringify(data));
+                if (ok) {
+                    document.getElementById('verifyEmailConfirm').value = email;
+                    document.getElementById('registerEmail').value = email;
+                }
+            } catch (e) {
+                showResult('sendVerifyResult', false, e.message);
+            }
+        }
+
+        // 3. 인증 코드 확인
+        async function verifyEmail() {
+            const email = document.getElementById('verifyEmailConfirm').value;
+            const code = document.getElementById('verifyCode').value;
+            if (!email || !code) {
+                showResult('verifyEmailResult', false, '이메일과 인증 코드를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/verify-email', 'POST', { email, code });
+                showResult('verifyEmailResult', ok, data.message || JSON.stringify(data));
+                if (ok) {
+                    document.getElementById('registerCode').value = code;
+                }
+            } catch (e) {
+                showResult('verifyEmailResult', false, e.message);
+            }
+        }
+
+        // 4. 회원가입
+        async function register() {
+            const email = document.getElementById('registerEmail').value;
+            const verificationCode = document.getElementById('registerCode').value;
+            const password = document.getElementById('registerPassword').value;
+            const nickname = document.getElementById('registerNickname').value;
+
+            if (!email || !verificationCode || !password || !nickname) {
+                showResult('registerResult', false, '모든 필드를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/register', 'POST', {
+                    email, verificationCode, password, nickname
+                });
+                showResult('registerResult', ok, data.message || JSON.stringify(data));
+                if (ok) {
+                    document.getElementById('loginEmail').value = email;
+                }
+            } catch (e) {
+                showResult('registerResult', false, e.message);
+            }
+        }
+
+        // 5. 로그인
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showResult('loginResult', false, '이메일과 비밀번호를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/login', 'POST', { email, password });
+                showResult('loginResult', ok, data.message || JSON.stringify(data));
+
+                if (ok && data.data) {
+                    document.getElementById('tokenDisplay').style.display = 'block';
+                    document.getElementById('accessToken').textContent = data.data.accessToken;
+                    document.getElementById('userInfo').textContent = JSON.stringify(data.data.user, null, 2);
+                    document.getElementById('refreshToken').value = data.data.refreshToken;
+                } else {
+                    document.getElementById('tokenDisplay').style.display = 'none';
+                }
+            } catch (e) {
+                showResult('loginResult', false, e.message);
+            }
+        }
+
+        // 비밀번호 재설정 요청
+        async function requestPasswordReset() {
+            const email = document.getElementById('resetEmail').value;
+            if (!email) {
+                showResult('resetResult', false, '이메일을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/password-reset', 'POST', { email });
+                showResult('resetResult', ok, data.message || JSON.stringify(data));
+            } catch (e) {
+                showResult('resetResult', false, e.message);
+            }
+        }
+
+        // 비밀번호 재설정 확인
+        async function confirmPasswordReset() {
+            const token = document.getElementById('resetToken').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            if (!token || !newPassword) {
+                showResult('confirmResetResult', false, '토큰과 새 비밀번호를 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/password-reset/confirm', 'POST', { token, newPassword });
+                showResult('confirmResetResult', ok, data.message || JSON.stringify(data));
+            } catch (e) {
+                showResult('confirmResetResult', false, e.message);
+            }
+        }
+
+        // 토큰 갱신
+        async function refreshToken() {
+            const refreshToken = document.getElementById('refreshToken').value;
+            if (!refreshToken) {
+                showResult('refreshResult', false, 'Refresh Token을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/refresh', 'POST', { refreshToken });
+                showResult('refreshResult', ok, data.message || JSON.stringify(data));
+
+                if (ok && data.data) {
+                    document.getElementById('accessToken').textContent = data.data.accessToken;
+                    document.getElementById('refreshToken').value = data.data.refreshToken;
+                }
+            } catch (e) {
+                showResult('refreshResult', false, e.message);
+            }
+        }
+
+        // OAuth 결과 처리 공통 함수
+        function handleOAuthResult(resultId, ok, data) {
+            showResult(resultId, ok, data.message || JSON.stringify(data));
+            if (ok && data.data) {
+                document.getElementById('tokenDisplay').style.display = 'block';
+                document.getElementById('accessToken').textContent = data.data.accessToken;
+                document.getElementById('userInfo').textContent = JSON.stringify(data.data.user, null, 2);
+                document.getElementById('refreshToken').value = data.data.refreshToken;
+            }
+        }
+
+        // Google OAuth 로그인
+        async function oauthGoogle() {
+            const accessToken = document.getElementById('googleAccessToken').value;
+            if (!accessToken) {
+                showResult('googleResult', false, 'Access Token을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/oauth/google', 'POST', { accessToken });
+                handleOAuthResult('googleResult', ok, data);
+            } catch (e) {
+                showResult('googleResult', false, e.message);
+            }
+        }
+
+        // Kakao OAuth 로그인
+        async function oauthKakao() {
+            const accessToken = document.getElementById('kakaoAccessToken').value;
+            if (!accessToken) {
+                showResult('kakaoResult', false, 'Access Token을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/oauth/kakao', 'POST', { accessToken });
+                handleOAuthResult('kakaoResult', ok, data);
+            } catch (e) {
+                showResult('kakaoResult', false, e.message);
+            }
+        }
+
+        // Naver OAuth 로그인
+        async function oauthNaver() {
+            const accessToken = document.getElementById('naverAccessToken').value;
+            if (!accessToken) {
+                showResult('naverResult', false, 'Access Token을 입력하세요.');
+                return;
+            }
+            try {
+                const { ok, data } = await apiCall('/oauth/naver', 'POST', { accessToken });
+                handleOAuthResult('naverResult', ok, data);
+            } catch (e) {
+                showResult('naverResult', false, e.message);
+            }
+        }
+    </script>
+</body>
+</html>

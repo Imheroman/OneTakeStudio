@@ -19,6 +19,9 @@
     <modules>
         <module>common</module>
         <module>core-service</module>
+        <module>media-service</module>
+        <module>eureka-server</module>
+        <module>api-gateway</module>
     </modules>
 
     <properties>
@@ -45,4 +48,22 @@
             <optional>true</optional>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -1,0 +1,19 @@
+package com.onetake.media.recording.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Builder;
+import lombok.Getter;
+
+@Getter
+@Builder
+public class RecordingStartRequest {
+
+    @NotBlank(message = "스튜디오 ID는 필수입니다")
+    private String studioId;
+
+    private String outputFormat; // mp4, webm 등
+
+    private String quality; // 720p, 1080p 등
+
+    private boolean audioOnly;
+}

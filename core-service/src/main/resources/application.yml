@@ -1,0 +1,110 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: core-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/core_db?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: core_user
+    password: core_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  mail:
+    host: smtp.naver.com
+    port: 587
+    username: unimokw@naver.com
+    password: "3LEQ3HYB6V3X"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+jwt:
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
+  access-token-expiration: 3600000
+  refresh-token-expiration: 604800000
+
+email:
+  verification:
+    expiration-minutes: 10
+    code-length: 6
+  password-reset:
+    expiration-minutes: 30
+
+# OAuth 설정
+oauth:
+  google:
+    client-id: ${OAUTH_GOOGLE_CLIENT_ID:51683382309-340jprf00qpfjggfv5jphuifk5jk1np0.apps.googleusercontent.com}
+    client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET: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}
+    redirect-uri: ${OAUTH_GOOGLE_REDIRECT_URI:http://localhost:3000/oauth/callback}
+  kakao:
+    client-id: ${OAUTH_KAKAO_CLIENT_ID:42b37ce2a41ca38644fa194c0b3d86bd}
+    client-secret: ${OAUTH_KAKAO_CLIENT_SECRET:C21YcsY9g9y1dlVnVTMCEm0IqosxHzGh}
+    redirect-uri: ${OAUTH_KAKAO_REDIRECT_URI:http://localhost:3000/oauth/callback}
+  naver:
+    client-id: ${OAUTH_NAVER_CLIENT_ID:ID4xqmLVEISnoNshnvoH}
+    client-secret: ${OAUTH_NAVER_CLIENT_SECRET:QUGmPMFJqK}
+    redirect-uri: ${OAUTH_NAVER_REDIRECT_URI:http://localhost:3000/oauth/callback}
+
+# Eureka Client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.value}
+
+# AI Service
+ai:
+  service:
+    url: ${AI_SERVICE_URL:http://localhost:8000}
+  webhook:
+    url: ${AI_WEBHOOK_URL:http://localhost:8080/api/ai/webhook}
+
+# Media Service
+media:
+  service:
+    url: ${MEDIA_SERVICE_URL:http://localhost:8082}
+
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:C:/Users/SSAFY/Desktop/project/backend/onetakestudio-backend/AI/venv/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe}
+
+# Storage
+storage:
+  base-path: ${STORAGE_BASE_PATH:C:/Users/SSAFY/Desktop/project/test/recordings}
+
+management:
+  health:
+    mail:
+      enabled: false
+
+logging:
+  level:
+    com.onetake: DEBUG
+    org.springframework.security: DEBUG

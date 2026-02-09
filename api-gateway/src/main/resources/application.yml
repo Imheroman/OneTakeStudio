@@ -1,0 +1,130 @@
+server:
+  port: 60000
+
+spring:
+  application:
+    name: api-gateway
+  codec:
+    max-in-memory-size: 512MB
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            # Core Service Routes
+            - id: core-service
+              uri: lb://core-service
+              predicates:
+                - Path=/api/auth/**, /api/users/**, /api/studios/**, /api/workspace/**, /api/notifications/**, /api/destinations/**, /api/dashboard, /api/favorites/**, /api/storage/**, /api/library/**, /api/invites/**, /api/ai/**
+              filters:
+                - StripPrefix=0
+
+            # Media Service - Publish
+            - id: media-service-publish
+              uri: lb://media-service
+              predicates:
+                - Path=/api/publish,/api/publish/**
+              filters:
+                - RewritePath=/api/publish(?<segment>.*),/api/media/publish${segment}
+
+            # Media Service - Publish v1
+            - id: media-service-publish-v1
+              uri: lb://media-service
+              predicates:
+                - Path=/api/v1/media/publish/**
+              filters:
+                - RewritePath=/api/v1/media/publish(?<segment>.*),/api/media/publish${segment}
+
+            # Media Service Routes
+            - id: media-service
+              uri: lb://media-service
+              predicates:
+                - Path=/api/v1/media/**, /api/media/**, /api/shorts/**, /api/callback/**
+              filters:
+                - RewritePath=/api/v1/media(?<segment>.*),/api/media${segment}
+
+            # Media Service - Stream Routes (별칭)
+            - id: media-service-stream
+              uri: lb://media-service
+              predicates:
+                - Path=/api/streams/**
+              filters:
+                - RewritePath=/api/streams/(?<segment>.*),/api/media/stream/${segment}
+
+            # Media Service - Chat Routes
+            - id: media-service-chat
+              uri: lb://media-service
+              predicates:
+                - Path=/api/media/chat/**
+              filters:
+                - StripPrefix=0
+
+            # Media Service - OAuth Routes (YouTube/Chzzk 채팅 연동)
+            - id: media-service-oauth
+              uri: lb://media-service
+              predicates:
+                - Path=/api/oauth/**
+              filters:
+                - StripPrefix=0
+
+            # Media Service - Recording Routes (별칭)
+            - id: media-service-recording
+              uri: lb://media-service
+              predicates:
+                - Path=/api/recordings/**
+              filters:
+                - RewritePath=/api/recordings/(?<segment>.*),/api/media/record/${segment}
+
+          default-filters:
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+          globalcors:
+            cors-configurations:
+              "[/**]":
+                allowedOriginPatterns:
+                  - "*"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowedHeaders: "*"
+                exposedHeaders:
+                  - "Authorization"
+                allowCredentials: true
+                maxAge: 3600
+
+# JWT
+jwt:
+  secret: b25ldGFrZXN0dWRpby1qd3Qtc2VjcmV0LWtleS1mb3ItaHMyNTYtYWxnb3JpdGhtLW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHM=
+
+# Eureka Client
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    gateway:
+      access: read-only
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web: INFO

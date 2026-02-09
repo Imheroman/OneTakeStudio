@@ -1,0 +1,23 @@
+port: 7880
+bind_addresses:
+  - ""
+
+rtc:
+  tcp_port: 7881
+  # Windows 등에서 50000-50100 충돌 시 다른 구간 사용 (50200-50250)
+  port_range_start: 50200
+  port_range_end: 50250
+
+keys:
+  # LiveKit 1.9+ 요구: secret 최소 32자
+  devkey: devkey-secret-for-livekit-min-32-chars
+
+# Redis (Egress 통신용)
+redis:
+  address: redis:6379
+
+# Webhook 설정 (녹화 완료 알림)
+webhook:
+  urls:
+    - http://host.docker.internal:8082/api/media/webhook/livekit
+  api_key: devkey

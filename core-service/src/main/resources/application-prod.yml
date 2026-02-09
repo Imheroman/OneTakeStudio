@@ -1,0 +1,82 @@
+# =====================================================
+# Production Configuration - core-service
+# 운영 환경에서 환경변수로 오버라이드
+# =====================================================
+
+core:
+  external-url: ${CORE_EXTERNAL_URL:http://localhost:8080}
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+  mail:
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+oauth:
+  google:
+    client-id: ${OAUTH_GOOGLE_CLIENT_ID}
+    client-secret: ${OAUTH_GOOGLE_CLIENT_SECRET}
+    redirect-uri: ${OAUTH_GOOGLE_REDIRECT_URI}
+  kakao:
+    client-id: ${OAUTH_KAKAO_CLIENT_ID}
+    client-secret: ${OAUTH_KAKAO_CLIENT_SECRET}
+    redirect-uri: ${OAUTH_KAKAO_REDIRECT_URI}
+  naver:
+    client-id: ${OAUTH_NAVER_CLIENT_ID}
+    client-secret: ${OAUTH_NAVER_CLIENT_SECRET}
+    redirect-uri: ${OAUTH_NAVER_REDIRECT_URI}
+
+eureka:
+  client:
+    enabled: false
+
+# AI Service
+ai:
+  service:
+    url: ${AI_SERVICE_URL}
+  webhook:
+    url: ${AI_WEBHOOK_URL}
+
+# Media Service
+media:
+  service:
+    url: ${MEDIA_SERVICE_URL}
+
+# FFmpeg
+ffmpeg:
+  path: ${FFMPEG_PATH:/usr/bin/ffmpeg}
+
+# Storage
+storage:
+  base-path: ${STORAGE_BASE_PATH:/data/storage}
+
+# Recording files (Media Service에서 저장한 녹화 파일 경로)
+recording:
+  base-path: ${RECORDING_BASE_PATH:/data/recordings}
+
+logging:
+  level:
+    com.onetake: INFO
+    org.springframework.security: WARN

@@ -1,0 +1,180 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-server
+  namespace: media
+  labels:
+    app: media-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media-server
+  template:
+    metadata:
+      labels:
+        app: media-server
+    spec:
+      imagePullSecrets:
+        - name: ecr-secret
+      containers:
+        - name: media-server
+          image: 325899475975.dkr.ecr.ap-northeast-2.amazonaws.com/media-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "prod"
+            - name: JAVA_OPTS
+              value: "-Xms256m -Xmx512m"
+            - name: SERVER_PORT
+              value: "8081"
+            # DB Secret
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_NAME
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: DB_PASSWORD
+            # ConfigMap - Redis (Spring Boot 자동 바인딩 형식)
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: REDIS_HOST
+            - name: SPRING_DATA_REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: REDIS_PORT
+            - name: LIVEKIT_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: LIVEKIT_HOST
+            - name: LIVEKIT_PUBLIC_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: LIVEKIT_PUBLIC_URL
+            - name: CORE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: CORE_SERVICE_URL
+            - name: AI_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: AI_SERVICE_URL
+            - name: RECORDING_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: RECORDING_BASE_PATH
+            - name: RECORDING_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: RECORDING_BASE_URL
+            # Secret
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: JWT_SECRET
+            - name: LIVEKIT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: LIVEKIT_API_KEY
+            - name: LIVEKIT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: LIVEKIT_API_SECRET
+            # YouTube OAuth
+            - name: YOUTUBE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: YOUTUBE_CLIENT_ID
+            - name: YOUTUBE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: YOUTUBE_CLIENT_SECRET
+            - name: YOUTUBE_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: YOUTUBE_REDIRECT_URI
+            # Chzzk OAuth
+            - name: CHZZK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: CHZZK_CLIENT_ID
+            - name: CHZZK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: media-secret
+                  key: CHZZK_CLIENT_SECRET
+            - name: CHZZK_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: CHZZK_REDIRECT_URI
+            # OAuth 공통
+            - name: OAUTH_FRONTEND_REDIRECT_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: media-config
+                  key: OAUTH_FRONTEND_REDIRECT_URI
+          volumeMounts:
+            - name: recordings
+              mountPath: /recordings
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "768Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: recordings
+          hostPath:
+            path: /data/recordings
+            type: DirectoryOrCreate

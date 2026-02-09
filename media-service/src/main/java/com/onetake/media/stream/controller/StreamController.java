@@ -1,0 +1,66 @@
+package com.onetake.media.stream.controller;
+
+import com.onetake.media.global.common.ApiResponse;
+import com.onetake.media.stream.dto.IceServerResponse;
+import com.onetake.media.stream.dto.StreamSessionResponse;
+import com.onetake.media.stream.dto.StreamTokenRequest;
+import com.onetake.media.stream.dto.StreamTokenResponse;
+import com.onetake.media.stream.service.StreamService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/media")
+@RequiredArgsConstructor
+public class StreamController {
+
+    private final StreamService streamService;
+
+    @PostMapping("/stream/join")
+    public ResponseEntity<ApiResponse<StreamTokenResponse>> joinStream(
+            @RequestHeader("X-User-Id") String odUserId,
+            @Valid @RequestBody StreamTokenRequest request) {
+        String studioId = request.getStudioId();
+        StreamTokenResponse response = streamService.joinStream(odUserId, studioId, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/stream/{studioId}/leave")
+    public ResponseEntity<ApiResponse<Void>> leaveStream(
+            @RequestHeader("X-User-Id") String odUserId,
+            @PathVariable String studioId) {
+        streamService.leaveStream(studioId, odUserId);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @PostMapping("/stream/{studioId}/end")
+    public ResponseEntity<ApiResponse<Void>> endStream(
+            @PathVariable String studioId) {
+        streamService.endStream(studioId);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @GetMapping("/stream/{studioId}/session")
+    public ResponseEntity<ApiResponse<StreamSessionResponse>> getActiveSession(
+            @PathVariable String studioId) {
+        StreamSessionResponse response = streamService.getActiveSession(studioId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/stream/{studioId}/history")
+    public ResponseEntity<ApiResponse<List<StreamSessionResponse>>> getSessionHistory(
+            @PathVariable String studioId) {
+        List<StreamSessionResponse> response = streamService.getSessionHistory(studioId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/ice-servers")
+    public ResponseEntity<ApiResponse<IceServerResponse>> getIceServers() {
+        IceServerResponse response = streamService.getIceServers();
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+}

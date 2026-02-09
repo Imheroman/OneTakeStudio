@@ -1,0 +1,842 @@
+---
+name: onetake-streaming-project
+description: OneTakeStudio MSA 개발 프로젝트 통합 가이드. Spring Boot 3.5.9, Java 21, React, Next.js, LiveKit WebRTC 기반. 이메일/비밀번호/닉네임 회원가입 + 이메일 인증. MSA 2-서비스 구조 (Core-MySQL, Media-MySQL 통합). 라이브 스트리밍, WebRTC, 녹화, AI 쇼츠, 멀티 플랫폼 송출, 실시간 채팅. 내부 BIGINT + 외부 UUID 설계. LiveKit Egress 연동. Spring Cloud Gateway, Eureka, Redis, k3s 환경. 6인 팀 개발.
+---
+
+# OneTakeStudio MSA 개발 프로젝트 (최종 통합 가이드)
+
+## 📁 프로젝트 경로 및 구조
+
+### Git 레포: 단일 레포, 브랜치 분리
+- **레포 경로**: `C:\Users\SSAFY\Desktop\project\backend\onetakestudio-backend`
+- **백엔드 브랜치**: `be-dev` (작업), `master` (메인)
+- **프론트엔드 브랜치**: `FE/dev` (같은 레포, `frontend/` 폴더)
+- **GitLab**: `https://lab.ssafy.com/s14-webmobile1-sub1/S14P11C206`
+
+### 백엔드 모듈 구조 (be-dev 브랜치)
+```
+onetakestudio-backend/
+├── pom.xml                          ← 루트 POM (모듈 정의)
+├── docker-compose.yml               ← MySQL (통합), Redis, LiveKit
+├── common/                          ← 공통 라이브러리 (JAR, 서버 아님)
+│   └── src/main/java/com/onetake/common/
+│       ├── dto/ApiResponse.java
+│       └── jwt/JwtUtil.java
+├── core-service/                    ← Core Service (MySQL core_db, port: 8080)
+│   └── src/main/java/com/onetake/core/
+│       ├── CoreServiceApplication.java
+│       ├── config/                  ← JwtConfig, AsyncConfig, RestTemplateConfig, RedisConfig
+│       ├── security/                ← CustomUserDetails, CurrentUser, JwtAuthenticationFilter, TokenBlacklistService
+│       ├── auth/                    ← 인증 (controller, service, dto, entity, exception, repository, scheduler)
+│       ├── user/                    ← 사용자 (controller, service, dto, entity, exception, repository)
+│       ├── studio/                  ← 스튜디오 (controller, service, dto, entity, exception, repository) ★ 전체 구현됨
+│       ├── destination/             ← 송출 채널 (controller, service, dto, entity, exception, repository)
+│       ├── workspace/               ← 워크스페이스 대시보드 (controller, service, dto)
+│       └── notification/            ← 알림 (controller, dto)
+├── media-service/                   ← Media Service (MySQL media_db, port: 8082)
+│   └── src/main/java/com/onetake/media/
+│       ├── MediaServiceApplication.java
+│       ├── global/                  ← 공통 (config, exception, common)
+│       ├── stream/                  ← WebRTC 스트림 (LiveKit 토큰)
+│       ├── recording/               ← 녹화 (LiveKit Egress)
+│       ├── publish/                 ← RTMP 송출
+│       └── screenshare/             ← 화면 공유
+├── eureka-server/                   ← Eureka Service Discovery (port: 8761)
+│   └── src/main/java/com/onetake/eureka/EurekaServerApplication.java
+└── api-gateway/                     ← API Gateway (port: 60000)
+    └── src/main/java/com/onetake/gateway/ApiGatewayApplication.java
+```
+
+### 실행 순서
+1. Docker Compose (`docker-compose up -d`) → MySQL (통합), Redis, LiveKit
+2. Eureka Server (port 8761)
+3. Core Service (port 8080, Eureka 등록)
+4. Media Service (port 8082)
+5. API Gateway (port 60000) → 클라이언트 진입점
+
+### 프론트엔드 (FE/dev 브랜치)
+- 경로: 같은 레포의 `FE/dev` 브랜치 → `frontend/` 폴더
+- Next.js + React + TypeScript
+- `npm run dev`로 실행 (port 3000)
+
+---
+
+## 📌 프로젝트 개요
+
+**OneTakeStudio**는 "송출부터 편집까지 원테이크"를 실현하는 **웹 기반 멀티 플랫폼 라이브 스트리밍 플랫폼**입니다.
+
+### 🎯 핵심 기능
+1. **WebRTC 기반 라이브 스트리밍** (LiveKit)
+2. **멀티 플랫폼 동시 송출** (YouTube, Twitch, 치지직)
+3. **실시간 녹화 및 마커 시스템**
+4. **AI 기반 쇼츠 자동 생성**
+5. **통합 채팅 시스템**
+6. **실시간 협업** (백스테이지/팬텀 모드)
+7. **클라우드 스토리지 관리**
+
+---
+
+## 👥 팀 구성
+
+- **백엔드**: 2명 (Spring Boot, MSA)
+- **프론트엔드**: 2명 (React, Next.js, WebRTC)
+- **인프라**: 1명 (k3s, Jenkins, Docker)
+- **AI**: 1명 (Python, FastAPI, OpenCV)
+
+**총 6인 팀 개발 프로젝트**
+
+---
+
+## 🏗️ 기술 스택
+
+### Frontend
+- React, Next.js, JavaScript, HTML5, CSS
+- WebRTC (LiveKit SDK)
+- Socket.io-client, Zustand/Redux
+- TailwindCSS, Shadcn/ui
+
+### Backend (MSA)
+- **Framework**: Spring Boot **3.5.9**
+- **Language**: Java **21** (Oracle JDK)
+- **ORM**: Spring Data JPA
+- **MSA**:
+  - Spring Cloud Gateway (API Gateway, port: 60000)
+  - Spring Cloud Netflix Eureka (Service Discovery, port: 8761)
+  - Redis Streams (메시지 브로커)
+- **WebRTC**: **LiveKit** (SFU Server)
+- **Database**:
+  - Core Service: **MySQL 8.0** (core_db, port: 3306)
+  - Media Service: **MySQL 8.0** (media_db, port: 3306) ← PostgreSQL에서 통합 마이그레이션됨
+- **Cache**: Redis 7
+- **Auth**: JWT, Spring Security
+
+### AI Service
+- FastAPI, Python
+- OpenCV, TensorFlow/PyTorch
+- Whisper (STT)
+
+### Infrastructure
+- **Orchestration**: **k3s** (Lightweight Kubernetes)
+- **CI/CD**: Jenkins
+- **Container**: Docker
+- **Storage**: MinIO (S3-compatible)
+- **Reverse Proxy**: Nginx (+ RTMP)
+- **Monitoring**: Prometheus, Grafana
+
+---
+
+## 📂 MSA 아키텍처
+
+### 서비스 구성
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Spring Cloud Gateway                       │
+│                    (API Gateway / Port: 60000)               │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ├─── Service Discovery
+                            │    (Eureka Server / Port: 8761)
+                            │
+        ┌───────────────────┼───────────────────┐
+        │                   │                   │
+        ▼                   ▼                   ▼
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│  Core Service    │ │  Media Service   │ │   AI Service     │
+│  (Port: 8080)    │ │  (Port: 8082)    │ │  (Port: 8000)    │
+│                  │ │                  │ │                  │
+│  - Auth          │ │  - Stream        │ │  - AI Shorts     │
+│  - User          │ │  - Recording     │ │  - STT/자막      │
+│  - Studio        │ │  - Publish       │ │  - 영상 분석     │
+│  - Destination   │ │  - ScreenShare   │ │                  │
+│  - Workspace     │ │                  │ │  Python/FastAPI  │
+│  - Notification  │ │  + LiveKit       │ │                  │
+│                  │ │                  │ │                  │
+│  MySQL (core_db) │ │  MySQL (media_db)│ │                  │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+        │                   │                   │
+        └───────────────────┼───────────────────┘
+                            │
+                    ┌───────────────┐
+                    │ Redis Streams │
+                    │ (Message Bus) │
+                    └───────────────┘
+                            │
+                    ┌───────────────┐
+                    │   LiveKit     │
+                    │ (WebRTC SFU)  │
+                    └───────────────┘
+```
+
+---
+
+## 🎯 설계 원칙
+
+### 1. ID 전략: 내부 BIGINT + 외부 UUID
+
+```sql
+-- 모든 테이블 공통 패턴
+CREATE TABLE example (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,  -- 내부 조인용 (성능)
+    example_id CHAR(36) UNIQUE NOT NULL,   -- 외부 API 노출용 (보안)
+    ...
+);
+```
+
+**이유**:
+- ✅ 내부 조인 성능 최적화 (BIGINT)
+- ✅ API 보안 (UUID 예측 불가)
+- ✅ MSA 분산 환경 적합
+
+### 2. Destination 분리: Core + Media
+
+```
+Core Service:
+  → connected_destinations (OAuth 토큰, 채널 메타데이터)
+  
+Media Service:
+  → publish_destinations (실시간 RTMP 연결 상태)
+```
+
+**이유**:
+- ✅ 단일 책임 원칙
+- ✅ 장애 격리
+- ✅ 확장성
+
+### 3. egress_id 필수 저장
+
+```sql
+-- LiveKit 연동 시 필수!
+recordings.egress_id VARCHAR(100)
+publish_sessions.egress_id VARCHAR(100)
+```
+
+**이유**: LiveKit으로 녹화/송출 중지 요청 시 반드시 필요
+
+---
+
+## 🗄️ 데이터베이스 구조
+
+### Core Service (MySQL - core_db)
+
+| 테이블 | 설명 |
+|--------|------|
+| `users` | 사용자 (id + user_id) |
+| `studios` | 스튜디오 (id + studio_id) |
+| `studio_members` | 멤버 초대/역할 |
+| `member_invites` | 초대장 |
+| `scenes` | 씬/장면 |
+| `scene_sources` | 소스 레이어 |
+| `connected_destinations` | 연동된 송출 채널 (OAuth) ⭐ |
+| `studio_destination_map` | 스튜디오-채널 매핑 |
+| `refresh_tokens` | JWT Refresh Token |
+
+### Media Service (MySQL - media_db)
+
+| 테이블 | 설명 |
+|--------|------|
+| `stream_sessions` | WebRTC 세션 (LiveKit Token) |
+| `publish_sessions` | 송출 세션 (egress_id 포함) ⭐ |
+| `publish_destinations` | 실시간 RTMP 상태 ⭐ |
+| `publish_events` | 송출 이벤트 로그 |
+| `recording_sessions` | 녹화 세션 (egress_id 포함) |
+| `recording_events` | 녹화 이벤트 로그 |
+| `screen_share_sessions` | 화면 공유 세션 |
+| `clips` | 클립/쇼츠 |
+| `markers` | 마커/북마크 |
+| `banners` | 배너 |
+
+**상세 ERD**: `references/database-erd.md`
+
+---
+
+## 🔐 인증 시스템 (이메일 기반 회원가입)
+
+### 필수 입력 정보
+- **이메일** (email): 로그인 ID로 사용, 인증 필수
+- **비밀번호** (password): 8자 이상
+- **닉네임** (nickname): 2-20자
+
+### 이메일 인증 흐름
+1. 회원가입 시 이메일 입력 → 인증 코드 발송
+2. 6자리 인증 코드 입력 → 이메일 인증 완료
+3. 인증 완료 후 로그인 가능
+
+### 포함된 기능
+- ✅ 이메일로 로그인 (username 제거)
+- ✅ 이메일 인증 (6자리 코드, 5분 유효)
+- ✅ 비밀번호 찾기/재설정 (이메일로 재설정 링크 발송)
+- ✅ OAuth 소셜 로그인 (Google, Kakao, Naver)
+
+### JWT 토큰 관리 (Redis 블랙리스트)
+
+**k3s 환경 특성상 각 서비스에서 개별 JWT 검증 + Redis 공유**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              k3s Ingress (Traefik/Nginx)                     │
+│              라우팅만 담당 - JWT 검증 X                        │
+└─────────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┴───────────────────┐
+        ▼                                       ▼
+┌──────────────────────────┐         ┌──────────────────────────┐
+│   Core Service (Pod)     │         │  Media Service (Pod)     │
+│   JwtFilter + Redis체크   │         │  JwtFilter + Redis체크    │
+│   로그아웃 시 블랙리스트 등록│         │  @RequestHeader X-User-Id │
+└──────────────────────────┘         └──────────────────────────┘
+                │                               │
+                └───────────────┬───────────────┘
+                                ▼
+                        ┌───────────────┐
+                        │  Redis (Pod)  │
+                        │  블랙리스트    │
+                        └───────────────┘
+```
+
+**common 모듈 구조** (라이브러리, 서버 아님):
+```
+common/                      ← JAR 라이브러리 (실행 X)
+├── dto/ApiResponse.java     ← 공통 응답 DTO
+└── jwt/JwtUtil.java         ← JWT 생성/검증
+
+Core Service (서버)                      Media Service (서버)
+├── common 의존                          ├── global/common/ApiResponse.java (자체 구현)
+├── security/TokenBlacklistService.java  ├── Redis 연결 (Streams)
+├── security/JwtAuthenticationFilter.java├── 자체 SecurityConfig
+├── Redis 연결                           └── X-User-Id 헤더 사용
+└── 로그아웃 API
+```
+
+**Redis 블랙리스트 저장 형식**:
+```
+Key: blacklist:{jti}         # JWT ID (토큰 고유값)
+Value: 1
+TTL: 토큰 남은 만료시간
+```
+
+**로그아웃 흐름**:
+1. 클라이언트 → Core Service `/api/auth/logout` 요청
+2. Core Service → Redis에 토큰 JTI 저장 (블랙리스트 등록)
+3. 이후 요청 시 Core/Media 모두 Redis 블랙리스트 체크
+4. 블랙리스트에 있으면 401 Unauthorized
+
+**Media Service 사용자 정보 전달**:
+```java
+// Media Service - StreamController.java
+@PostMapping("/stream/join")
+public ResponseEntity<ApiResponse<StreamTokenResponse>> joinStream(
+        @RequestHeader("X-User-Id") Long userId,  // ← 인증된 사용자 ID
+        @Valid @RequestBody StreamTokenRequest request) {
+    // userId로 권한 확인 후 처리
+}
+```
+
+### User 테이블
+```sql
+CREATE TABLE users (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id CHAR(36) UNIQUE NOT NULL,        -- UUID (외부 노출용)
+    email VARCHAR(255) UNIQUE NOT NULL,       -- 이메일 (로그인 ID)
+    password VARCHAR(255) NOT NULL,           -- bcrypt
+    nickname VARCHAR(50) NOT NULL,
+    profile_image_url VARCHAR(500),
+    email_verified BOOLEAN DEFAULT FALSE,     -- 이메일 인증 여부
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_email (email),
+    INDEX idx_email_verified (email_verified)
+);
+```
+
+### email_verifications 테이블 (이메일 인증 코드)
+```sql
+CREATE TABLE email_verifications (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) NOT NULL,
+    verification_code VARCHAR(6) NOT NULL,    -- 6자리 인증 코드
+    type VARCHAR(20) NOT NULL,                -- SIGNUP/PASSWORD_RESET
+    expires_at DATETIME NOT NULL,             -- 만료 시간 (5분)
+    verified BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_email (email),
+    INDEX idx_code (verification_code),
+    INDEX idx_expires (expires_at)
+);
+```
+
+### password_reset_tokens 테이블 (비밀번호 재설정)
+```sql
+CREATE TABLE password_reset_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    token CHAR(36) UNIQUE NOT NULL,           -- UUID 토큰
+    expires_at DATETIME NOT NULL,             -- 만료 시간 (1시간)
+    used BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_expires (expires_at)
+);
+```
+
+**상세 가이드**: `references/auth-email-signup.md`
+
+---
+
+## 🎬 LiveKit 연동
+
+### LiveKit이란?
+```
+WebRTC SFU (Selective Forwarding Unit) 서버
+→ 브라우저 간 영상/음성 중계
+→ 녹화 (Egress)
+→ RTMP 송출 (Egress)
+```
+
+### 주요 기능
+
+#### 1. 토큰 발급
+```java
+@Service
+public class LiveKitService {
+    
+    public String createToken(String roomName, String participantName, boolean canPublish) {
+        AccessToken token = new AccessToken(apiKey, apiSecret);
+        token.setName(participantName);
+        token.setIdentity(participantName);
+        token.addGrants(
+            new RoomJoin(true),
+            new RoomName(roomName),
+            new CanPublish(canPublish)
+        );
+        token.setTtl(Duration.ofHours(6));
+        return token.toJwt();
+    }
+}
+```
+
+#### 2. 녹화 시작
+```java
+public String startRecording(String roomName, String outputPath) {
+    EgressServiceClient client = EgressServiceClient.createClient(url, apiKey, apiSecret);
+    
+    RoomCompositeEgressRequest request = RoomCompositeEgressRequest.newBuilder()
+        .setRoomName(roomName)
+        .setFile(EncodedFileOutput.newBuilder()
+            .setFilepath(outputPath)
+            .setFileType(EncodedFileType.MP4)
+            .build())
+        .build();
+    
+    EgressInfo info = client.startRoomCompositeEgress(request).get();
+    
+    return info.getEgressId();  // ⭐ DB에 저장 필수!
+}
+```
+
+#### 3. 녹화 중지
+```java
+public void stopRecording(String egressId) {
+    EgressServiceClient client = EgressServiceClient.createClient(url, apiKey, apiSecret);
+    client.stopEgress(egressId);
+}
+```
+
+**상세 가이드**: `references/livekit-guide.md`
+
+---
+
+## 📋 API 엔드포인트
+
+### Stream (WebRTC 세션)
+| 메서드 | URL | 설명 |
+|--------|-----|------|
+| POST | /api/v1/media/stream/join | 스트림 참가 (토큰 발급) |
+| POST | /api/v1/media/stream/{studioId}/leave | 스트림 퇴장 |
+| POST | /api/v1/media/stream/{studioId}/end | 스트림 종료 |
+
+### Recording (녹화)
+| 메서드 | URL | 설명 |
+|--------|-----|------|
+| POST | /api/v1/media/record/start | 녹화 시작 |
+| POST | /api/v1/media/record/{studioId}/stop | 녹화 중지 |
+| POST | /api/v1/media/record/{studioId}/pause | 녹화 일시정지 |
+| POST | /api/v1/media/record/{studioId}/resume | 녹화 재개 |
+
+### Publish (RTMP 송출)
+| 메서드 | URL | 설명 |
+|--------|-----|------|
+| POST | /api/v1/media/publish | 송출 시작 |
+| POST | /api/v1/media/publish/stop | 송출 중지 |
+| GET | /api/v1/media/publish/status | 송출 상태 조회 |
+
+### ScreenShare (화면 공유)
+| 메서드 | URL | 설명 |
+|--------|-----|------|
+| POST | /api/v1/media/screen-share/start | 화면 공유 시작 |
+| POST | /api/v1/media/screen-share/stop | 화면 공유 중지 |
+
+**전체 API**: `references/api-specifications.md`
+
+### API Gateway 라우팅 규칙 (port 60000)
+```yaml
+# Core Service 라우트
+- /api/auth/**         → core-service:8080
+- /api/users/**        → core-service:8080
+- /api/studios/**      → core-service:8080
+- /api/workspace/**    → core-service:8080
+- /api/notifications/**→ core-service:8080
+- /api/destinations/** → core-service:8080
+- /api/dashboard       → core-service:8080
+
+# Media Service 라우트
+- /api/v1/media/**     → media-service:8082
+- /api/streams/**      → media-service:8082 (RewritePath → /api/v1/media/stream/)
+- /api/recordings/**   → media-service:8082 (RewritePath → /api/v1/media/record/)
+- /api/publish/**      → media-service:8082 (RewritePath → /api/v1/media/publish/)
+```
+
+---
+
+## 🚀 개발 시작하기
+
+### 1. Docker 환경 실행
+
+```bash
+# Docker Compose 실행
+docker-compose up -d
+
+# 서비스 확인
+docker-compose ps
+
+# 로그 확인
+docker-compose logs -f
+```
+
+**서비스 접속**:
+- MySQL: `localhost:3306`
+  - core_db: core_user/core_password
+  - media_db: media_user/media_password
+- Redis: `localhost:6379`
+- LiveKit: `ws://localhost:7880`
+
+### 2. 데이터베이스 초기화
+
+```bash
+# MySQL (docker-compose로 자동 초기화)
+# init.sql이 docker-entrypoint-initdb.d에 마운트되어 자동 실행됨
+# 수동 초기화 필요 시:
+mysql -h localhost -P 3306 -u root -proot_password < docker/mysql/init.sql
+```
+
+### 3. 백엔드 실행
+
+```bash
+# 1. Eureka Server (port 8761)
+cd eureka-server
+./mvnw spring-boot:run
+
+# 2. Core Service (port 8080)
+cd core-service
+./mvnw spring-boot:run
+
+# 3. Media Service (port 8082)
+cd media-service
+./mvnw spring-boot:run
+
+# 4. API Gateway (port 60000)
+cd api-gateway
+./mvnw spring-boot:run
+```
+
+### 4. 프론트엔드 실행
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## 💻 개발 워크플로우
+
+### 예시: 라이브 송출 전체 흐름
+
+#### 1. 유저가 YouTube 연동 (Core Service)
+```java
+// DestinationController.java
+@PostMapping("/api/destinations/connect")
+public ResponseEntity<DestinationDto> connectYouTube(@RequestBody ConnectRequest request) {
+    // OAuth 처리
+    // connected_destinations 테이블에 저장 (access_token, stream_key 암호화)
+}
+```
+
+#### 2. 스튜디오 생성 시 YouTube 선택 (Core Service)
+```java
+// StudioController.java
+@PostMapping("/api/studios")
+public ResponseEntity<StudioDto> createStudio(@RequestBody CreateStudioRequest request) {
+    Studio studio = studioService.create(request);
+    
+    // studio_destination_map에 매핑 저장
+    for (UUID destId : request.getDestinationIds()) {
+        mapRepository.save(new StudioDestinationMap(studio.getId(), destId));
+    }
+}
+```
+
+#### 3. WebRTC 세션 참가 (Media Service)
+```java
+// StreamController.java
+@PostMapping("/api/v1/media/stream/join")
+public ResponseEntity<JoinResponse> joinStream(@RequestBody JoinRequest request) {
+    // 1. LiveKit 토큰 발급
+    String token = liveKitService.createToken(roomName, username, true);
+    
+    // 2. stream_sessions 테이블에 저장
+    StreamSession session = streamSessionRepository.save(/* ... */);
+    
+    return ResponseEntity.ok(new JoinResponse(token, "ws://localhost:7880"));
+}
+```
+
+#### 4. 라이브 송출 시작 (Media Service)
+```java
+// PublishController.java
+@PostMapping("/api/v1/media/publish")
+public ResponseEntity<PublishSessionDto> startPublish(@RequestBody StartPublishRequest request) {
+    // 1. Core Service에 "이 스튜디오는 어디로 송출?" 질문
+    List<DestinationDto> dests = coreServiceClient.getStudioDestinations(studioId);
+    
+    // 2. publish_sessions 생성
+    PublishSession session = publishSessionRepository.save(/* ... */);
+    
+    // 3. 각 플랫폼별 LiveKit Egress로 RTMP 송출
+    for (DestinationDto dest : dests) {
+        String egressId = liveKitService.startRtmpPublish(
+            roomName,
+            dest.getRtmpUrl(),
+            dest.getStreamKey()
+        );
+        
+        // 4. publish_destinations 저장 (실시간 상태 추적)
+        publishDestRepository.save(
+            PublishDestination.builder()
+                .publishSessionId(session.getId())
+                .destinationId(dest.getId())
+                .platform(dest.getPlatform())
+                .rtmpUrl(dest.getRtmpUrl())
+                .streamKeyEnc(encryptedStreamKey)
+                .status("CONNECTED")
+                .build()
+        );
+    }
+    
+    // 5. egress_id 저장 (중지 시 필요!)
+    session.setEgressId(egressId);
+    session.setStatus("LIVE");
+    publishSessionRepository.save(session);
+}
+```
+
+---
+
+## 📚 참조 문서
+
+### 필수 문서 (개발 전 반드시 읽기)
+
+| 문서 | 내용 | 언제 보나 |
+|------|------|----------|
+| `database-erd.md` | **전체 ERD** (Core + Media) | 모든 개발 시작 전 |
+| `auth-email-signup.md` | **이메일 회원가입/인증** 상세 | Auth 개발 시 |
+| `livekit-guide.md` | **LiveKit 개념 + 연동** | WebRTC/녹화/송출 개발 시 |
+| `complete-code.md` | **복붙 가능한 완성 코드** | 빠른 구현 시 |
+
+### 추가 문서
+
+| 문서 | 내용 |
+|------|------|
+| `livekit-service.md` | LiveKitService 전체 코드 |
+| `media-service-entities.md` | Media Service Entity 설계 |
+| `global-common.md` | 공통 클래스 (ApiResponse, Security) |
+| `feature-specifications.md` | 기능 명세서 (C, A, W, S, L 도메인) |
+| `api-specifications.md` | API 명세서 (110+ 엔드포인트) |
+| `msa-architecture.md` | MSA 설계 가이드 |
+| `tech-stack-details.md` | 기술 스택 상세 (pom.xml, application.yml) |
+| `api-test.md` | Postman + cURL 테스트 |
+| `docker-compose.yml` | Docker 환경 설정 |
+
+---
+
+## 🎨 와이어프레임
+
+**Figma**: https://www.figma.com/design/9feQqWFi0ixF6AoUr5oHnX/OneTakeStudio
+
+**스크린샷**: `assets/` 폴더 (14개 화면)
+
+---
+
+## 🧪 테스트
+
+### Unit Test
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+class StreamControllerTest {
+    
+    @MockBean
+    private LiveKitService liveKitService;
+    
+    @Test
+    void joinStream_shouldReturnToken() {
+        given(liveKitService.createToken(any(), any(), anyBoolean()))
+            .willReturn("mock-token");
+        
+        mockMvc.perform(post("/api/v1/media/stream/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("mock-token"));
+    }
+}
+```
+
+**상세**: `references/api-test.md`
+
+---
+
+## 🚢 배포 (k3s)
+
+### Docker 이미지 빌드
+```bash
+# Spring Boot
+./mvnw spring-boot:build-image -Dspring-boot.build-image.imageName=onetake/core-service:latest
+./mvnw spring-boot:build-image -Dspring-boot.build-image.imageName=onetake/media-service:latest
+
+# Frontend
+docker build -t onetake/frontend:latest ./frontend
+```
+
+### k3s 배포
+```bash
+kubectl apply -f k8s/core-service.yaml
+kubectl apply -f k8s/media-service.yaml
+kubectl apply -f k8s/gateway.yaml
+```
+
+---
+
+## 💡 개발 팁
+
+### 1. Feign Client 사용 (Core ↔ Media)
+```java
+@FeignClient(name = "core-service")
+public interface CoreServiceClient {
+    
+    @GetMapping("/internal/studios/{studioId}/destinations")
+    List<DestinationDto> getStudioDestinations(@PathVariable("studioId") Long studioId);
+}
+```
+
+### 2. Redis Streams 이벤트 발행
+```java
+// Media Service - RedisStreamConfig.java
+@Configuration
+public class RedisStreamConfig {
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+        RedisTemplate<String, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
+        return template;
+    }
+}
+
+// 이벤트 발행 예시
+stringRedisTemplate.opsForStream()
+    .add("stream:studio-events", Map.of("event", "STUDIO_CREATED", "studioId", studioId));
+```
+
+### 3. egress_id는 반드시 저장!
+```java
+// ❌ 잘못된 예
+String egressId = liveKitService.startRecording(roomName, path);
+// DB에 저장 안 함 → 중지 불가!
+
+// ✅ 올바른 예
+String egressId = liveKitService.startRecording(roomName, path);
+recording.setEgressId(egressId);  // 반드시 저장!
+recordingRepository.save(recording);
+```
+
+---
+
+## 🐛 트러블슈팅
+
+### LiveKit 연결 실패
+```bash
+# LiveKit 서버 상태 확인
+curl http://localhost:7880
+
+# 로그 확인
+docker logs onetake-livekit
+```
+
+### Redis 연결 실패
+```bash
+# Redis 상태 확인
+redis-cli ping
+
+# Redis Streams 확인
+redis-cli XLEN stream:studio-events
+```
+
+### DB 연결 실패
+```bash
+# MySQL 접속 확인 (Core)
+mysql -h localhost -P 3306 -u core_user -pcore_password core_db
+
+# MySQL 접속 확인 (Media)
+mysql -h localhost -P 3306 -u media_user -pmedia_password media_db
+```
+
+---
+
+## 📅 개발 로드맵
+
+### Phase 1: 기본 인프라 (1주)
+- ✅ Eureka, Gateway, Config 설정
+- ✅ Docker Compose 환경
+- ✅ 회원가입/로그인
+
+### Phase 2: WebRTC 세션 (2주)
+- ✅ LiveKit 연동
+- ✅ 토큰 발급 API
+- ✅ 프론트 WebRTC 연결
+
+### Phase 3: 녹화/송출 (2주)
+- ✅ 녹화 시작/중지
+- ✅ RTMP 송출
+- ✅ Destination 연동
+
+### Phase 4: 고급 기능 (2주)
+- ✅ 실시간 채팅
+- ✅ 마커 시스템
+- ✅ 협업 기능
+
+### Phase 5: AI 기능 (1주)
+- ✅ AI 쇼츠 생성
+- ✅ STT 자막
+
+---
+
+**이 Skill은 OneTakeStudio MSA 프로젝트의 완전한 개발 가이드입니다.**
+**내부 BIGINT + 외부 UUID 설계, LiveKit 연동, Destination 분리 등 베스트 프랙티스를 모두 반영했습니다!** 🚀

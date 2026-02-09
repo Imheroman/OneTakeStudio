@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"traefik.ingress.kubernetes.io/router.entrypoints":"websecure","traefik.ingress.kubernetes.io/router.tls.certresolver":"letsencrypt"},"name":"monitoring-ingress","namespace":"monitoring"},"spec":{"rules":[{"host":"i14c206.p.ssafy.io","http":{"paths":[{"backend":{"service":{"name":"prometheus-grafana","port":{"number":80}}},"path":"/grafana","pathType":"Prefix"},{"backend":{"service":{"name":"prometheus-kube-prometheus-prometheus","port":{"number":9090}}},"path":"/prometheus","pathType":"Prefix"}]}}]}}
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+  creationTimestamp: "2026-01-27T11:49:16Z"
+  generation: 1
+  name: monitoring-ingress
+  namespace: monitoring
+  resourceVersion: "13846"
+  uid: df1ec69f-a63c-41ce-bd67-19af8bd1aa48
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: i14c206.p.ssafy.io
+      http:
+        paths:
+          - backend:
+              service:
+                name: prometheus-grafana
+                port:
+                  number: 80
+            path: /grafana
+            pathType: Prefix
+          - backend:
+              service:
+                name: prometheus-kube-prometheus-prometheus
+                port:
+                  number: 9090
+            path: /prometheus
+            pathType: Prefix
+status:
+  loadBalancer:
+    ingress:
+      - ip: 172.26.2.231

@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: redisinsight-ingress
+  namespace: database
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
+    # 외부 접속 차단을 위한 인증 middleware 추가
+    traefik.ingress.kubernetes.io/router.middlewares: database-redisinsight-basicauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - i14c206.p.ssafy.io
+  rules:
+    - host: i14c206.p.ssafy.io
+      http:
+        paths:
+          - backend:
+              service:
+                name: redisinsight
+                port:
+                  number: 5540
+            path: /redis-insight
+            pathType: Prefix

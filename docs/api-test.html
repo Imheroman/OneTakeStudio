@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Destination API Test</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; padding: 20px; background: #1a1a2e; color: #eee; }
+        h1 { text-align: center; color: #00d9ff; }
+        h2 { color: #00d9ff; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+        .row label { min-width: 120px; font-weight: bold; }
+        input, select { flex: 1; padding: 10px; border: none; border-radius: 5px; background: #0f0f23; color: #fff; min-width: 200px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin: 5px 5px 5px 0; }
+        .btn-primary { background: #00d9ff; color: #000; }
+        .btn-success { background: #49cc90; color: #000; }
+        .btn-warning { background: #fca130; color: #000; }
+        .btn-danger { background: #f93e3e; color: #fff; }
+        .btn:hover { opacity: 0.8; }
+        .method { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px; display: inline-block; }
+        .method.get { background: #61affe; color: #000; }
+        .method.post { background: #49cc90; color: #000; }
+        .method.put { background: #fca130; color: #000; }
+        .method.delete { background: #f93e3e; color: #fff; }
+        .response { margin-top: 15px; padding: 15px; background: #0a0a1a; border-radius: 5px; font-family: monospace; font-size: 13px; white-space: pre-wrap; max-height: 250px; overflow-y: auto; }
+        .response.success { border-left: 3px solid #49cc90; }
+        .response.error { border-left: 3px solid #f93e3e; }
+        .status { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status.up { background: #49cc90; }
+        .status.down { background: #f93e3e; }
+        .api-item { padding: 15px; background: #0f0f23; border-radius: 8px; margin-bottom: 15px; }
+        .api-item h4 { margin: 0 0 15px 0; }
+        .endpoint { color: #888; font-size: 14px; }
+        .divider { border-top: 1px solid #333; margin: 20px 0; }
+        .token-display { background: #0a0a1a; padding: 10px; border-radius: 5px; word-break: break-all; font-family: monospace; font-size: 12px; margin-top: 10px; }
+        .user-info { background: #0f3460; padding: 10px; border-radius: 5px; margin-top: 10px; }
+        .logged-in { color: #49cc90; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Destination API Test</h1>
+
+        <!-- 설정 & 상태 -->
+        <div class="card">
+            <h2>설정</h2>
+            <div class="row">
+                <label>Core Service:</label>
+                <input type="text" id="coreUrl" value="http://localhost:8080">
+                <span><span class="status" id="status-core"></span><span id="core-text">-</span></span>
+                <button class="btn btn-primary" onclick="checkHealth()">상태 확인</button>
+            </div>
+            <div class="row">
+                <label>JWT Token:</label>
+                <input type="text" id="jwtToken" placeholder="로그인 후 자동 입력됩니다">
+            </div>
+            <div id="currentUser"></div>
+        </div>
+
+        <!-- 인증 API -->
+        <div class="card">
+            <h2>인증 (Auth API)</h2>
+
+            <!-- 로그인 -->
+            <div class="api-item">
+                <h4><span class="method post">POST</span>/api/auth/login</h4>
+                <p class="endpoint">로그인 후 JWT 토큰 발급</p>
+                <div class="row">
+                    <label>Email:</label>
+                    <input type="email" id="login-email" placeholder="이메일">
+                </div>
+                <div class="row">
+                    <label>Password:</label>
+                    <input type="password" id="login-password" placeholder="비밀번호">
+                </div>
+                <button class="btn btn-success" onclick="login()">로그인</button>
+                <div class="response" id="resp-login"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 회원가입 -->
+            <div class="api-item">
+                <h4>회원가입 (3단계)</h4>
+
+                <p class="endpoint"><span class="method post">POST</span>/api/auth/send-verification - 1단계: 인증 코드 발송</p>
+                <div class="row">
+                    <label>Email:</label>
+                    <input type="email" id="reg-email" placeholder="이메일">
+                    <button class="btn btn-primary" onclick="sendVerification()">인증코드 발송</button>
+                </div>
+                <div class="response" id="resp-send-verify"></div>
+
+                <div class="divider"></div>
+
+                <p class="endpoint"><span class="method post">POST</span>/api/auth/verify-email - 2단계: 이메일 인증</p>
+                <div class="row">
+                    <label>인증 코드:</label>
+                    <input type="text" id="reg-code" placeholder="이메일로 받은 인증 코드">
+                    <button class="btn btn-primary" onclick="verifyEmail()">인증 확인</button>
+                </div>
+                <div class="response" id="resp-verify-email"></div>
+
+                <div class="divider"></div>
+
+                <p class="endpoint"><span class="method post">POST</span>/api/auth/register - 3단계: 회원가입 완료</p>
+                <div class="row">
+                    <label>Password:</label>
+                    <input type="password" id="reg-password" placeholder="비밀번호 (8자 이상)">
+                </div>
+                <div class="row">
+                    <label>Nickname:</label>
+                    <input type="text" id="reg-nickname" placeholder="닉네임 (2-20자)">
+                </div>
+                <button class="btn btn-success" onclick="register()">회원가입</button>
+                <div class="response" id="resp-register"></div>
+            </div>
+        </div>
+
+        <!-- Destination CRUD API -->
+        <div class="card">
+            <h2>Destination API (송출 채널 관리)</h2>
+
+            <!-- 목록 조회 -->
+            <div class="api-item">
+                <h4><span class="method get">GET</span>/api/destinations</h4>
+                <p class="endpoint">내 연동 채널 목록 조회</p>
+                <button class="btn btn-primary" onclick="getDestinations()">목록 조회</button>
+                <div class="response" id="resp-list"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 채널 등록 -->
+            <div class="api-item">
+                <h4><span class="method post">POST</span>/api/destinations</h4>
+                <p class="endpoint">신규 송출 채널 등록</p>
+                <div class="row">
+                    <label>Platform:</label>
+                    <select id="create-platform">
+                        <option value="youtube">YouTube</option>
+                        <option value="twitch">Twitch</option>
+                        <option value="afreeca">AfreecaTV</option>
+                        <option value="custom">Custom RTMP</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <label>Channel ID:</label>
+                    <input type="text" id="create-channelId" placeholder="채널 ID (필수)">
+                </div>
+                <div class="row">
+                    <label>Channel Name:</label>
+                    <input type="text" id="create-channelName" placeholder="채널 이름">
+                </div>
+                <div class="row">
+                    <label>RTMP URL:</label>
+                    <input type="text" id="create-rtmpUrl" placeholder="rtmp://a.rtmp.youtube.com/live2">
+                </div>
+                <div class="row">
+                    <label>Stream Key:</label>
+                    <input type="text" id="create-streamKey" placeholder="스트림 키">
+                </div>
+                <button class="btn btn-success" onclick="createDestination()">채널 등록</button>
+                <div class="response" id="resp-create"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 단일 조회 -->
+            <div class="api-item">
+                <h4><span class="method get">GET</span>/api/destinations/{destinationId}</h4>
+                <p class="endpoint">단일 채널 조회</p>
+                <div class="row">
+                    <label>Destination ID:</label>
+                    <input type="text" id="get-destinationId" placeholder="UUID 형식의 destination ID">
+                </div>
+                <button class="btn btn-primary" onclick="getDestination()">조회</button>
+                <div class="response" id="resp-get"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 채널 수정 -->
+            <div class="api-item">
+                <h4><span class="method put">PUT</span>/api/destinations/{destinationId}</h4>
+                <p class="endpoint">채널 정보 수정</p>
+                <div class="row">
+                    <label>Destination ID:</label>
+                    <input type="text" id="update-destinationId" placeholder="수정할 destination ID">
+                </div>
+                <div class="row">
+                    <label>Channel Name:</label>
+                    <input type="text" id="update-channelName" placeholder="변경할 채널 이름">
+                </div>
+                <div class="row">
+                    <label>RTMP URL:</label>
+                    <input type="text" id="update-rtmpUrl" placeholder="변경할 RTMP URL">
+                </div>
+                <div class="row">
+                    <label>Stream Key:</label>
+                    <input type="text" id="update-streamKey" placeholder="변경할 스트림 키">
+                </div>
+                <button class="btn btn-warning" onclick="updateDestination()">수정</button>
+                <div class="response" id="resp-update"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 채널 삭제 -->
+            <div class="api-item">
+                <h4><span class="method delete">DELETE</span>/api/destinations/{destinationId}</h4>
+                <p class="endpoint">채널 연동 해제</p>
+                <div class="row">
+                    <label>Destination ID:</label>
+                    <input type="text" id="delete-destinationId" placeholder="삭제할 destination ID">
+                </div>
+                <button class="btn btn-danger" onclick="deleteDestination()">삭제</button>
+                <div class="response" id="resp-delete"></div>
+            </div>
+        </div>
+
+        <!-- 내부 API -->
+        <div class="card">
+            <h2>Internal API (서비스 간 통신용)</h2>
+
+            <div class="api-item">
+                <h4><span class="method post">POST</span>/api/destinations/internal/batch</h4>
+                <p class="endpoint">ID 목록으로 Destination 일괄 조회 (media-service에서 호출)</p>
+                <div class="row">
+                    <label>IDs (쉼표 구분):</label>
+                    <input type="text" id="batch-ids" placeholder="1, 2, 3">
+                </div>
+                <button class="btn btn-primary" onclick="batchGetDestinations()">일괄 조회</button>
+                <div class="response" id="resp-batch"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getConfig() {
+            return {
+                coreUrl: document.getElementById('coreUrl').value,
+                jwtToken: document.getElementById('jwtToken').value
+            };
+        }
+
+        async function apiCall(method, url, body, respId, useAuth = true) {
+            const config = getConfig();
+            const el = document.getElementById(respId);
+            el.textContent = '요청 중...';
+            el.className = 'response';
+
+            try {
+                const options = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+
+                if (useAuth && config.jwtToken) {
+                    options.headers['Authorization'] = `Bearer ${config.jwtToken}`;
+                }
+
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const res = await fetch(url, options);
+                const data = await res.json();
+
+                el.textContent = `Status: ${res.status}\n\n${JSON.stringify(data, null, 2)}`;
+                el.className = 'response ' + (res.ok ? 'success' : 'error');
+
+                return { ok: res.ok, data };
+            } catch (e) {
+                el.textContent = 'Error: ' + e.message;
+                el.className = 'response error';
+                return { ok: false, data: null };
+            }
+        }
+
+        async function checkHealth() {
+            const config = getConfig();
+            const dot = document.getElementById('status-core');
+            const text = document.getElementById('core-text');
+
+            try {
+                const res = await fetch(config.coreUrl + '/actuator/health');
+                const data = await res.json();
+                dot.className = 'status up';
+                text.textContent = data.status || 'UP';
+            } catch {
+                dot.className = 'status down';
+                text.textContent = 'DOWN';
+            }
+        }
+
+        // ========== Auth API ==========
+
+        async function login() {
+            const config = getConfig();
+            const body = {
+                email: document.getElementById('login-email').value,
+                password: document.getElementById('login-password').value
+            };
+
+            const result = await apiCall('POST', `${config.coreUrl}/api/auth/login`, body, 'resp-login', false);
+
+            if (result.ok && result.data?.data?.accessToken) {
+                const token = result.data.data.accessToken;
+                const user = result.data.data.user;
+
+                document.getElementById('jwtToken').value = token;
+                document.getElementById('currentUser').innerHTML = `
+                    <div class="user-info">
+                        <span class="logged-in">로그인됨</span> |
+                        ${user.email} (${user.nickname})
+                    </div>
+                `;
+            }
+        }
+
+        async function sendVerification() {
+            const config = getConfig();
+            const body = {
+                email: document.getElementById('reg-email').value
+            };
+            await apiCall('POST', `${config.coreUrl}/api/auth/send-verification`, body, 'resp-send-verify', false);
+        }
+
+        async function verifyEmail() {
+            const config = getConfig();
+            const body = {
+                email: document.getElementById('reg-email').value,
+                code: document.getElementById('reg-code').value
+            };
+            await apiCall('POST', `${config.coreUrl}/api/auth/verify-email`, body, 'resp-verify-email', false);
+        }
+
+        async function register() {
+            const config = getConfig();
+            const body = {
+                email: document.getElementById('reg-email').value,
+                verificationCode: document.getElementById('reg-code').value,
+                password: document.getElementById('reg-password').value,
+                nickname: document.getElementById('reg-nickname').value
+            };
+            await apiCall('POST', `${config.coreUrl}/api/auth/register`, body, 'resp-register', false);
+        }
+
+        // ========== Destination API ==========
+
+        function getDestinations() {
+            const config = getConfig();
+            apiCall('GET', `${config.coreUrl}/api/destinations`, null, 'resp-list');
+        }
+
+        function createDestination() {
+            const config = getConfig();
+            const body = {
+                platform: document.getElementById('create-platform').value,
+                channelId: document.getElementById('create-channelId').value,
+                channelName: document.getElementById('create-channelName').value || undefined,
+                rtmpUrl: document.getElementById('create-rtmpUrl').value || undefined,
+                streamKey: document.getElementById('create-streamKey').value || undefined
+            };
+
+            Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+            apiCall('POST', `${config.coreUrl}/api/destinations`, body, 'resp-create');
+        }
+
+        function getDestination() {
+            const config = getConfig();
+            const id = document.getElementById('get-destinationId').value;
+            apiCall('GET', `${config.coreUrl}/api/destinations/${id}`, null, 'resp-get');
+        }
+
+        function updateDestination() {
+            const config = getConfig();
+            const id = document.getElementById('update-destinationId').value;
+            const body = {
+                channelName: document.getElementById('update-channelName').value || undefined,
+                rtmpUrl: document.getElementById('update-rtmpUrl').value || undefined,
+                streamKey: document.getElementById('update-streamKey').value || undefined
+            };
+
+            Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+            apiCall('PUT', `${config.coreUrl}/api/destinations/${id}`, body, 'resp-update');
+        }
+
+        function deleteDestination() {
+            const config = getConfig();
+            const id = document.getElementById('delete-destinationId').value;
+            apiCall('DELETE', `${config.coreUrl}/api/destinations/${id}`, null, 'resp-delete');
+        }
+
+        function batchGetDestinations() {
+            const config = getConfig();
+            const ids = document.getElementById('batch-ids').value
+                .split(',')
+                .map(s => parseInt(s.trim()))
+                .filter(n => !isNaN(n));
+
+            apiCall('POST', `${config.coreUrl}/api/destinations/internal/batch`, ids, 'resp-batch');
+        }
+
+        window.onload = checkHealth;
+    </script>
+</body>
+</html>

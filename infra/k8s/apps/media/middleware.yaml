@@ -1,0 +1,68 @@
+# CORS 헤더 미들웨어 (www.onetakestudio.duckdns.org → i14c206.p.ssafy.io)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: media-cors-headers
+  namespace: media
+spec:
+  headers:
+    accessControlAllowMethods:
+      - "GET"
+      - "POST"
+      - "PUT"
+      - "DELETE"
+      - "PATCH"
+      - "OPTIONS"
+    accessControlAllowHeaders:
+      - "*"
+    accessControlAllowOriginListRegex:
+      - "https://www\\.onetakestudio\\.duckdns\\.org"
+      - "https://i14c206\\.p\\.ssafy\\.io"
+    accessControlAllowCredentials: true
+    accessControlMaxAge: 3600
+    accessControlExposeHeaders:
+      - "Authorization"
+---
+# /api/publish/** -> /api/media/publish/**
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: media-rewrite-publish
+  namespace: media
+spec:
+  replacePathRegex:
+    regex: ^/api/publish/(.*)
+    replacement: /api/media/publish/$1
+---
+# /api/v1/media/** -> /api/media/**
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: media-rewrite-v1-media
+  namespace: media
+spec:
+  replacePathRegex:
+    regex: ^/api/v1/media/(.*)
+    replacement: /api/media/$1
+---
+# /api/streams/** -> /api/media/stream/**
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: media-rewrite-streams
+  namespace: media
+spec:
+  replacePathRegex:
+    regex: ^/api/streams/(.*)
+    replacement: /api/media/stream/$1
+---
+# /api/recordings/** -> /api/media/record/**
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: media-rewrite-recordings
+  namespace: media
+spec:
+  replacePathRegex:
+    regex: ^/api/recordings/(.*)
+    replacement: /api/media/record/$1

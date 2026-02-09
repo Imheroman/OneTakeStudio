@@ -1,0 +1,345 @@
+# [핵심] 모든 작업이 'onetakestudio' 태그가 붙은 러너에서 실행되도록 설정
+default:
+  tags:
+    - onetakestudio
+
+stages:
+  - setup        # Secret, ConfigMap 생성
+  - build        # 앱 빌드
+  - docker       # 이미지 빌드 & 푸시
+  - deploy       # 배포
+
+variables:
+  # AWS ECR 주소 (GitLab Variables에 ECR_REGISTRY 등록 필요)
+  # 예: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com
+  CORE_IMAGE: $ECR_REGISTRY/core-server
+  MEDIA_IMAGE: $ECR_REGISTRY/media-server
+  DOCKER_TLS_CERTDIR: ""
+
+# ─────────────────────────────────────────────
+# Stage 1: Kubernetes Secret 생성
+# ─────────────────────────────────────────────
+setup-secrets:
+  stage: setup
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+    # 1. Namespace 생성
+    - kubectl create namespace database --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl create namespace media --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl create namespace core --dry-run=client -o yaml | kubectl apply -f -
+
+    # 2. DB Password Secret 생성
+    - |
+      kubectl create secret generic mysql-secret \
+        --namespace=database \
+        --from-literal=root-password="$MYSQL_ROOT_PASSWORD" \
+        --from-literal=media-password="$MEDIA_DB_PASSWORD" \
+        --from-literal=core-password="$CORE_DB_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    - |
+      kubectl create secret generic db-secret \
+        --namespace=media \
+        --from-literal=DB_HOST="mysql.database.svc.cluster.local" \
+        --from-literal=DB_PORT="3306" \
+        --from-literal=DB_NAME="media_db" \
+        --from-literal=DB_USERNAME="user_media" \
+        --from-literal=DB_PASSWORD="$MEDIA_DB_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    - |
+      kubectl create secret generic db-secret \
+        --namespace=core \
+        --from-literal=DB_HOST="mysql.database.svc.cluster.local" \
+        --from-literal=DB_PORT="3306" \
+        --from-literal=DB_NAME="core_db" \
+        --from-literal=DB_USERNAME="user_core" \
+        --from-literal=DB_PASSWORD="$CORE_DB_PASSWORD" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 4. Core Application Secret 생성 (JWT, Mail, OAuth)
+    - |
+      kubectl create secret generic core-secret \
+        --namespace=core \
+        --from-literal=JWT_SECRET="$JWT_SECRET" \
+        --from-literal=MAIL_USERNAME="$MAIL_USERNAME" \
+        --from-literal=MAIL_PASSWORD="$MAIL_PASSWORD" \
+        --from-literal=OAUTH_GOOGLE_CLIENT_ID="$OAUTH_GOOGLE_CLIENT_ID" \
+        --from-literal=OAUTH_GOOGLE_CLIENT_SECRET="$OAUTH_GOOGLE_CLIENT_SECRET" \
+        --from-literal=OAUTH_KAKAO_CLIENT_ID="$OAUTH_KAKAO_CLIENT_ID" \
+        --from-literal=OAUTH_KAKAO_CLIENT_SECRET="$OAUTH_KAKAO_CLIENT_SECRET" \
+        --from-literal=OAUTH_NAVER_CLIENT_ID="$OAUTH_NAVER_CLIENT_ID" \
+        --from-literal=OAUTH_NAVER_CLIENT_SECRET="$OAUTH_NAVER_CLIENT_SECRET" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 5. Media Application Secret 생성
+    - |
+      kubectl create secret generic media-secret \
+        --namespace=media \
+        --from-literal=JWT_SECRET="$JWT_SECRET" \
+        --from-literal=LIVEKIT_API_KEY="devkey" \
+        --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
+        --from-literal=YOUTUBE_CLIENT_ID="$YOUTUBE_CLIENT_ID" \
+        --from-literal=YOUTUBE_CLIENT_SECRET="$YOUTUBE_CLIENT_SECRET" \
+        --from-literal=CHZZK_CLIENT_ID="$CHZZK_CLIENT_ID" \
+        --from-literal=CHZZK_CLIENT_SECRET="$CHZZK_CLIENT_SECRET" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # 6. LiveKit namespace 및 Secret
+    - kubectl create namespace livekit --dry-run=client -o yaml | kubectl apply -f -
+    - |
+      kubectl create secret generic livekit-secret \
+        --namespace=livekit \
+        --from-literal=LIVEKIT_API_KEY="devkey" \
+        --from-literal=LIVEKIT_API_SECRET="$LIVEKIT_API_SECRET" \
+        --from-literal=LIVEKIT_KEYS="devkey: $LIVEKIT_API_SECRET" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    - echo "=== Secrets 생성 완료 ==="
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      when: manual
+
+# ─────────────────────────────────────────────
+# Stage 1-b: ECR Pull Secret 갱신 (12시간 유효)
+# ─────────────────────────────────────────────
+#setup-ecr-secret:
+#  stage: setup
+#  image: amazon/aws-cli:latest
+#  before_script:
+#    - yum install -y tar gzip
+#    - curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+#    - chmod +x kubectl && mv kubectl /usr/local/bin/
+#    - mkdir -p ~/.kube
+#    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+#  script:
+#    - |
+#      ECR_TOKEN=$(aws ecr get-login-password --region $AWS_DEFAULT_REGION)
+#      for NS in core media; do
+#        kubectl create secret docker-registry ecr-secret \
+#          --namespace=$NS \
+#          --docker-server=$ECR_REGISTRY \
+#          --docker-username=AWS \
+#          --docker-password="$ECR_TOKEN" \
+#          --dry-run=client -o yaml | kubectl apply -f -
+#      done
+#    - echo "=== ECR Secret 갱신 완료 ==="
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+##      changes:
+##        - infra/apps/**
+#      when: manual
+
+# ─────────────────────────────────────────────
+# Stage 2: Maven 빌드
+# ─────────────────────────────────────────────
+build-core:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    # 루트에서 common + core-service 빌드 (-am: also make dependencies)
+    - mvn clean package -pl common,core-service -am -DskipTests
+  artifacts:
+    paths:
+      - core-service/target/*.jar
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - core-service/**/*
+          - common/**/*
+
+build-media:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    # 루트에서 common + media-service 빌드 (-am: also make dependencies)
+    - mvn clean package -pl common,media-service -am -DskipTests
+  artifacts:
+    paths:
+      - media-service/target/*.jar
+    expire_in: 1 hour
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - media-service/**/*
+          - common/**/*
+
+# ─────────────────────────────────────────────
+# Stage 3: Docker 이미지 빌드 & 푸시 (AWS ECR)
+# ─────────────────────────────────────────────
+docker-core:
+  stage: docker
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    # AWS CLI 설치 및 ECR 로그인
+    - apk add --no-cache aws-cli
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+  script:
+    - docker build -t $CORE_IMAGE:$CI_COMMIT_SHORT_SHA -t $CORE_IMAGE:latest -f core-service/Dockerfile core-service
+    - docker push $CORE_IMAGE:$CI_COMMIT_SHORT_SHA
+    - docker push $CORE_IMAGE:latest
+  needs:
+    - job: build-core
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - core-service/**/*
+          - common/**/*
+
+docker-media:
+  stage: docker
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    # AWS CLI 설치 및 ECR 로그인
+    - apk add --no-cache aws-cli
+    - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+  script:
+    - docker build -t $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA -t $MEDIA_IMAGE:latest -f media-service/Dockerfile media-service
+    - docker push $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA
+    - docker push $MEDIA_IMAGE:latest
+  needs:
+    - job: build-media
+      artifacts: true
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - media-service/**/*
+          - common/**/*
+
+# ─────────────────────────────────────────────
+# Stage 4: Kubernetes 배포
+# ─────────────────────────────────────────────
+deploy-core:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+    - |
+      sed -i "s|image: .*|image: $CORE_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/k8s/apps/core/deployment.yaml
+      kubectl apply -f infra/k8s/apps/core/namespace.yaml
+      kubectl apply -f infra/k8s/apps/core/configmap.yaml
+      kubectl apply -f infra/k8s/apps/core/deployment.yaml
+      kubectl apply -f infra/k8s/apps/core/service.yaml
+      kubectl apply -f infra/k8s/apps/core/hpa.yaml
+      kubectl apply -f infra/k8s/apps/core/middleware.yaml
+      kubectl apply -f infra/k8s/apps/core/ingress.yaml
+      kubectl rollout status deployment/api-server -n core --timeout=300s
+  needs:
+    - job: docker-core
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - core-service/**/*
+
+deploy-media:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [ "" ]
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+    - |
+      sed -i "s|image: .*|image: $MEDIA_IMAGE:$CI_COMMIT_SHORT_SHA|g" infra/k8s/apps/media/deployment.yaml
+      kubectl apply -f infra/k8s/apps/media/namespace.yaml
+      kubectl apply -f infra/k8s/apps/media/configmap.yaml
+      kubectl apply -f infra/k8s/apps/media/deployment.yaml
+      kubectl apply -f infra/k8s/apps/media/service.yaml
+      kubectl apply -f infra/k8s/apps/media/hpa.yaml
+      kubectl apply -f infra/k8s/apps/media/middleware.yaml
+      kubectl apply -f infra/k8s/apps/media/ingress.yaml
+      kubectl rollout status deployment/media-server -n media --timeout=300s
+  needs:
+    - job: docker-media
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - media-service/**/*
+
+deploy-livekit:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+  script:
+    - |
+      # Namespace
+      kubectl apply -f infra/k8s/livekit/namespace/namespace.yaml
+      # Shared resources
+      kubectl apply -f infra/k8s/livekit/shared/pvc.yaml
+      # Server
+      kubectl apply -f infra/k8s/livekit/server/configmap.yaml
+      kubectl apply -f infra/k8s/livekit/server/deployment.yaml
+      kubectl apply -f infra/k8s/livekit/server/service.yaml
+      # Egress
+      kubectl apply -f infra/k8s/livekit/egress/deployment.yaml
+      # Ingress
+      kubectl apply -f infra/k8s/livekit/ingress/deployment.yaml
+      kubectl apply -f infra/k8s/livekit/ingress/ingress.yaml
+      # Wait for server
+      kubectl rollout status deployment/livekit-server -n livekit --timeout=300s
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - infra/k8s/livekit/**/*
+      when: manual
+
+# ─────────────────────────────────────────────
+# Frontend Vercel 배포 (추가됨)
+# ─────────────────────────────────────────────
+deploy-frontend:
+  stage: deploy
+  image: node:20 # Vercel CLI 실행을 위한 Node 환경
+  script:
+    - npm install --global vercel
+    - cd frontend
+
+    # Vercel 배포 명령
+#    - vercel pull --yes --environment=production --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN
+#    - vercel build --prod --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN
+#    - vercel deploy --prod --prebuilt --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN
+    - vercel deploy --prod --yes --token=$ONETAKESTUDIO_GITLAB_CI_TOKEN  # vercel build 작동
+  rules:
+    # main, master 브랜치이면서 'frontend' 폴더 내부에 변경이 있을 때만 실행
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "dev-local" || $CI_COMMIT_BRANCH == "INFRA/infra"
+      changes:
+        compare_to: refs/heads/master
+        paths:
+          - frontend/**/*

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: livekit-egress
+  namespace: livekit
+  labels:
+    app: livekit-egress
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: livekit-egress
+  template:
+    metadata:
+      labels:
+        app: livekit-egress
+    spec:
+      initContainers:
+        - name: fix-recording-permissions
+          image: busybox
+          command: ['sh', '-c', 'chmod -R 777 /recordings']
+          volumeMounts:
+            - name: recordings
+              mountPath: /recordings
+      containers:
+        - name: livekit-egress
+          image: livekit/egress:latest
+          env:
+            - name: EGRESS_CONFIG_FILE
+              value: "/etc/egress/config.yaml"
+            - name: EGRESS_REDIS_ADDRESS
+              value: "redis.database.svc.cluster.local:6379"
+            - name: LIVEKIT_URL
+              value: "ws://livekit-server.livekit.svc.cluster.local:7880"
+            - name: LIVEKIT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secret
+                  key: LIVEKIT_API_KEY
+            - name: LIVEKIT_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: livekit-secret
+                  key: LIVEKIT_API_SECRET
+          volumeMounts:
+            - name: recordings
+              mountPath: /recordings
+            - name: config
+              mountPath: /etc/egress
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "1500m"
+            limits:
+              memory: "2Gi"
+              cpu: "4"
+      volumes:
+        - name: recordings
+          hostPath:
+            path: /data/recordings
+            type: DirectoryOrCreate
+        - name: config
+          configMap:
+            name: egress-config

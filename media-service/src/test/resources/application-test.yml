@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: media-service-test
+
+  # H2 In-Memory Database (테스트용)
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  # JPA
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+
+  # Redis 비활성화 (테스트)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+# Server
+server:
+  port: 0
+
+# Eureka 비활성화 (테스트)
+eureka:
+  client:
+    enabled: false
+
+# LiveKit (Mock)
+livekit:
+  host: http://localhost:7880
+  api:
+    key: test-api-key
+    secret: test-api-secret
+  egress:
+    output-path: /tmp/recordings/
+
+# Core Service
+core:
+  service:
+    url: http://localhost:8080
+
+# Recording Storage
+recording:
+  storage:
+    base-path: ./test-recordings
+    base-url: http://localhost:8082/api/media/record/files
+
+# External Upload (테스트 - 비활성화)
+external:
+  upload:
+    enabled: false
+    server-url: http://localhost:8090/api/upload
+    api-key: test-api-key
+    timeout: 5000
+    chunk-size: 1048576
+    max-retries: 1
+    retry-delay: 100
+
+# Logging
+logging:
+  level:
+    com.onetake.media: DEBUG
+    org.hibernate.SQL: DEBUG
