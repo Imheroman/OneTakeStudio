@@ -2,4 +2,4 @@
 
 ## Architecture Diagram
 
-![img](images/image(light).png)
+![img](images/architecture.svg)
